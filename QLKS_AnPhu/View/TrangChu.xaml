@@ -1,0 +1,22 @@
+<UserControl x:Class="QLKS_AnPhu.View.TrangChu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600"
+             d:DesignWidth="1000"
+             Background="#F4F7FA">
+    <Grid Margin="34">
+        <StackPanel>
+            <TextBlock Text="Trang chủ"
+                       FontSize="26"
+                       FontWeight="Bold"
+                       Foreground="#172033" />
+            <TextBlock Text="Chọn chức năng ở thanh menu bên trái để bắt đầu."
+                       Margin="0,12,0,0"
+                       FontSize="15"
+                       Foreground="#667085" />
+        </StackPanel>
+    </Grid>
+</UserControl>

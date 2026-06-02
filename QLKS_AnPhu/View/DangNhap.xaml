@@ -1,0 +1,131 @@
+<Window x:Class="QLKS_AnPhu.View.DangNhap"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:QLKS_AnPhu.View"
+        mc:Ignorable="d"
+        Title="Đăng nhập"
+        Height="520"
+        Width="900"
+        MinHeight="480"
+        MinWidth="780"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="#F3F6FB">
+    <Window.Resources>
+        <Style x:Key="InputLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#243447" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+
+        <Style x:Key="InputStyle" TargetType="Control">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="BorderBrush" Value="#C9D3E3" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="White" />
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="44" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="#1F6FEB" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1.05*" />
+            <ColumnDefinition Width="0.95*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#123A5D">
+            <Grid Margin="52">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="AN PHÚ HOTEL"
+                               FontSize="30"
+                               FontWeight="Bold"
+                               Foreground="White" />
+                    <TextBlock Text="Hệ thống quản lý khách sạn"
+                               Margin="0,14,0,0"
+                               FontSize="18"
+                               Foreground="#DCEBFA" />
+                    <Border Width="64"
+                            Height="4"
+                            Margin="0,28,0,0"
+                            HorizontalAlignment="Left"
+                            Background="#F7C948" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="1"
+                           Text="Quản lý phòng, khách hàng, đặt phòng và thanh toán"
+                           FontSize="14"
+                           Foreground="#BFD3E8"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1" Margin="56,48">
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Đăng nhập"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           Foreground="#172033" />
+                <TextBlock Text="Nhập thông tin tài khoản để tiếp tục"
+                           Margin="0,8,0,34"
+                           FontSize="14"
+                           Foreground="#667085" />
+
+                <TextBlock Text="Tên đăng nhập" Style="{StaticResource InputLabelStyle}" />
+                <TextBox x:Name="TxtTenDangNhap"
+                         Style="{StaticResource InputStyle}"
+                         VerticalContentAlignment="Center"
+                         KeyDown="Input_KeyDown" />
+
+                <TextBlock Text="Mật khẩu"
+                           Style="{StaticResource InputLabelStyle}"
+                           Margin="0,18,0,8" />
+                <PasswordBox x:Name="TxtMatKhau"
+                             Style="{StaticResource InputStyle}"
+                             VerticalContentAlignment="Center"
+                             KeyDown="Input_KeyDown" />
+
+                <TextBlock x:Name="TxtThongBao"
+                           Margin="0,14,0,0"
+                           MinHeight="22"
+                           FontSize="13"
+                           Foreground="#C62828"
+                           TextWrapping="Wrap" />
+
+                <Button Content="Đăng nhập"
+                        Margin="0,16,0,0"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Click="BtnDangNhap_Click" />
+
+                <Button Content="Thoát"
+                        Height="40"
+                        Margin="0,12,0,0"
+                        FontSize="14"
+                        Background="Transparent"
+                        BorderBrush="#C9D3E3"
+                        BorderThickness="1"
+                        Foreground="#344054"
+                        Cursor="Hand"
+                        Click="BtnThoat_Click" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

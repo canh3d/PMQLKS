@@ -1,0 +1,110 @@
+<Window x:Class="QLKS_AnPhu.View.KhachHangForm"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Khách hàng"
+        Width="560"
+        Height="560"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="White">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="42" />
+            <RowDefinition Height="44" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="TxtTieuDe"
+                   Text="Thêm khách hàng"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   Foreground="#0F1F33" />
+
+        <Grid Grid.Row="1" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="126" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="42" />
+                <RowDefinition Height="42" />
+                <RowDefinition Height="42" />
+                <RowDefinition Height="42" />
+                <RowDefinition Height="42" />
+                <RowDefinition Height="42" />
+                <RowDefinition Height="42" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Họ tên" VerticalAlignment="Center" />
+            <TextBox x:Name="TxtHoTen" Grid.Column="1" Height="30" Padding="8,0" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="1" Text="Số điện thoại" VerticalAlignment="Center" />
+            <TextBox x:Name="TxtSDT" Grid.Row="1" Grid.Column="1" Height="30" Padding="8,0" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="2" Text="CCCD/CMND" VerticalAlignment="Center" />
+            <TextBox x:Name="TxtCCCD" Grid.Row="2" Grid.Column="1" Height="30" Padding="8,0" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="3" Text="Giới tính" VerticalAlignment="Center" />
+            <ComboBox x:Name="CboGioiTinh" Grid.Row="3" Grid.Column="1" Height="30" SelectedIndex="0">
+                <ComboBoxItem Content="Nam" />
+                <ComboBoxItem Content="Nữ" />
+                <ComboBoxItem Content="Khác" />
+            </ComboBox>
+
+            <TextBlock Grid.Row="4" Text="Ngày sinh" VerticalAlignment="Center" />
+            <DatePicker x:Name="DpNgaySinh" Grid.Row="4" Grid.Column="1" Height="30" />
+
+            <TextBlock Grid.Row="5" Text="Loại khách" VerticalAlignment="Center" />
+            <ComboBox x:Name="CboLoaiKhach" Grid.Row="5" Grid.Column="1" Height="30" SelectedIndex="0">
+                <ComboBoxItem Content="Thường" />
+                <ComboBoxItem Content="VIP" />
+                <ComboBoxItem Content="Khách đoàn" />
+            </ComboBox>
+
+            <TextBlock Grid.Row="6" Text="Trạng thái" VerticalAlignment="Center" />
+            <ComboBox x:Name="CboTrangThai" Grid.Row="6" Grid.Column="1" Height="30" SelectedIndex="0">
+                <ComboBoxItem Content="Đang hoạt động" />
+                <ComboBoxItem Content="Tạm khóa" />
+                <ComboBoxItem Content="Ngừng sử dụng" />
+            </ComboBox>
+
+            <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                <TextBlock Text="Địa chỉ" />
+                <TextBox x:Name="TxtDiaChi" Height="48" Margin="0,6,0,0" Padding="8" TextWrapping="Wrap" AcceptsReturn="True" />
+                <TextBlock Text="Ghi chú" Margin="0,12,0,0" />
+                <TextBox x:Name="TxtGhiChu" Height="62" Margin="0,6,0,0" Padding="8" TextWrapping="Wrap" AcceptsReturn="True" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock x:Name="TxtThongBao"
+                   Grid.Row="2"
+                   VerticalAlignment="Center"
+                   Foreground="#EF4444"
+                   TextWrapping="Wrap" />
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Width="104"
+                    Height="34"
+                    Background="#0B55C7"
+                    BorderBrush="#0B55C7"
+                    Foreground="White"
+                    FontWeight="SemiBold"
+                    Click="BtnLuu_Click"
+                    Content="Lưu" />
+            <Button Width="104"
+                    Height="34"
+                    Margin="12,0,0,0"
+                    Background="#667085"
+                    BorderBrush="#667085"
+                    Foreground="White"
+                    FontWeight="SemiBold"
+                    Click="BtnHuy_Click"
+                    Content="Hủy" />
+        </StackPanel>
+    </Grid>
+</Window>

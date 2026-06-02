@@ -1,0 +1,173 @@
+<Window x:Class="QLKS_AnPhu.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Quản lý khách sạn"
+        Width="1360"
+        Height="780"
+        MinWidth="1120"
+        MinHeight="680"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="#F4F7FA">
+    <Window.Resources>
+        <Style x:Key="MenuButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Margin" Value="12,5" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#172033" />
+            <Setter Property="Background" Value="#EEF3F8" />
+            <Setter Property="BorderBrush" Value="#C9D3E3" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style x:Key="ActiveMenuButtonStyle" TargetType="Button" BasedOn="{StaticResource MenuButtonStyle}">
+            <Setter Property="Background" Value="#2F63E7" />
+            <Setter Property="BorderBrush" Value="#2F63E7" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="74" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#1B2638">
+            <Grid Margin="18,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Width="44"
+                        Height="44"
+                        VerticalAlignment="Center"
+                        Background="#202E43"
+                        BorderBrush="#2E3C52"
+                        Foreground="White"
+                        Cursor="Hand"
+                        Click="BtnToggleMenu_Click">
+                    <iconPacks:PackIconMaterial Kind="Menu" Width="20" Height="20" />
+                </Button>
+
+                <TextBlock Grid.Column="1"
+                           Text="QUẢN LÝ KHÁCH SẠN"
+                           Margin="24,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="23"
+                           FontWeight="Bold"
+                           Foreground="White" />
+
+                <TextBlock Grid.Column="2"
+                           Text="Xin chào: Admin"
+                           VerticalAlignment="Center"
+                           FontSize="15"
+                           Foreground="White" />
+
+                <Button Grid.Column="4"
+                        Height="38"
+                        Padding="16,0"
+                        VerticalAlignment="Center"
+                        Background="#F59E0B"
+                        BorderBrush="#F59E0B"
+                        Foreground="White"
+                        FontWeight="SemiBold"
+                        Cursor="Hand"
+                        Click="BtnDangXuat_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Logout" Width="15" Height="15" Margin="0,0,6,0" />
+                        <TextBlock Text="Đăng xuất" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidebarColumn" Width="244" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="#EAF0F6" BorderBrush="#D5DEE9" BorderThickness="0,0,1,0">
+                <StackPanel Margin="0,14">
+                    <Button x:Name="BtnTrangChu" Style="{StaticResource ActiveMenuButtonStyle}" Click="BtnTrangChu_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Home" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblTrangChu" Text="Trang chủ" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}" Click="BtnQLPhong_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Bed" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblQuanLyPhong" Text="Quản lý phòng" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}" Click="BtnPhieuThue_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="ClipboardText" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblPhieuThue" Text="Phiếu thuê" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}" Click="BtnKhachHang_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="AccountGroup" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblKhachHang" Text="Khách hàng" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}" Click="BtnHoaDon_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Receipt" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblHoaDon" Text="Hóa đơn" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}" Click="BtnDichVuVatTu_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Tools" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblDichVu" Text="Dịch vụ - vật tư" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="AccountTie" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblNhanVien" Text="Nhân viên" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="FileChart" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblBaoCao" Text="Báo cáo" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MenuButtonStyle}" Click="BtnDangXuat_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Logout" Width="16" Height="16" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LblDangXuat" Text="Đăng xuất" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <ContentControl x:Name="MainContent" Grid.Column="1" />
+        </Grid>
+    </Grid>
+</Window>
