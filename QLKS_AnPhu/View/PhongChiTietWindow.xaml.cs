@@ -15,6 +15,7 @@ namespace QLKS_AnPhu.View
         private readonly PhongDTO phong;
         private readonly PhongBUS phongBUS = new();
         private readonly DichVuVatTuBUS dichVuVatTuBUS = new();
+        private readonly ThanhToanFlowBUS thanhToanBUS = new();
         private readonly DispatcherTimer thoiGianLuuTruTimer = new();
         private ObservableCollection<DichVuChiTietItem> dichVuHienTai = new();
         private RoomStayData? stayData;
@@ -147,14 +148,32 @@ namespace QLKS_AnPhu.View
             string ngayTraExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong")
                 ? "ISNULL(PT.NgayTraPhong, PT.NgayTraDuKien)"
                 : "PT.NgayTraDuKien";
+            string maDatPhongExpr = ColumnExists("PHIEUTHUE", "MaDatPhong") ? "PT.MaDatPhong" : "CAST(NULL AS int)";
             string soNguoiExpr = ColumnExists("PHIEUTHUE", "SoNguoi") ? "PT.SoNguoi" : "1";
             string ghiChuExpr = ColumnExists("PHIEUTHUE", "GhiChu") ? "PT.GhiChu" : "CAST(NULL AS nvarchar(1000))";
             string tienPhongExpr = TienPhongSql("PT.NgayNhan", "PT.NgayTraDuKien", ngayTraExpr);
+            bool coChiTietDatPhong = TableExists("CHITIETDATPHONG") && ColumnExists("PHIEUTHUE", "MaDatPhong");
+            string joinPhong = coChiTietDatPhong
+                ? @"JOIN dbo.CHITIETDATPHONG CT ON PT.MaDatPhong = CT.MaDatPhong
+JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong"
+                : "LEFT JOIN dbo.PHONG P ON PT.MaPhong = P.MaPhong";
+            string wherePhong = coChiTietDatPhong
+                ? "(CT.MaPhong = @MaPhong OR PT.MaPhong = @MaPhong)"
+                : "PT.MaPhong = @MaPhong";
+            string soPhongDoanExpr = coChiTietDatPhong
+                ? "(SELECT COUNT(*) FROM dbo.CHITIETDATPHONG CT2 WHERE CT2.MaDatPhong = PT.MaDatPhong)"
+                : "1";
+            string danhSachPhongDoanExpr = coChiTietDatPhong
+                ? @"(SELECT STRING_AGG(CAST(" + TenPhongSql("P2") + @" AS nvarchar(max)), N', ')
+                    FROM dbo.CHITIETDATPHONG CT2
+                    JOIN dbo.PHONG P2 ON CT2.MaPhong = P2.MaPhong
+                    WHERE CT2.MaDatPhong = PT.MaDatPhong)"
+                : TenPhongSql("P");
 
             DataTable data = ConnectDB.GetData(@"
 SELECT TOP 1
        PT.MaThue,
-       CAST(NULL AS int) AS MaDatPhong,
+       " + maDatPhongExpr + @" AS MaDatPhong,
        KH.HoTen,
        KH.SDT,
        " + soNguoiExpr + @" AS SoNguoi,
@@ -163,12 +182,14 @@ SELECT TOP 1
        ISNULL(PT.TienCoc, 0) AS TienCoc,
        " + tienPhongExpr + @" AS TienPhong,
        " + ghiChuExpr + @" AS GhiChu,
-       PT.TrangThai
+       PT.TrangThai,
+       " + soPhongDoanExpr + @" AS SoPhongDoan,
+       " + danhSachPhongDoanExpr + @" AS DanhSachPhongDoan
 FROM dbo.PHIEUTHUE PT
 JOIN dbo.KHACHHANG KH ON PT.MaKH = KH.MaKH
-LEFT JOIN dbo.PHONG P ON PT.MaPhong = P.MaPhong
+" + joinPhong + @"
 LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
-WHERE PT.MaPhong = @MaPhong
+WHERE " + wherePhong + @"
   AND (
         PT.TrangThai IN (N'Đang thuê', N'Dang thue', N'Có khách', N'Co khach')
         OR P.TrangThai IN (N'Đang thuê', N'Dang thue', N'Có khách', N'Co khach')
@@ -193,11 +214,21 @@ ORDER BY PT.MaThue DESC",
             string soNguoiExpr = ColumnExists(bangDatPhong, "SoNguoi") ? "DP.SoNguoi" : "1";
             string ghiChuExpr = ColumnExists(bangDatPhong, "GhiChu") ? "DP.GhiChu" : "CAST(NULL AS nvarchar(1000))";
             string tienPhongExpr = TienPhongSql(ngayNhanExpr, ngayTraExpr, ngayTraExpr);
-            string joinPhong = TableExists("CHITIETDATPHONG")
+            bool coChiTietDatPhong = TableExists("CHITIETDATPHONG");
+            string joinPhong = coChiTietDatPhong
                 ? @"JOIN dbo.CHITIETDATPHONG CT ON DP.MaDatPhong = CT.MaDatPhong
 JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong"
                 : "JOIN dbo.PHONG P ON DP.MaPhong = P.MaPhong";
-            string wherePhong = TableExists("CHITIETDATPHONG") ? "CT.MaPhong = @MaPhong" : "DP.MaPhong = @MaPhong";
+            string wherePhong = coChiTietDatPhong ? "CT.MaPhong = @MaPhong" : "DP.MaPhong = @MaPhong";
+            string soPhongDoanExpr = coChiTietDatPhong
+                ? "(SELECT COUNT(*) FROM dbo.CHITIETDATPHONG CT2 WHERE CT2.MaDatPhong = DP.MaDatPhong)"
+                : "1";
+            string danhSachPhongDoanExpr = coChiTietDatPhong
+                ? @"(SELECT STRING_AGG(CAST(" + TenPhongSql("P2") + @" AS nvarchar(max)), N', ')
+                    FROM dbo.CHITIETDATPHONG CT2
+                    JOIN dbo.PHONG P2 ON CT2.MaPhong = P2.MaPhong
+                    WHERE CT2.MaDatPhong = DP.MaDatPhong)"
+                : TenPhongSql("P");
 
             DataTable data = ConnectDB.GetData(@"
 SELECT TOP 1
@@ -211,7 +242,9 @@ SELECT TOP 1
        ISNULL(" + tienCocExpr + @", 0) AS TienCoc,
        " + tienPhongExpr + @" AS TienPhong,
        " + ghiChuExpr + @" AS GhiChu,
-       DP.TrangThai
+       DP.TrangThai,
+       " + soPhongDoanExpr + @" AS SoPhongDoan,
+       " + danhSachPhongDoanExpr + @" AS DanhSachPhongDoan
 FROM dbo." + bangDatPhong + @" DP
 JOIN dbo.KHACHHANG KH ON DP.MaKH = KH.MaKH
 " + joinPhong + @"
@@ -270,6 +303,14 @@ ORDER BY DP.MaDatPhong DESC",
             string soLuongExpr = ColumnExists(bangPhatSinh, "SoLuong") ? "PS.SoLuong" : "1";
             string donGiaExpr = ColumnExists(bangPhatSinh, "DonGia") ? "ISNULL(PS.DonGia, DV.DonGia)" : "DV.DonGia";
             string thanhTienExpr = ColumnExists(bangPhatSinh, "ThanhTien") ? "PS.ThanhTien" : "(" + soLuongExpr + " * " + donGiaExpr + ")";
+            string roomFilter = keyColumn != "MaPhong" && ColumnExists(bangPhatSinh, "MaPhong")
+                ? " AND PS.MaPhong = @MaPhong"
+                : string.Empty;
+            string keyFilter = "PS." + keyColumn + " = @KeyValue";
+            if (keyColumn == "MaThue" && data.MaDatPhong.HasValue && ColumnExists(bangPhatSinh, "MaDatPhong"))
+            {
+                keyFilter = "(" + keyFilter + " OR PS.MaDatPhong = @MaDatPhong)";
+            }
 
             DataTable services = ConnectDB.GetData(@"
 SELECT " + psKeyExpr + @" AS MaPhatSinh,
@@ -279,8 +320,10 @@ SELECT " + psKeyExpr + @" AS MaPhatSinh,
        " + thanhTienExpr + @" AS ThanhTien
 FROM dbo." + bangPhatSinh + @" PS
 JOIN dbo.DICHVUVATTU DV ON PS." + maDvPs + " = DV." + maDv + @"
-WHERE PS." + keyColumn + @" = @KeyValue",
-                new SqlParameter("@KeyValue", keyValue));
+WHERE " + keyFilter + roomFilter,
+                new SqlParameter("@KeyValue", keyValue),
+                new SqlParameter("@MaDatPhong", data.MaDatPhong ?? 0),
+                new SqlParameter("@MaPhong", phong.Ma));
 
             foreach (DataRow row in services.Rows)
             {
@@ -301,7 +344,7 @@ WHERE PS." + keyColumn + @" = @KeyValue",
             return new RoomStayData
             {
                 MaThue = laPhieuThue ? GetNullableInt(row, "MaThue") : null,
-                MaDatPhong = laPhieuThue ? null : GetNullableInt(row, "MaDatPhong"),
+                MaDatPhong = GetNullableInt(row, "MaDatPhong"),
                 HoTen = row["HoTen"]?.ToString() ?? string.Empty,
                 SDT = row["SDT"]?.ToString() ?? string.Empty,
                 SoNguoi = Convert.ToInt32(GetDecimal(row, "SoNguoi")),
@@ -310,7 +353,9 @@ WHERE PS." + keyColumn + @" = @KeyValue",
                 TienCoc = GetDecimal(row, "TienCoc"),
                 TienPhong = GetDecimal(row, "TienPhong"),
                 GhiChu = row["GhiChu"]?.ToString() ?? string.Empty,
-                TrangThai = row["TrangThai"]?.ToString() ?? string.Empty
+                TrangThai = row["TrangThai"]?.ToString() ?? string.Empty,
+                SoPhongDoan = Convert.ToInt32(GetDecimal(row, "SoPhongDoan")),
+                DanhSachPhongDoan = row["DanhSachPhongDoan"]?.ToString() ?? string.Empty
             };
         }
 
@@ -342,14 +387,20 @@ WHERE PS." + keyColumn + @" = @KeyValue",
             DateTime now = DateTime.Now;
             if (dangThue)
             {
-                if (ngayTra.HasValue && now > ngayTra.Value)
+                if (!ngayTra.HasValue)
                 {
-                    int quaGio = Math.Max(1, (int)Math.Ceiling((now - ngayTra.Value).TotalHours));
-                    return new ThoiGianLuuTruResult($"Quá giờ {quaGio} giờ", true);
+                    return new ThoiGianLuuTruResult("--", false);
                 }
 
-                int soGioDangThue = Math.Max(1, (int)Math.Ceiling((now - ngayNhan.Value).TotalHours));
-                return new ThoiGianLuuTruResult($"{soGioDangThue} giờ", false);
+                if (now > ngayTra.Value)
+                {
+                    int quaGio = Math.Max(1, (int)Math.Ceiling((now - ngayTra.Value).TotalHours));
+                    return new ThoiGianLuuTruResult($"Qua gio {quaGio} gio", true);
+                }
+
+                int soGioConLai = Math.Max(1, (int)Math.Ceiling((ngayTra.Value - now).TotalHours));
+                return new ThoiGianLuuTruResult($"Con lai {soGioConLai} gio", false);
+
             }
 
             DateTime end = ngayTra ?? now;
@@ -373,7 +424,7 @@ WHERE PS." + keyColumn + @" = @KeyValue",
             {
                 if (stayData?.MaDatPhong.HasValue == true)
                 {
-                    phongBUS.NhanPhongTuDatPhong(stayData.MaDatPhong.Value);
+                    phongBUS.NhanPhongTuDatPhong(stayData.MaDatPhong.Value, tienPhong + tienDichVu, datCoc);
                     stayData = LoadRoomStayData();
                     PhongChiTietWindow_Loaded(sender, e);
                     return;
@@ -420,7 +471,7 @@ WHERE PS." + keyColumn + @" = @KeyValue",
 
             try
             {
-                TraPhong(maThue);
+                thanhToanBUS.CheckOut(maThue);
                 MessageBox.Show("Đã trả phòng. Phòng chuyển sang trạng thái chưa dọn dẹp.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 PhongChiTietWindow_Loaded(sender, e);
             }
@@ -474,6 +525,7 @@ WHERE PS." + keyColumn + @" = @KeyValue",
             try
             {
                 ThemDichVuPhatSinh(dichVu, soLuong);
+                thanhToanBUS.CongDichVuPhatSinh(stayData.MaThue.Value, dichVu.DonGia * soLuong);
                 dichVuHienTai = LoadDichVu(stayData);
                 DgDichVu.ItemsSource = dichVuHienTai;
                 CapNhatHoaDon();
@@ -696,6 +748,26 @@ WHERE PS." + keyColumn + @" = @KeyValue",
 END AS decimal(18, 2))";
         }
 
+        private static string TenPhongSql(string alias)
+        {
+            if (ColumnExists("PHONG", "TenPhong"))
+            {
+                return alias + ".TenPhong";
+            }
+
+            if (ColumnExists("PHONG", "SoPhong"))
+            {
+                return alias + ".SoPhong";
+            }
+
+            if (ColumnExists("PHONG", "MaSoPhong"))
+            {
+                return alias + ".MaSoPhong";
+            }
+
+            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
+        }
+
         private static bool TableExists(string tableName)
         {
             object? result = ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM sys.tables WHERE name = @Name", new SqlParameter("@Name", tableName));
@@ -833,11 +905,15 @@ END AS decimal(18, 2))";
         private static string BoDau(string value)
         {
             string formD = (value ?? string.Empty).Normalize(System.Text.NormalizationForm.FormD);
-            char[] chars = formD
+            string withoutMarks = new(formD
                 .Where(ch => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark)
-                .Select(ch => ch == 'đ' ? 'd' : ch == 'Đ' ? 'D' : ch)
-                .ToArray();
-            return new string(chars).Normalize(System.Text.NormalizationForm.FormC);
+                .ToArray());
+            return withoutMarks
+                .Replace("đ", "d")
+                .Replace("Đ", "D")
+                .Replace("đ", "d")
+                .Replace("Đ", "D")
+                .Normalize(System.Text.NormalizationForm.FormC);
         }
 
         private record ThoiGianLuuTruResult(string Text, bool QuaGio);
@@ -862,6 +938,8 @@ END AS decimal(18, 2))";
             public decimal TienPhong { get; set; }
             public string GhiChu { get; set; } = string.Empty;
             public string TrangThai { get; set; } = string.Empty;
+            public int SoPhongDoan { get; set; } = 1;
+            public string DanhSachPhongDoan { get; set; } = string.Empty;
         }
 
         private class DichVuChiTietItem

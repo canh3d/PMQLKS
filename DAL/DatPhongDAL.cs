@@ -26,7 +26,8 @@ namespace QLKS_AnPhu.DAL
 
                 if (request.NhanNgay)
                 {
-                    ThemPhieuThue(conn, tran, maDatPhong, request, maKhachHang);
+                    int? maThue = ThemPhieuThue(conn, tran, maDatPhong, request, maKhachHang);
+                    ThemDichVuPhatSinh(conn, tran, maDatPhong, maThue, request);
                     CapNhatTrangThaiDatPhong(conn, tran, bangDatPhong, maDatPhong, LayGiaTriHopLeTheoCheck(conn, tran, bangDatPhong, "TrangThai", "Đang thuê", "Dang thue", "Có khách", "Co khach"));
                     CapNhatTrangThaiPhong(conn, tran, request.Phong.Ma, "Đang thuê");
                 }
@@ -88,7 +89,11 @@ namespace QLKS_AnPhu.DAL
 
                 if (requestGop.NhanNgay)
                 {
-                    ThemPhieuThue(conn, tran, maDatPhong, requestGop, maKhachHang);
+                    int? maThue = ThemPhieuThue(conn, tran, maDatPhong, requestGop, maKhachHang);
+                    foreach (DatPhongRequestDTO request in danhSach)
+                    {
+                        ThemDichVuPhatSinh(conn, tran, maDatPhong, maThue, request);
+                    }
                     CapNhatTrangThaiDatPhong(conn, tran, bangDatPhong, maDatPhong, LayGiaTriHopLeTheoCheck(conn, tran, bangDatPhong, "TrangThai", "Đang thuê", "Dang thue", "Có khách", "Co khach"));
                     foreach (DatPhongRequestDTO request in danhSach)
                     {
@@ -490,11 +495,11 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
             cmd.ExecuteNonQuery();
         }
 
-        private static void ThemPhieuThue(SqlConnection conn, SqlTransaction tran, int maDatPhong, DatPhongRequestDTO request, int maKhachHang)
+        private static int? ThemPhieuThue(SqlConnection conn, SqlTransaction tran, int maDatPhong, DatPhongRequestDTO request, int maKhachHang)
         {
             if (!TableExists(conn, tran, "PHIEUTHUE"))
             {
-                return;
+                return null;
             }
 
             List<string> columns = new();
@@ -510,7 +515,7 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
             AddColumnIfExists(conn, tran, columns, values, "PHIEUTHUE", "TrangThai", "@TrangThai");
             AddColumnIfExists(conn, tran, columns, values, "PHIEUTHUE", "GhiChu", "@GhiChu");
 
-            using SqlCommand cmd = new("INSERT INTO dbo.PHIEUTHUE(" + string.Join(",", columns) + ") VALUES(" + string.Join(",", values) + ")", conn, tran);
+            using SqlCommand cmd = new("INSERT INTO dbo.PHIEUTHUE(" + string.Join(",", columns) + ") VALUES(" + string.Join(",", values) + "); SELECT SCOPE_IDENTITY();", conn, tran);
             cmd.Parameters.AddWithValue("@MaDatPhong", maDatPhong);
             cmd.Parameters.AddWithValue("@MaKH", maKhachHang);
             cmd.Parameters.AddWithValue("@MaPhong", request.Phong.Ma);
@@ -521,7 +526,68 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
             cmd.Parameters.AddWithValue("@TienCoc", request.TienCoc);
             cmd.Parameters.AddWithValue("@TrangThai", LayGiaTriHopLeTheoCheck(conn, tran, "PHIEUTHUE", "TrangThai", "Đang thuê", "Dang thue", "Đã đặt", "Da dat"));
             cmd.Parameters.AddWithValue("@GhiChu", string.IsNullOrWhiteSpace(request.GhiChu) ? DBNull.Value : request.GhiChu);
-            cmd.ExecuteNonQuery();
+            object? value = cmd.ExecuteScalar();
+            return value == null || value == DBNull.Value ? null : Convert.ToInt32(value);
+        }
+
+        private static void ThemDichVuPhatSinh(SqlConnection conn, SqlTransaction tran, int maDatPhong, int? maThue, DatPhongRequestDTO request)
+        {
+            if (request.DichVuDaThem.Count == 0)
+            {
+                return;
+            }
+
+            string table = TableExists(conn, tran, "PHATSINHDICHVU")
+                ? "PHATSINHDICHVU"
+                : TableExists(conn, tran, "CHITIETPHATSINH")
+                    ? "CHITIETPHATSINH"
+                    : string.Empty;
+            if (string.IsNullOrWhiteSpace(table))
+            {
+                return;
+            }
+
+            bool requiresMaThue = ColumnRequired(conn, tran, table, "MaThue");
+            if (requiresMaThue && !maThue.HasValue)
+            {
+                return;
+            }
+
+            string maDvColumn = ColumnExists(conn, tran, table, "MaDVVT")
+                ? "MaDVVT"
+                : ColumnExists(conn, tran, table, "MaDichVu")
+                    ? "MaDichVu"
+                    : string.Empty;
+            if (string.IsNullOrWhiteSpace(maDvColumn))
+            {
+                return;
+            }
+
+            foreach (DichVuDatPhongDTO dichVu in request.DichVuDaThem.Where(item => item.SoLuong > 0))
+            {
+                List<string> columns = new();
+                List<string> values = new();
+                AddColumnIfExists(conn, tran, columns, values, table, "MaThue", "@MaThue");
+                AddColumnIfExists(conn, tran, columns, values, table, "MaDatPhong", "@MaDatPhong");
+                AddColumnIfExists(conn, tran, columns, values, table, "MaPhong", "@MaPhong");
+                AddColumnIfExists(conn, tran, columns, values, table, maDvColumn, "@MaDichVu");
+                AddColumnIfExists(conn, tran, columns, values, table, "SoLuong", "@SoLuong");
+                AddColumnIfExists(conn, tran, columns, values, table, "DonGia", "@DonGia");
+                AddColumnIfExists(conn, tran, columns, values, table, "ThanhTien", "@ThanhTien");
+                AddColumnIfExists(conn, tran, columns, values, table, "NgayPhatSinh", "@NgayPhatSinh");
+                AddColumnIfExists(conn, tran, columns, values, table, "NgaySuDung", "@NgayPhatSinh");
+
+                using SqlCommand cmd = new("INSERT INTO dbo." + table + "(" + string.Join(",", columns) + ") VALUES(" + string.Join(",", values) + ")", conn, tran);
+                cmd.Parameters.AddWithValue("@MaThue", maThue.HasValue ? maThue.Value : DBNull.Value);
+                cmd.Parameters.AddWithValue("@MaDatPhong", maDatPhong);
+                cmd.Parameters.AddWithValue("@MaPhong", request.Phong.Ma);
+                cmd.Parameters.AddWithValue("@MaDichVu", dichVu.Ma);
+                cmd.Parameters.AddWithValue("@SoLuong", dichVu.SoLuong);
+                cmd.Parameters.AddWithValue("@DonGia", dichVu.DonGia);
+                cmd.Parameters.AddWithValue("@ThanhTien", dichVu.ThanhTien);
+                cmd.Parameters.AddWithValue("@NgayPhatSinh", DateTime.Now);
+                cmd.ExecuteNonQuery();
+            }
         }
 
         private static void CapNhatTrangThaiPhong(SqlConnection conn, SqlTransaction tran, int maPhong, string trangThai)
@@ -684,6 +750,23 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
                   FROM sys.tables t
                   JOIN sys.columns c ON t.object_id = c.object_id
                   WHERE t.name = @TableName AND c.name = @ColumnName",
+                conn,
+                tran);
+            cmd.Parameters.AddWithValue("@TableName", tableName);
+            cmd.Parameters.AddWithValue("@ColumnName", columnName);
+            return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+        }
+
+        private static bool ColumnRequired(SqlConnection conn, SqlTransaction tran, string tableName, string columnName)
+        {
+            using SqlCommand cmd = new(
+                @"SELECT COUNT(*)
+                  FROM sys.tables t
+                  JOIN sys.columns c ON t.object_id = c.object_id
+                  WHERE t.name = @TableName
+                    AND c.name = @ColumnName
+                    AND c.is_nullable = 0
+                    AND COLUMNPROPERTY(t.object_id, c.name, 'IsIdentity') = 0",
                 conn,
                 tran);
             cmd.Parameters.AddWithValue("@TableName", tableName);

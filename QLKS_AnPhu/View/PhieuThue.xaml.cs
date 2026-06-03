@@ -86,9 +86,9 @@ namespace QLKS_AnPhu.View
             bool coBangDatPhong = TableExists(bangDatPhong);
             bool coChiTietDatPhong = TableExists("CHITIETDATPHONG");
             bool coPhieuThue = TableExists("PHIEUTHUE");
-            string tenPhong = ColumnExists("PHONG", "TenPhong") ? "TenPhong" : "SoPhong";
-            string tenPhongExpr = ColumnExists("PHONG", "TenPhong") ? "P.TenPhong" : "N'P' + P.SoPhong";
-            string tenPhongP2Expr = ColumnExists("PHONG", "TenPhong") ? "P2.TenPhong" : "N'P' + P2.SoPhong";
+            string tenPhong = ColumnExists("PHONG", "TenPhong") ? "TenPhong" : ColumnExists("PHONG", "SoPhong") ? "SoPhong" : "MaPhong";
+            string tenPhongExpr = TenPhongSql("P");
+            string tenPhongP2Expr = TenPhongSql("P2");
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
             string ghiChuThueExpr = coPhieuThue && ColumnExists("PHIEUTHUE", "GhiChu") ? "PT.GhiChu" : "CAST(NULL AS nvarchar(255))";
 
@@ -634,6 +634,26 @@ END AS decimal(18, 2))";
                 new SqlParameter("@TableName", tableName),
                 new SqlParameter("@ColumnName", columnName));
             return Convert.ToInt32(result) > 0;
+        }
+
+        private static string TenPhongSql(string alias)
+        {
+            if (ColumnExists("PHONG", "TenPhong"))
+            {
+                return alias + ".TenPhong";
+            }
+
+            if (ColumnExists("PHONG", "SoPhong"))
+            {
+                return alias + ".SoPhong";
+            }
+
+            if (ColumnExists("PHONG", "MaSoPhong"))
+            {
+                return alias + ".MaSoPhong";
+            }
+
+            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
         }
     }
 }

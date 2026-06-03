@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.Windows;
 using Microsoft.Data.SqlClient;
+using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DAL;
 
 namespace QLKS_AnPhu.View
@@ -9,6 +10,7 @@ namespace QLKS_AnPhu.View
     public partial class HoaDonChiTietWindow : Window
     {
         private readonly HoaDonItem hoaDon;
+        private readonly ThanhToanFlowBUS thanhToanBUS = new();
 
         public bool DuLieuDaThayDoi { get; private set; }
 
@@ -107,7 +109,7 @@ namespace QLKS_AnPhu.View
 
             try
             {
-                ThanhToanPhieuThue(hoaDon.MaGoc);
+                thanhToanBUS.CheckOut(hoaDon.MaGoc);
                 DuLieuDaThayDoi = true;
                 MessageBox.Show("Đã thanh toán hóa đơn.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 Close();
@@ -258,6 +260,7 @@ namespace QLKS_AnPhu.View
     public class DichVuHoaDonItem
     {
         public int Stt { get; init; }
+        public int? MaPhong { get; init; }
         public string TenDichVu { get; init; } = string.Empty;
         public decimal SoLuong { get; init; }
         public decimal DonGia { get; init; }

@@ -309,6 +309,13 @@ namespace QLKS_AnPhu.UserControls
                     TienCoc = tienCoc,
                     TienPhong = tienPhong,
                     TienDichVu = tienDichVu,
+                    DichVuDaThem = phongItem.DichVuDaThem.Select(item => new DichVuDatPhongDTO
+                    {
+                        Ma = item.Ma,
+                        Ten = item.Ten,
+                        SoLuong = item.SoLuong,
+                        DonGia = item.DonGia
+                    }).ToList(),
                     GhiChu = TaoGhiChuDoan(phongDaChon.Count, tongDatCoc, tongTienConLai, tienDichVu, TaoMoTaDichVu(phongItem), TxtGhiChu.Text.Trim())
                 });
             }

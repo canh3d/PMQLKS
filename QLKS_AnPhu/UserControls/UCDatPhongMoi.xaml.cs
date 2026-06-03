@@ -54,6 +54,13 @@ namespace QLKS_AnPhu.UserControls
                 TienCoc = NhanNgay ? 0 : tienDatCoc,
                 TienPhong = tienPhong,
                 TienDichVu = tienDichVu,
+                DichVuDaThem = dichVuDaThem.Select(item => new DichVuDatPhongDTO
+                {
+                    Ma = item.Ma,
+                    Ten = item.Ten,
+                    SoLuong = item.SoLuong,
+                    DonGia = item.DonGia
+                }).ToList(),
                 GhiChu = phong.GhiChu == "--" ? string.Empty : phong.GhiChu
             };
         }

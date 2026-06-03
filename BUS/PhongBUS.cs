@@ -7,6 +7,7 @@ namespace QLKS_AnPhu.BUS
     {
         private readonly PhongDAL phongDAL = new();
         private readonly DatPhongDAL datPhongDAL = new();
+        private readonly ThanhToanFlowBUS thanhToanBUS = new();
 
         public List<PhongDTO> LayDanhSach()
         {
@@ -95,6 +96,17 @@ namespace QLKS_AnPhu.BUS
             datPhongDAL.NhanPhongTuDatPhong(maDatPhong);
         }
 
+        public KetQuaCheckInThanhToanDTO NhanPhongTuDatPhong(int maDatPhong, decimal tongTienDuKien, decimal tienDatCocTruoc)
+        {
+            datPhongDAL.NhanPhongTuDatPhong(maDatPhong);
+            return thanhToanBUS.CheckInTuDatPhong(maDatPhong, tongTienDuKien, tienDatCocTruoc);
+        }
+
+        public void NoShow(int maDatPhong)
+        {
+            thanhToanBUS.NoShow(maDatPhong);
+        }
+
         public void DatPhongTheoDoan(IEnumerable<PhongDTO> danhSachPhong)
         {
             foreach (PhongDTO phong in danhSachPhong.Where(item => !DangDuocSuDung(item)))
@@ -135,7 +147,7 @@ namespace QLKS_AnPhu.BUS
                    phong.TrangThai.Contains("thue", StringComparison.OrdinalIgnoreCase) ||
                    phong.TrangThai.Contains("đặt", StringComparison.OrdinalIgnoreCase) ||
                    phong.TrangThai.Contains("dat", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("Ä‘áº·t", StringComparison.OrdinalIgnoreCase) ||
+                   phong.TrangThai.Contains("đặt", StringComparison.OrdinalIgnoreCase) ||
                    phong.TrangThai.Contains("đang", StringComparison.OrdinalIgnoreCase) ||
                    phong.TrangThai.Contains("dang", StringComparison.OrdinalIgnoreCase) ||
                    phong.TrangThai.Contains("bận", StringComparison.OrdinalIgnoreCase) ||

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Data.SqlClient;
+using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DAL;
 
 namespace QLKS_AnPhu.View
@@ -11,6 +12,7 @@ namespace QLKS_AnPhu.View
     public partial class HoaDon : UserControl
     {
         private readonly ObservableCollection<HoaDonItem> danhSachHoaDon = new();
+        private readonly ThanhToanFlowBUS thanhToanBUS = new();
         private bool dangNapDuLieu;
 
         public HoaDon()
@@ -77,13 +79,13 @@ namespace QLKS_AnPhu.View
 
             if (TableExists("PHIEUTHUE"))
             {
-                string tenPhongExpr = ColumnExists("PHONG", "TenPhong") ? "P.TenPhong" : "N'P' + P.SoPhong";
+                string tenPhongExpr = TenPhongSql("P");
                 string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
                 string ngayTraExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong") ? "ISNULL(PT.NgayTraPhong, PT.NgayTraDuKien)" : "PT.NgayTraDuKien";
                 string ngayLapExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong") ? "ISNULL(PT.NgayTraPhong, PT.NgayNhan)" : "PT.NgayNhan";
                 string tienPhongExpr = TienPhongSql("PT.NgayNhan", "PT.NgayTraDuKien", ngayTraExpr);
                 bool thueCoChiTietDoan = TableExists("CHITIETDATPHONG") && ColumnExists("PHIEUTHUE", "MaDatPhong");
-                string tenPhongP2Expr = ColumnExists("PHONG", "TenPhong") ? "P2.TenPhong" : "N'P' + P2.SoPhong";
+                string tenPhongP2Expr = TenPhongSql("P2");
                 string tongGiaNgayThueExpr = @"(SELECT ISNULL(SUM(ISNULL(NULLIF(LP2.DonGiaDem, 0), ISNULL(LP2.DonGiaGio, 0) * 24.0)), 0)
                                                 FROM dbo.CHITIETDATPHONG CT2
                                                 JOIN dbo.PHONG P2 ON CT2.MaPhong = P2.MaPhong
@@ -215,8 +217,8 @@ LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong");
             {
                 string ngayNhan = ColumnExists(bangDatPhong, "NgayNhanDuKien") ? "DP.NgayNhanDuKien" : "DP.NgayNhanPhong";
                 string ngayTra = ColumnExists(bangDatPhong, "NgayTraDuKien") ? "DP.NgayTraDuKien" : "DP.NgayTraPhong";
-                string tenPhongExpr = ColumnExists("PHONG", "TenPhong") ? "P.TenPhong" : "N'P' + P.SoPhong";
-                string tenPhongP2Expr = ColumnExists("PHONG", "TenPhong") ? "P2.TenPhong" : "N'P' + P2.SoPhong";
+                string tenPhongExpr = TenPhongSql("P");
+                string tenPhongP2Expr = TenPhongSql("P2");
                 string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
                 bool coChiTietDatPhong = TableExists("CHITIETDATPHONG");
                 bool coMaPhongDat = ColumnExists(bangDatPhong, "MaPhong");
@@ -526,7 +528,7 @@ ORDER BY X.NgayLapHoaDon DESC";
 
             try
             {
-                ThanhToanPhieuThue(item.MaGoc);
+                thanhToanBUS.CheckOut(item.MaGoc);
                 MessageBox.Show("Đã thanh toán hóa đơn.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 TaiDuLieu();
             }
@@ -702,6 +704,26 @@ END AS decimal(18, 2))";
                 new SqlParameter("@TableName", tableName),
                 new SqlParameter("@ColumnName", columnName));
             return Convert.ToInt32(result) > 0;
+        }
+
+        private static string TenPhongSql(string alias)
+        {
+            if (ColumnExists("PHONG", "TenPhong"))
+            {
+                return alias + ".TenPhong";
+            }
+
+            if (ColumnExists("PHONG", "SoPhong"))
+            {
+                return alias + ".SoPhong";
+            }
+
+            if (ColumnExists("PHONG", "MaSoPhong"))
+            {
+                return alias + ".MaSoPhong";
+            }
+
+            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
         }
     }
 

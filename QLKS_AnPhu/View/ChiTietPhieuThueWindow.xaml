@@ -156,7 +156,7 @@
                     <TextBlock x:Name="TxtNgayNhanDuKien" Grid.Row="4" Grid.Column="1" />
                     <TextBlock Grid.Row="5" Text="Giờ trả dự kiến" />
                     <TextBlock x:Name="TxtNgayTraDuKien" Grid.Row="5" Grid.Column="1" />
-                    <TextBlock Grid.Row="6" Text="Thời lượng" />
+                    <TextBlock Grid.Row="6" Text="Thời gian còn lại" />
                     <TextBlock x:Name="TxtThoiLuong" Grid.Row="6" Grid.Column="1" />
                     <TextBlock Grid.Row="7" Text="Loại phiếu" />
                     <TextBlock x:Name="TxtLoaiPhieu" Grid.Row="7" Grid.Column="1" />

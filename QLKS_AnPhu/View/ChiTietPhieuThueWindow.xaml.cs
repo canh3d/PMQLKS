@@ -11,6 +11,7 @@ namespace QLKS_AnPhu.View
         private readonly string loaiPhieu;
         private readonly int maGoc;
         private readonly PhongBUS phongBUS = new();
+        private readonly ThanhToanFlowBUS thanhToanBUS = new();
         private DataRow? currentRow;
 
         public bool DuLieuDaThayDoi { get; private set; }
@@ -60,18 +61,21 @@ namespace QLKS_AnPhu.View
                 TxtLoaiKhach.Text = GetString(currentRow, "LoaiKhach");
                 TxtDiaChi.Text = GetString(currentRow, "DiaChi");
                 TxtPhong.Text = thongTinPhong.SoLuongPhong > 1
-                    ? thongTinPhong.SoPhong + " (" + thongTinPhong.SoLuongPhong.ToString("N0") + " phĂ²ng)"
+                    ? thongTinPhong.SoPhong + " (" + thongTinPhong.SoLuongPhong.ToString("N0") + " phòng)"
                     : thongTinPhong.SoPhong;
                 TxtLoaiPhong.Text = thongTinPhong.TenLoaiPhong;
                 if (thongTinPhong.SoLuongPhong > 1)
                 {
-                    TxtPhong.Text = thongTinPhong.SoPhong + " (" + thongTinPhong.SoLuongPhong.ToString("N0") + " phong)";
+                    TxtPhong.Text = thongTinPhong.SoPhong + " (" + thongTinPhong.SoLuongPhong.ToString("N0") + " phòng)";
                 }
                 TxtNgayNhan.Text = GetDateText(currentRow, "NgayNhanThucTe");
                 TxtNgayTra.Text = GetDateText(currentRow, "NgayTraThucTe");
                 TxtNgayNhanDuKien.Text = GetDateText(currentRow, "NgayNhanDuKien");
                 TxtNgayTraDuKien.Text = GetDateText(currentRow, "NgayTraDuKien");
-                TxtThoiLuong.Text = TinhThoiLuong(GetDate(currentRow, "NgayNhan"), GetDate(currentRow, "NgayTra"));
+                TxtThoiLuong.Text = TinhThoiGianConLai(
+                    GetDate(currentRow, "NgayNhan"),
+                    GetDate(currentRow, "NgayTraDuKien"),
+                    TxtTrangThai.Text);
                 TxtLoaiPhieu.Text = loaiPhieu == "DAT" ? "Phiếu đặt phòng" : "Phiếu thuê";
                 TxtTienPhong.Text = tienPhong.ToString("N0") + " VND";
                 TxtPhuThu.Text = phuThu.ToString("N0") + " VND";
@@ -94,9 +98,10 @@ namespace QLKS_AnPhu.View
 
         private string SqlPhieuThue()
         {
-            string tenPhongExpr = ColumnExists("PHONG", "TenPhong") ? "P.TenPhong" : "N'P' + P.SoPhong";
-            string ngayTraThucTeExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong") ? "ISNULL(PT.NgayTraPhong, PT.NgayTraDuKien)" : "PT.NgayTraDuKien";
-            string tienPhongExpr = TienPhongSql("PT.NgayNhan", "PT.NgayTraDuKien", ngayTraThucTeExpr);
+            string tenPhongExpr = TenPhongSql("P");
+            string ngayTraThucTeExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong") ? "PT.NgayTraPhong" : "CAST(NULL AS datetime)";
+            string ngayTinhTienExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong") ? "ISNULL(PT.NgayTraPhong, PT.NgayTraDuKien)" : "PT.NgayTraDuKien";
+            string tienPhongExpr = TienPhongSql("PT.NgayNhan", "PT.NgayTraDuKien", ngayTinhTienExpr);
             string diaChiExpr = ColumnExists("KHACHHANG", "DiaChi") ? "KH.DiaChi" : "CAST(NULL AS nvarchar(255))";
             string ghiChuExpr = ColumnExists("PHIEUTHUE", "GhiChu") ? "PT.GhiChu" : "CAST(NULL AS nvarchar(255))";
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
@@ -142,7 +147,7 @@ namespace QLKS_AnPhu.View
         private string SqlDatPhong()
         {
             string bangDatPhong = TableExists("PHIEUDATPHONG") ? "PHIEUDATPHONG" : "DATPHONG";
-            string tenPhongExpr = ColumnExists("PHONG", "TenPhong") ? "P.TenPhong" : "N'P' + P.SoPhong";
+            string tenPhongExpr = TenPhongSql("P");
             string ngayNhan = ColumnExists(bangDatPhong, "NgayNhanDuKien") ? "DP.NgayNhanDuKien" : "DP.NgayNhanPhong";
             string ngayTra = ColumnExists(bangDatPhong, "NgayTraDuKien") ? "DP.NgayTraDuKien" : "DP.NgayTraPhong";
             string tienCoc = ColumnExists(bangDatPhong, "TienCoc") ? "DP.TienCoc" : "DP.DatCoc";
@@ -269,7 +274,7 @@ namespace QLKS_AnPhu.View
         private DataTable LayPhongTheoPhieuThue()
         {
             string bangDatPhong = TableExists("PHIEUDATPHONG") ? "PHIEUDATPHONG" : TableExists("DATPHONG") ? "DATPHONG" : string.Empty;
-            string tenPhongExpr = ColumnExists("PHONG", "TenPhong") ? "P.TenPhong" : "N'P' + P.SoPhong";
+            string tenPhongExpr = TenPhongSql("P");
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
             string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0)";
             bool coMaDatPhong = ColumnExists("PHIEUTHUE", "MaDatPhong");
@@ -331,7 +336,7 @@ WHERE PT.MaThue = @Ma", new SqlParameter("@Ma", maGoc));
         private DataTable LayPhongTheoDatPhong()
         {
             string bangDatPhong = TableExists("PHIEUDATPHONG") ? "PHIEUDATPHONG" : "DATPHONG";
-            string tenPhongExpr = ColumnExists("PHONG", "TenPhong") ? "P.TenPhong" : "N'P' + P.SoPhong";
+            string tenPhongExpr = TenPhongSql("P");
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
             string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0)";
 
@@ -410,7 +415,21 @@ ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
 
             try
             {
-                phongBUS.NhanPhongTuDatPhong(maGoc);
+                decimal tongTienDuKien = 0;
+                decimal tienDatCocTruoc = 0;
+                if (currentRow != null)
+                {
+                    ThongTinPhongChiTiet thongTinPhong = LayThongTinPhongChiTiet();
+                    decimal tienPhong = thongTinPhong.TienPhong > 0 ? thongTinPhong.TienPhong : GetDecimal(currentRow, "TienPhong");
+                    decimal phuThu = GetDecimal(currentRow, "PhuPhi");
+                    decimal tienDichVu = LoadDichVuSuDung();
+                    bool laVip = GetString(currentRow, "LoaiKhach").Contains("VIP", StringComparison.OrdinalIgnoreCase);
+                    decimal giamGia = laVip ? Math.Round((tienPhong + phuThu) * 0.1m, 0) : 0;
+                    tongTienDuKien = Math.Max(0, tienPhong + phuThu + tienDichVu - giamGia);
+                    tienDatCocTruoc = GetDecimal(currentRow, "TienCoc");
+                }
+
+                phongBUS.NhanPhongTuDatPhong(maGoc, tongTienDuKien, tienDatCocTruoc);
                 DuLieuDaThayDoi = true;
                 MessageBox.Show("Đã nhận phòng. Phòng đã chuyển sang trạng thái đang thuê.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 LoadChiTiet();
@@ -435,7 +454,7 @@ ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
 
             try
             {
-                TraPhong();
+                thanhToanBUS.CheckOut(maGoc);
                 DuLieuDaThayDoi = true;
                 MessageBox.Show("Đã trả phòng.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 LoadChiTiet();
@@ -546,6 +565,47 @@ END AS decimal(18, 2))";
             Close();
         }
 
+        private static string TinhThoiGianConLai(DateTime start, DateTime end, string trangThai)
+        {
+            if (end <= start)
+            {
+                return "--";
+            }
+
+            bool dangThue = BoDau(trangThai).Contains("thue", StringComparison.OrdinalIgnoreCase);
+            if (!dangThue)
+            {
+                return DinhDangKhoangThoiGian(end - start);
+            }
+
+            TimeSpan remaining = end - DateTime.Now;
+            if (remaining.TotalMinutes < 0)
+            {
+                return "Qua gio " + DinhDangKhoangThoiGian(DateTime.Now - end);
+            }
+
+            return "Con lai " + DinhDangKhoangThoiGian(remaining);
+        }
+
+        private static string DinhDangKhoangThoiGian(TimeSpan value)
+        {
+            int totalHours = Math.Max(1, (int)Math.Ceiling(value.TotalHours));
+            int days = totalHours / 24;
+            int hours = totalHours % 24;
+
+            if (days > 0 && hours > 0)
+            {
+                return days + " ngay " + hours + " gio";
+            }
+
+            if (days > 0)
+            {
+                return days + " ngay";
+            }
+
+            return totalHours + " gio";
+        }
+
         private static string TinhThoiLuong(DateTime start, DateTime end)
         {
             if (end <= start) return "1 ngày";
@@ -594,6 +654,36 @@ END AS decimal(18, 2))";
                 new SqlParameter("@TableName", tableName),
                 new SqlParameter("@ColumnName", columnName));
             return Convert.ToInt32(result) > 0;
+        }
+
+        private static string TenPhongSql(string alias)
+        {
+            if (ColumnExists("PHONG", "TenPhong"))
+            {
+                return alias + ".TenPhong";
+            }
+
+            if (ColumnExists("PHONG", "SoPhong"))
+            {
+                return alias + ".SoPhong";
+            }
+
+            if (ColumnExists("PHONG", "MaSoPhong"))
+            {
+                return alias + ".MaSoPhong";
+            }
+
+            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
+        }
+
+        private static string BoDau(string value)
+        {
+            string formD = (value ?? string.Empty).Normalize(System.Text.NormalizationForm.FormD);
+            char[] chars = formD
+                .Where(ch => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                .Select(ch => ch)
+                .ToArray();
+            return new string(chars).Normalize(System.Text.NormalizationForm.FormC);
         }
 
         private class ThongTinPhongChiTiet
