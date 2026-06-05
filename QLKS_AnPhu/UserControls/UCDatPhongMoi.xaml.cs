@@ -261,6 +261,7 @@ namespace QLKS_AnPhu.UserControls
             PanelNgayTra.Visibility = theoGio ? Visibility.Collapsed : Visibility.Visible;
             TxtGioNhan.Visibility = theoGio ? Visibility.Visible : Visibility.Collapsed;
             PanelDatTheoGio.Visibility = theoGio ? Visibility.Visible : Visibility.Collapsed;
+            TxtGioTraNgay.IsReadOnly = cheDo == CheDoDatPhong.QuaDem;
 
             if (theoGio)
             {
@@ -270,6 +271,8 @@ namespace QLKS_AnPhu.UserControls
             }
             else if (cheDo == CheDoDatPhong.QuaDem)
             {
+                TxtGioNhanNgay.Text = "21:00";
+                TxtGioTraNgay.Text = "08:00";
                 GrpThongTinDatPhong.Header = "THÔNG TIN ĐẶT PHÒNG QUA ĐÊM";
                 LblNgayNhan.Text = "Ngày nhận";
                 LblNgayTra.Text = "Ngày trả";
@@ -569,7 +572,7 @@ namespace QLKS_AnPhu.UserControls
             DateTime date = DpNgayTra.SelectedDate ?? LayNgayNhanLuu().AddDays(1);
             if (cheDoHienTai == CheDoDatPhong.QuaDem)
             {
-                return date.Date.Add(LayGio(TxtGioTraNgay.Text, new TimeSpan(8, 0, 0)));
+                return date.Date.AddHours(8);
             }
 
             return date.Date.Add(LayGio(TxtGioTraNgay.Text, new TimeSpan(12, 0, 0)));

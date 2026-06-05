@@ -7,7 +7,7 @@
              mc:Ignorable="d"
              d:DesignHeight="873.846"
              d:DesignWidth="1400"
-             Background="White"
+             Background="#F7F8FA"
              SnapsToDevicePixels="True"
              UseLayoutRounding="True"
              TextOptions.TextFormattingMode="Display"
@@ -18,49 +18,92 @@
         <SolidColorBrush x:Key="TextMainBrush" Color="#111827" />
         <SolidColorBrush x:Key="TextMutedBrush" Color="#667085" />
         <SolidColorBrush x:Key="BlueBrush" Color="#0F3B62" />
+        <SolidColorBrush x:Key="PrimaryBrushLocal" Color="#2563EB" />
         <SolidColorBrush x:Key="GreenBrush" Color="#1F8E52" />
         <SolidColorBrush x:Key="RedBrush" Color="#B32835" />
         <SolidColorBrush x:Key="GrayBrush" Color="#667085" />
         <SolidColorBrush x:Key="VipBrush" Color="#B6732B" />
 
         <Style x:Key="PanelStyle" TargetType="Border">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#D5DFEA" />
+            <Setter Property="Background" Value="#FAFAFA" />
+            <Setter Property="BorderBrush" Value="#D8DEE8" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="CornerRadius" Value="12" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
         </Style>
 
         <Style x:Key="ToolButtonStyle" TargetType="Button">
+            <Style.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                </Style>
+                <Style TargetType="iconPacks:PackIconMaterial">
+                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                </Style>
+            </Style.Resources>
             <Setter Property="Height" Value="34" />
             <Setter Property="Padding" Value="12,0" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.92" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.82" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Background" Value="#E5E7EB" />
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#CBD5E1" />
+                                <Setter Property="Foreground" Value="#64748B" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="LargeActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ToolButtonStyle}">
-            <Setter Property="Height" Value="50" />
+            <Setter Property="Height" Value="46" />
             <Setter Property="FontSize" Value="15" />
         </Style>
 
         <Style x:Key="DetailTextBoxStyle" TargetType="TextBox">
-            <Setter Property="Height" Value="30" />
+            <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="8,0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="IsReadOnly" Value="True" />
-            <Setter Property="Background" Value="#F7F7F7" />
-            <Setter Property="BorderBrush" Value="#B8BDC6" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
             <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
         </Style>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid Margin="18,12,18,12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="78" />
-            <RowDefinition Height="58" />
+            <RowDefinition Height="0" />
+            <RowDefinition Height="44" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -72,7 +115,7 @@
                     <GradientStop Color="#0B4EA2" Offset="1" />
                 </LinearGradientBrush>
             </Border.Background>
-            <StackPanel Margin="18,12,0,0">
+            <StackPanel Margin="18,12,0,0" Visibility="Collapsed">
                 <TextBlock Text="QUẢN LÝ KHÁCH HÀNG"
                            FontSize="23"
                            FontWeight="SemiBold"
@@ -84,7 +127,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="14,12,14,8">
+        <Grid Grid.Row="1" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="340" />
                 <ColumnDefinition Width="8" />
@@ -146,7 +189,7 @@
                     Content="Khách VIP" />
         </Grid>
 
-        <Grid Grid.Row="2" Margin="14,0,14,14">
+        <Grid Grid.Row="2" Margin="0,0,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2.72*" />
                 <ColumnDefinition Width="16" />
@@ -234,7 +277,8 @@
                               RowHeight="34"
                               FontSize="13"
                               BorderThickness="0"
-                              AlternatingRowBackground="#FAFAFA"
+                              AlternationCount="2"
+                              AlternatingRowBackground="#F8FAFC"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto"
                               SelectionChanged="DgKhachHang_SelectionChanged">
@@ -243,11 +287,31 @@
                                 <Setter Property="Height" Value="34" />
                                 <Setter Property="FontSize" Value="13" />
                                 <Setter Property="FontWeight" Value="SemiBold" />
-                                <Setter Property="Background" Value="#E5E7EB" />
-                                <Setter Property="BorderBrush" Value="#C5CBD5" />
+                                <Setter Property="Foreground" Value="#334155" />
+                                <Setter Property="Background" Value="#EEF2F7" />
+                                <Setter Property="BorderBrush" Value="#CBD5E1" />
                                 <Setter Property="BorderThickness" Value="0,0,1,1" />
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="White" />
+                                <Setter Property="Foreground" Value="#334155" />
+                                <Setter Property="SnapsToDevicePixels" Value="True" />
+                                <Style.Triggers>
+                                    <Trigger Property="AlternationIndex" Value="1">
+                                        <Setter Property="Background" Value="#F8FAFC" />
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#EEF4FF" />
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#DBEAFE" />
+                                        <Setter Property="Foreground" Value="#111827" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Mã KH" Binding="{Binding Ma}" Width="62" />
                             <DataGridTextColumn Header="Họ tên khách hàng" Binding="{Binding HoTen}" Width="180" />

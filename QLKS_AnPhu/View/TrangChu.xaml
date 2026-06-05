@@ -2,21 +2,193 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="600"
-             d:DesignWidth="1000"
-             Background="#F4F7FA">
-    <Grid Margin="34">
-        <StackPanel>
-            <TextBlock Text="Trang chủ"
-                       FontSize="26"
-                       FontWeight="Bold"
-                       Foreground="#172033" />
-            <TextBlock Text="Chọn chức năng ở thanh menu bên trái để bắt đầu."
-                       Margin="0,12,0,0"
-                       FontSize="15"
-                       Foreground="#667085" />
-        </StackPanel>
-    </Grid>
+             d:DesignHeight="760"
+             d:DesignWidth="1120"
+             Background="{StaticResource AppBackgroundBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="22" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="22" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" CornerRadius="18" Padding="28" Effect="{StaticResource SoftShadow}">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#2563EB" Offset="0" />
+                        <GradientStop Color="#8B5CF6" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="TỔNG QUAN KHÁCH SẠN" FontSize="32" FontWeight="Bold" Foreground="White" Visibility="Collapsed" />
+                        <TextBlock Text="Theo dõi nhanh doanh thu, phòng, khách hàng và hiệu suất vận hành trong ngày."
+                                   Margin="0,8,0,0"
+                                   FontSize="15"
+                                   Foreground="#E0EAFF"
+                                   Visibility="Collapsed" />
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <Button Style="{StaticResource AppButtonStyle}" Background="White" BorderBrush="White" Foreground="{StaticResource PrimaryBrush}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="Plus" Width="18" Height="18" Margin="0,0,8,0" />
+                                    <TextBlock Text="Đặt phòng mới" Style="{StaticResource ButtonContentTextStyle}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource AppOutlineButtonStyle}" Margin="12,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="FileChart" Width="18" Height="18" Margin="0,0,8,0" />
+                                    <TextBlock Text="Xem báo cáo" Style="{StaticResource ButtonContentTextStyle}" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Width="150" Height="150" CornerRadius="36" Background="#FFFFFF22" BorderBrush="#FFFFFF44" BorderThickness="1">
+                        <iconPacks:PackIconMaterial Kind="HomeCity" Width="86" Height="86" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <UniformGrid Grid.Row="2" Columns="5">
+                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,14,0">
+                    <StackPanel>
+                        <Border Width="54" Height="54" CornerRadius="16" HorizontalAlignment="Left">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#22C55E" Offset="0" />
+                                    <GradientStop Color="#06B6D4" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <iconPacks:PackIconMaterial Kind="CashMultiple" Width="30" Height="30" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Doanh thu" Margin="0,16,0,4" Foreground="{StaticResource TextMutedBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="TxtDoanhThuHomNay" Text="0 đ" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,14,0">
+                    <StackPanel>
+                        <Border Width="54" Height="54" CornerRadius="16" Background="#DBEAFE" HorizontalAlignment="Left">
+                            <iconPacks:PackIconMaterial Kind="Bed" Width="30" Height="30" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Phòng đang thuê" Margin="0,16,0,4" Foreground="{StaticResource TextMutedBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="TxtPhongDangThue" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,14,0">
+                    <StackPanel>
+                        <Border Width="54" Height="54" CornerRadius="16" Background="#DCFCE7" HorizontalAlignment="Left">
+                            <iconPacks:PackIconMaterial Kind="CalendarCheck" Width="30" Height="30" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Phòng trống" Margin="0,16,0,4" Foreground="{StaticResource TextMutedBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="TxtPhongTrong" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,14,0">
+                    <StackPanel>
+                        <Border Width="54" Height="54" CornerRadius="16" Background="#E0F2FE" HorizontalAlignment="Left">
+                            <iconPacks:PackIconMaterial Kind="AccountGroup" Width="30" Height="30" Foreground="{StaticResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Khách hàng" Margin="0,16,0,4" Foreground="{StaticResource TextMutedBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="TxtKhachHang" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource AppKpiCardStyle}">
+                    <StackPanel>
+                        <Border Width="54" Height="54" CornerRadius="16" Background="#F5F3FF" HorizontalAlignment="Left">
+                            <iconPacks:PackIconMaterial Kind="ChartDonut" Width="30" Height="30" Foreground="{StaticResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Tỷ lệ lấp đầy" Margin="0,16,0,4" Foreground="{StaticResource TextMutedBrush}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="TxtTyLeLapDay" Text="0%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="22" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource AppCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Hoạt động nhanh" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                        <TextBlock Text="Các thao tác thường dùng trong vận hành khách sạn." Margin="0,5,0,18" Foreground="{StaticResource TextMutedBrush}" />
+                        <WrapPanel>
+                            <Button Style="{StaticResource AppButtonStyle}" Margin="0,0,12,12">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="Plus" Width="18" Height="18" Margin="0,0,8,0" />
+                                    <TextBlock Text="Thêm mới" Style="{StaticResource ButtonContentTextStyle}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource AppOutlineButtonStyle}" Margin="0,0,12,12">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="Printer" Width="18" Height="18" Margin="0,0,8,0" />
+                                    <TextBlock Text="In danh sách" Style="{StaticResource ButtonContentTextStyle}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource AppOutlineButtonStyle}" Margin="0,0,12,12">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="FileExcel" Width="18" Height="18" Margin="0,0,8,0" />
+                                    <TextBlock Text="Xuất Excel" Style="{StaticResource ButtonContentTextStyle}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource AppOutlineButtonStyle}" Margin="0,0,12,12">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" />
+                                    <TextBlock Text="Làm mới" Style="{StaticResource ButtonContentTextStyle}" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource AppCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Nhận diện màu form" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                        <TextBlock Text="Mỗi phân hệ có gradient riêng nhưng dùng chung style." Margin="0,5,0,18" Foreground="{StaticResource TextMutedBrush}" />
+                        <Border Height="12" CornerRadius="6" Margin="0,0,0,10">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#2563EB" Offset="0" />
+                                    <GradientStop Color="#8B5CF6" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border Height="12" CornerRadius="6" Margin="0,0,0,10">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#22C55E" Offset="0" />
+                                    <GradientStop Color="#2563EB" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border Height="12" CornerRadius="6" Margin="0,0,0,10">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#F59E0B" Offset="0" />
+                                    <GradientStop Color="#FACC15" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

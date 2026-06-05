@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Data.SqlClient;
@@ -21,6 +22,7 @@ namespace QLKS_AnPhu.View
         private RoomStayData? stayData;
         private decimal tienPhong;
         private decimal tienDichVu;
+        private decimal phuPhi;
         private decimal datCoc;
 
         public PhongChiTietWindow(PhongDTO phong)
@@ -39,15 +41,16 @@ namespace QLKS_AnPhu.View
             dichVuHienTai = LoadDichVu(stayData);
 
             tienPhong = stayData?.TienPhong ?? 0;
+            phuPhi = stayData?.PhuPhi ?? 0;
             datCoc = stayData?.TienCoc ?? 0;
 
             string tenPhong = $"Phòng {phong.MaHienThi}";
             Title = $"Thông tin chi tiết - {tenPhong}";
             TxtTieuDe.Text = $"Chi tiết phòng - {tenPhong}";
             TxtSoPhongHeader.Text = phong.MaHienThi;
-            TxtNgayNhan.Text = stayData?.NgayNhan?.ToString("dd/MM/yyyy HH:mm") ?? string.Empty;
-            TxtNgayNhanSidebar.Text = TxtNgayNhan.Text;
-            TxtNgayTra.Text = stayData?.NgayTra?.ToString("dd/MM/yyyy HH:mm") ?? string.Empty;
+            TxtNgayNhan.Text = stayData?.NgayNhanThucTe?.ToString("dd/MM/yyyy HH:mm") ?? string.Empty;
+            TxtNgayNhanSidebar.Text = stayData?.NgayNhanDat?.ToString("dd/MM/yyyy HH:mm") ?? string.Empty;
+            TxtNgayTra.Text = stayData?.NgayTraDat?.ToString("dd/MM/yyyy HH:mm") ?? string.Empty;
             TxtSoLuongKhachHeader.Text = stayData?.SoNguoi > 0 ? $"{stayData.SoNguoi} người" : "--";
             TxtHoTen.Text = stayData?.HoTen ?? string.Empty;
             TxtSDT.Text = stayData?.SDT ?? string.Empty;
@@ -78,11 +81,15 @@ namespace QLKS_AnPhu.View
             BtnNhanPhong.IsEnabled = daDat && !dangThue;
             BtnHuyDat.IsEnabled = daDat && !dangThue;
             BtnTraPhong.IsEnabled = dangThue;
+            BtnGiaHanPhong.IsEnabled = dangThue && stayData?.MaThue.HasValue == true;
+            BtnDoiPhong.IsEnabled = stayData?.MaThue.HasValue == true || stayData?.MaDatPhong.HasValue == true;
             BtnDonDep.IsEnabled = canDonDep;
             BtnThanhToan.IsEnabled = dangThue || stayData != null;
             BtnLuu.IsEnabled = stayData != null;
-            CboDichVuThem.IsEnabled = stayData?.MaThue.HasValue == true && dangThue;
+            CboDichVuThem.IsEnabled = stayData?.MaThue.HasValue == true || stayData?.MaDatPhong.HasValue == true;
             TxtSoLuongDichVu.IsEnabled = CboDichVuThem.IsEnabled;
+            BtnGiamSoLuongDichVu.IsEnabled = CboDichVuThem.IsEnabled;
+            BtnTangSoLuongDichVu.IsEnabled = CboDichVuThem.IsEnabled;
         }
 
         private void NapDanhSachDichVuThem()
@@ -106,10 +113,12 @@ namespace QLKS_AnPhu.View
         private void CapNhatHoaDon()
         {
             tienDichVu = dichVuHienTai.Sum(item => item.ThanhTien);
-            decimal vat = Math.Round((tienPhong + tienDichVu) * 0.1m, 0);
-            decimal tongThanhToan = tienPhong + tienDichVu + vat;
+            phuPhi = stayData?.PhuPhi ?? 0;
+            decimal vat = Math.Round(Math.Max(0, tienPhong + phuPhi) * 0.1m, 0);
+            decimal tongThanhToan = tienPhong + tienDichVu + phuPhi + vat;
             decimal daThanhToanLucNhanPhong = datCoc;
             decimal canThanhToanThem = Math.Max(0, tongThanhToan - daThanhToanLucNhanPhong);
+            string nhanSomText = TaoNhanPhuPhiNhanSom();
 
             TxtSoTienBanDau.Text = stayData == null
                 ? "Phòng chưa có phiếu đặt/thuê đang hoạt động"
@@ -119,12 +128,34 @@ namespace QLKS_AnPhu.View
             {
                 new("Tiền phòng", tienPhong),
                 new("Dịch vụ phát sinh trong thời gian thuê", tienDichVu),
+                new(nhanSomText, phuPhi),
                 new("Thuế VAT (10%)", vat),
                 new("Đã thanh toán lúc nhận phòng", -daThanhToanLucNhanPhong),
                 new("Tổng tiền hóa đơn", tongThanhToan)
             };
 
             TxtKhaDung.Text = stayData == null ? "--" : $"{canThanhToanThem:N0} VND";
+        }
+
+        private string TaoNhanPhuPhiNhanSom()
+        {
+            if (stayData?.NgayNhanThucTe is not DateTime ngayNhanThucTe ||
+                stayData.NgayNhanDat is not DateTime ngayNhanDat ||
+                ngayNhanThucTe >= ngayNhanDat)
+            {
+                return "Phụ phí nhận sớm";
+            }
+
+            TimeSpan somHon = ngayNhanDat - ngayNhanThucTe;
+            int tongPhut = Math.Max(0, (int)Math.Round(somHon.TotalMinutes));
+            int soGio = tongPhut / 60;
+            int soPhut = tongPhut % 60;
+            string thoiGian = soGio > 0 && soPhut > 0
+                ? $"{soGio} giờ {soPhut} phút"
+                : soGio > 0
+                    ? $"{soGio} giờ"
+                    : $"{soPhut} phút";
+            return $"Phụ phí nhận sớm ({thoiGian})";
         }
 
         private RoomStayData? LoadRoomStayData()
@@ -145,13 +176,18 @@ namespace QLKS_AnPhu.View
                 return null;
             }
 
-            string ngayTraExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong")
-                ? "ISNULL(PT.NgayTraPhong, PT.NgayTraDuKien)"
-                : "PT.NgayTraDuKien";
+            string bangDatPhong = TableExists("PHIEUDATPHONG") ? "PHIEUDATPHONG" : TableExists("DATPHONG") ? "DATPHONG" : string.Empty;
+            bool coPhieuDatLienKet = !string.IsNullOrWhiteSpace(bangDatPhong) && ColumnExists("PHIEUTHUE", "MaDatPhong");
+            string ngayNhanDatColumn = coPhieuDatLienKet && ColumnExists(bangDatPhong, "NgayNhanDuKien") ? "NgayNhanDuKien" : "NgayNhanPhong";
+            string ngayTraDatColumn = coPhieuDatLienKet && ColumnExists(bangDatPhong, "NgayTraDuKien") ? "NgayTraDuKien" : "NgayTraPhong";
+            string ngayNhanDatExpr = coPhieuDatLienKet ? "ISNULL(DP." + ngayNhanDatColumn + ", PT.NgayNhan)" : "PT.NgayNhan";
+            string ngayTraDatExpr = coPhieuDatLienKet ? "ISNULL(DP." + ngayTraDatColumn + ", PT.NgayTraDuKien)" : "PT.NgayTraDuKien";
+            string joinDatPhong = coPhieuDatLienKet ? "LEFT JOIN dbo." + bangDatPhong + " DP ON PT.MaDatPhong = DP.MaDatPhong" : string.Empty;
             string maDatPhongExpr = ColumnExists("PHIEUTHUE", "MaDatPhong") ? "PT.MaDatPhong" : "CAST(NULL AS int)";
             string soNguoiExpr = ColumnExists("PHIEUTHUE", "SoNguoi") ? "PT.SoNguoi" : "1";
             string ghiChuExpr = ColumnExists("PHIEUTHUE", "GhiChu") ? "PT.GhiChu" : "CAST(NULL AS nvarchar(1000))";
-            string tienPhongExpr = TienPhongSql("PT.NgayNhan", "PT.NgayTraDuKien", ngayTraExpr);
+            string tienPhongExpr = PricingHelper.TienPhongSql(ngayNhanDatExpr, "PT.NgayTraDuKien", "PT.NgayTraDuKien");
+            string phuPhiExpr = PricingHelper.PhuThuNhanSomSql("PT.NgayNhan", ngayNhanDatExpr);
             bool coChiTietDatPhong = TableExists("CHITIETDATPHONG") && ColumnExists("PHIEUTHUE", "MaDatPhong");
             string joinPhong = coChiTietDatPhong
                 ? @"JOIN dbo.CHITIETDATPHONG CT ON PT.MaDatPhong = CT.MaDatPhong
@@ -176,17 +212,21 @@ SELECT TOP 1
        " + maDatPhongExpr + @" AS MaDatPhong,
        KH.HoTen,
        KH.SDT,
+       " + (ColumnExists("KHACHHANG", "LoaiKhach") ? "KH.LoaiKhach" : "CAST(N'' AS nvarchar(50))") + @" AS LoaiKhach,
        " + soNguoiExpr + @" AS SoNguoi,
-       PT.NgayNhan,
-       PT.NgayTraDuKien AS NgayTra,
+       PT.NgayNhan AS NgayNhanThucTe,
+       " + ngayNhanDatExpr + @" AS NgayNhanDat,
+       " + ngayTraDatExpr + @" AS NgayTraDat,
        ISNULL(PT.TienCoc, 0) AS TienCoc,
        " + tienPhongExpr + @" AS TienPhong,
+       " + phuPhiExpr + @" AS PhuPhi,
        " + ghiChuExpr + @" AS GhiChu,
        PT.TrangThai,
        " + soPhongDoanExpr + @" AS SoPhongDoan,
        " + danhSachPhongDoanExpr + @" AS DanhSachPhongDoan
 FROM dbo.PHIEUTHUE PT
 JOIN dbo.KHACHHANG KH ON PT.MaKH = KH.MaKH
+" + joinDatPhong + @"
 " + joinPhong + @"
 LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
 WHERE " + wherePhong + @"
@@ -213,7 +253,7 @@ ORDER BY PT.MaThue DESC",
             string tienCocExpr = ColumnExists(bangDatPhong, "TienCoc") ? "DP.TienCoc" : "DP.DatCoc";
             string soNguoiExpr = ColumnExists(bangDatPhong, "SoNguoi") ? "DP.SoNguoi" : "1";
             string ghiChuExpr = ColumnExists(bangDatPhong, "GhiChu") ? "DP.GhiChu" : "CAST(NULL AS nvarchar(1000))";
-            string tienPhongExpr = TienPhongSql(ngayNhanExpr, ngayTraExpr, ngayTraExpr);
+            string tienPhongExpr = PricingHelper.TienPhongSql(ngayNhanExpr, ngayTraExpr, ngayTraExpr);
             bool coChiTietDatPhong = TableExists("CHITIETDATPHONG");
             string joinPhong = coChiTietDatPhong
                 ? @"JOIN dbo.CHITIETDATPHONG CT ON DP.MaDatPhong = CT.MaDatPhong
@@ -236,11 +276,14 @@ SELECT TOP 1
        DP.MaDatPhong,
        KH.HoTen,
        KH.SDT,
+       " + (ColumnExists("KHACHHANG", "LoaiKhach") ? "KH.LoaiKhach" : "CAST(N'' AS nvarchar(50))") + @" AS LoaiKhach,
        " + soNguoiExpr + @" AS SoNguoi,
-       " + ngayNhanExpr + @" AS NgayNhan,
-       " + ngayTraExpr + @" AS NgayTra,
+       CAST(NULL AS datetime) AS NgayNhanThucTe,
+       " + ngayNhanExpr + @" AS NgayNhanDat,
+       " + ngayTraExpr + @" AS NgayTraDat,
        ISNULL(" + tienCocExpr + @", 0) AS TienCoc,
        " + tienPhongExpr + @" AS TienPhong,
+       CAST(0 AS decimal(18,2)) AS PhuPhi,
        " + ghiChuExpr + @" AS GhiChu,
        DP.TrangThai,
        " + soPhongDoanExpr + @" AS SoPhongDoan,
@@ -298,7 +341,7 @@ ORDER BY DP.MaDatPhong DESC",
             string maDvPs = ColumnExists(bangPhatSinh, "MaDVVT") ? "MaDVVT" : "MaDichVu";
             string maDv = ColumnExists("DICHVUVATTU", "MaDVVT") ? "MaDVVT" : "MaDichVu";
             string tenDv = ColumnExists("DICHVUVATTU", "TenDVVT") ? "TenDVVT" : "TenDichVu";
-            string psKey = GetFirstExistingColumn(bangPhatSinh, "MaPhatSinh", "MaCTPhatSinh", "MaChiTiet", "ID", "Ma");
+            string psKey = GetFirstExistingColumn(bangPhatSinh, "MaPhatSinh", "MaCTPhatSinh", "MaCTPS", "MaChiTiet", "ID", "Ma");
             string psKeyExpr = string.IsNullOrWhiteSpace(psKey) ? "CAST(NULL AS int)" : "PS." + psKey;
             string soLuongExpr = ColumnExists(bangPhatSinh, "SoLuong") ? "PS.SoLuong" : "1";
             string donGiaExpr = ColumnExists(bangPhatSinh, "DonGia") ? "ISNULL(PS.DonGia, DV.DonGia)" : "DV.DonGia";
@@ -347,11 +390,14 @@ WHERE " + keyFilter + roomFilter,
                 MaDatPhong = GetNullableInt(row, "MaDatPhong"),
                 HoTen = row["HoTen"]?.ToString() ?? string.Empty,
                 SDT = row["SDT"]?.ToString() ?? string.Empty,
+                LoaiKhach = row["LoaiKhach"]?.ToString() ?? string.Empty,
                 SoNguoi = Convert.ToInt32(GetDecimal(row, "SoNguoi")),
-                NgayNhan = GetNullableDate(row, "NgayNhan"),
-                NgayTra = GetNullableDate(row, "NgayTra"),
+                NgayNhanThucTe = GetNullableDate(row, "NgayNhanThucTe"),
+                NgayNhanDat = GetNullableDate(row, "NgayNhanDat"),
+                NgayTraDat = GetNullableDate(row, "NgayTraDat"),
                 TienCoc = GetDecimal(row, "TienCoc"),
                 TienPhong = GetDecimal(row, "TienPhong"),
+                PhuPhi = GetDecimal(row, "PhuPhi"),
                 GhiChu = row["GhiChu"]?.ToString() ?? string.Empty,
                 TrangThai = row["TrangThai"]?.ToString() ?? string.Empty,
                 SoPhongDoan = Convert.ToInt32(GetDecimal(row, "SoPhongDoan")),
@@ -362,8 +408,8 @@ WHERE " + keyFilter + roomFilter,
         private void CapNhatThoiGianLuuTru()
         {
             ThoiGianLuuTruResult result = TinhThoiGianLuuTru(
-                stayData?.NgayNhan,
-                stayData?.NgayTra,
+                stayData?.NgayNhanThucTe,
+                stayData?.NgayTraDat,
                 phong.TrangThai ?? string.Empty,
                 stayData?.TrangThai ?? string.Empty);
             TxtThoiGianLuuTru.Text = result.Text;
@@ -424,7 +470,16 @@ WHERE " + keyFilter + roomFilter,
             {
                 if (stayData?.MaDatPhong.HasValue == true)
                 {
-                    phongBUS.NhanPhongTuDatPhong(stayData.MaDatPhong.Value, tienPhong + tienDichVu, datCoc);
+                    decimal giamGia = stayData.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round((tienPhong + phuPhi) * 0.1m, 0) : 0;
+                    if (!DialogService.XacNhanThanhToanCheckIn(this, "Phòng " + phong.MaHienThi, tienPhong, tienDichVu, phuPhi, datCoc, giamGia))
+                    {
+                        return;
+                    }
+                    phongBUS.NhanPhongTuDatPhong(
+                        stayData.MaDatPhong.Value,
+                        Math.Max(0, tienPhong + tienDichVu + phuPhi - giamGia),
+                        datCoc,
+                        Math.Max(0, tienPhong + phuPhi - giamGia));
                     stayData = LoadRoomStayData();
                     PhongChiTietWindow_Loaded(sender, e);
                     return;
@@ -437,7 +492,7 @@ WHERE " + keyFilter + roomFilter,
                     phong.TrangThai = "Đang thuê";
                 }
 
-                decimal tongHoaDon = tienPhong + tienDichVu;
+                decimal tongHoaDon = tienPhong + tienDichVu + phuPhi;
                 decimal conThanhToan = Math.Max(0, tongHoaDon - datCoc);
                 MessageBox.Show(
                     $"Hóa đơn nhận phòng\n\n" +
@@ -452,6 +507,32 @@ WHERE " + keyFilter + roomFilter,
             catch (Exception ex)
             {
                 MessageBox.Show("Không nhận được phòng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnHuyDat_Click(object sender, RoutedEventArgs e)
+        {
+            if (stayData is not { MaDatPhong: int maDatPhong } || stayData.MaThue.HasValue)
+            {
+                MessageBox.Show("Phong nay khong co phieu dat dang cho nhan phong de huy.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (MessageBox.Show("Xac nhan huy dat phong nay?", "Huy dat", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                phongBUS.NoShow(maDatPhong);
+                MessageBox.Show("Da huy dat phong va chuyen phong ve trang thai trong.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Information);
+                stayData = null;
+                PhongChiTietWindow_Loaded(sender, e);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Khong the huy dat phong: " + ex.Message, "Loi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -481,6 +562,117 @@ WHERE " + keyFilter + roomFilter,
             }
         }
 
+        private void BtnGiaHanPhong_Click(object sender, RoutedEventArgs e)
+        {
+            if (stayData is not { MaThue: int maThue, NgayTraDat: DateTime ngayTraDat })
+            {
+                MessageBox.Show("Phòng này chưa có phiếu thuê đang hoạt động để gia hạn.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            GiaHanPhongWindow window = new(
+                new GiaHanPhongRequestDTO
+                {
+                    MaThue = maThue,
+                    MaDatPhong = stayData.MaDatPhong,
+                    MaPhong = phong.Ma,
+                    NgayTraCu = ngayTraDat,
+                    NgayTraMoi = ngayTraDat
+                },
+                phong.MaHienThi);
+
+            DialogService.ShowDimmedDialogResult(window, this);
+            if (window.DuLieuDaThayDoi)
+            {
+                PhongChiTietWindow_Loaded(sender, e);
+            }
+        }
+
+        private void BtnDoiPhong_Click(object sender, RoutedEventArgs e)
+        {
+            if (stayData is not { NgayTraDat: DateTime ngayTraDat } ||
+                (!stayData.MaThue.HasValue && !stayData.MaDatPhong.HasValue))
+            {
+                MessageBox.Show("Phòng này chưa có phiếu đặt hoặc phiếu thuê đang hoạt động để đổi phòng.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DoiPhongWindow window = new(
+                new DoiPhongRequestDTO
+                {
+                    MaThue = stayData.MaThue.GetValueOrDefault(),
+                    MaDatPhong = stayData.MaDatPhong,
+                    MaPhongCu = phong.Ma,
+                    NgayBatDau = stayData.MaThue.HasValue ? DateTime.Now : stayData.NgayNhanDat ?? DateTime.Now,
+                    NgayTraDuKien = ngayTraDat
+                },
+                phong.MaHienThi);
+
+            DialogService.ShowDimmedDialogResult(window, this);
+            if (window.DuLieuDaThayDoi)
+            {
+                Close();
+            }
+        }
+
+        private void BtnThanhToan_Click(object sender, RoutedEventArgs e)
+        {
+            if (stayData is not { MaThue: int maThue })
+            {
+                MessageBox.Show("Chi co the thanh toan khi phong dang co phieu thue.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (MessageBox.Show("Xac nhan thanh toan va tra phong?", "Thanh toan", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                KetQuaCheckOutThanhToanDTO result = thanhToanBUS.CheckOut(maThue);
+                MessageBox.Show($"Da thanh toan hoa don {result.MaHoaDon}. So tien thu them: {result.TienThuThem:N0} VND.", "Thanh toan", MessageBoxButton.OK, MessageBoxImage.Information);
+                PhongChiTietWindow_Loaded(sender, e);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Khong the thanh toan: " + ex.Message, "Loi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnLuu_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                stayData = LoadRoomStayData();
+                dichVuHienTai = LoadDichVu(stayData);
+                DgDichVu.ItemsSource = dichVuHienTai;
+                CapNhatHoaDon();
+                CapNhatThoiGianLuuTru();
+                CapNhatTrangThaiNut();
+                MessageBox.Show("Da luu va cap nhat du lieu hien thi.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Khong the luu du lieu: " + ex.Message, "Loi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnInHoaDon_Click(object sender, RoutedEventArgs e)
+        {
+            if (stayData == null)
+            {
+                MessageBox.Show("Phong nay chua co du lieu hoa don de in.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            HoaDonPrintWindow window = new(TaoHoaDonTam())
+            {
+                Owner = this
+            };
+            window.ShowDialog();
+        }
+
         private void BtnDonDep_Click(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Xác nhận đã dọn dẹp xong và chuyển phòng về trạng thái phòng trống?", "Dọn dẹp", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -503,9 +695,9 @@ WHERE " + keyFilter + roomFilter,
 
         private void BtnThemDichVu_Click(object sender, RoutedEventArgs e)
         {
-            if (stayData == null || stayData.MaThue.HasValue != true)
+            if (stayData == null || (!stayData.MaThue.HasValue && !stayData.MaDatPhong.HasValue))
             {
-                MessageBox.Show("Phải nhận phòng trước khi thêm dịch vụ phát sinh.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Phòng chưa có phiếu đặt hoặc phiếu thuê để thêm dịch vụ.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -525,15 +717,56 @@ WHERE " + keyFilter + roomFilter,
             try
             {
                 ThemDichVuPhatSinh(dichVu, soLuong);
-                thanhToanBUS.CongDichVuPhatSinh(stayData.MaThue.Value, dichVu.DonGia * soLuong);
+                try
+                {
+                    if (stayData.MaThue.HasValue)
+                    {
+                        thanhToanBUS.CongDichVuPhatSinh(stayData.MaThue.Value, dichVu.DonGia * soLuong);
+                    }
+                }
+                catch
+                {
+                    // Hoa don se duoc tinh lai tu dich vu phat sinh khi thanh toan/check-out.
+                }
+
                 dichVuHienTai = LoadDichVu(stayData);
                 DgDichVu.ItemsSource = dichVuHienTai;
                 CapNhatHoaDon();
+                TxtSoLuongDichVu.Text = "1";
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Không thể thêm dịch vụ: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void BtnGiamSoLuongDichVu_Click(object sender, RoutedEventArgs e)
+        {
+            TxtSoLuongDichVu.Text = Math.Max(1, LaySoLuongDichVuNhap() - 1).ToString();
+            TxtSoLuongDichVu.CaretIndex = TxtSoLuongDichVu.Text.Length;
+        }
+
+        private void BtnTangSoLuongDichVu_Click(object sender, RoutedEventArgs e)
+        {
+            TxtSoLuongDichVu.Text = Math.Min(999, LaySoLuongDichVuNhap() + 1).ToString();
+            TxtSoLuongDichVu.CaretIndex = TxtSoLuongDichVu.Text.Length;
+        }
+
+        private void TxtSoLuongDichVu_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !e.Text.All(char.IsDigit);
+        }
+
+        private void TxtSoLuongDichVu_LostFocus(object sender, RoutedEventArgs e)
+        {
+            TxtSoLuongDichVu.Text = LaySoLuongDichVuNhap().ToString();
+        }
+
+        private int LaySoLuongDichVuNhap()
+        {
+            return int.TryParse(TxtSoLuongDichVu.Text.Trim(), out int soLuong) && soLuong > 0
+                ? Math.Min(999, soLuong)
+                : 1;
         }
 
         private void BtnXoaDichVu_Click(object sender, RoutedEventArgs e)
@@ -552,23 +785,47 @@ WHERE " + keyFilter + roomFilter,
 
             try
             {
-                if (item.MaPhatSinh.HasValue)
+                if (!item.MaPhatSinh.HasValue)
                 {
-                    XoaDichVuPhatSinh(item.MaPhatSinh.Value);
-                    dichVuHienTai = LoadDichVu(stayData);
-                    DgDichVu.ItemsSource = dichVuHienTai;
-                }
-                else
-                {
-                    dichVuHienTai.Remove(item);
+                    throw new InvalidOperationException("Không xác định được khóa dịch vụ phát sinh để xóa khỏi database.");
                 }
 
+                XoaDichVuPhatSinh(item.MaPhatSinh.Value);
+                dichVuHienTai = LoadDichVu(stayData);
+                DgDichVu.ItemsSource = dichVuHienTai;
                 CapNhatHoaDon();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Không thể xóa dịch vụ: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private HoaDonItem TaoHoaDonTam()
+        {
+            decimal phuPhiHoaDonTam = phuPhi;
+            decimal vat = Math.Round(Math.Max(0, tienPhong + phuPhiHoaDonTam) * 0.1m, 0);
+            int maGoc = stayData?.MaThue ?? stayData?.MaDatPhong ?? phong.Ma;
+            return new HoaDonItem
+            {
+                LoaiPhieu = stayData?.MaThue.HasValue == true ? "THUE" : "DAT",
+                MaGoc = maGoc,
+                MaHoaDon = "HD-TAM-" + maGoc,
+                MaPhieuThue = stayData?.MaThue.HasValue == true ? "PT-" + maGoc : "DP-" + maGoc,
+                TenKhachHang = stayData?.HoTen ?? string.Empty,
+                SoDienThoai = stayData?.SDT ?? string.Empty,
+                SoPhong = phong.MaHienThi,
+                LoaiPhong = phong.LoaiPhong,
+                NgayNhanPhong = stayData?.NgayNhanThucTe ?? stayData?.NgayNhanDat ?? DateTime.Now,
+                NgayTraPhong = stayData?.NgayTraDat ?? DateTime.Now,
+                NgayLapHoaDon = DateTime.Now,
+                TienPhong = tienPhong,
+                TienDichVu = tienDichVu,
+                PhuPhi = phuPhiHoaDonTam,
+                ThueVat = vat,
+                GiamGia = datCoc,
+                TrangThai = stayData?.MaThue.HasValue == true ? "Chua thanh toan" : "Tam tinh"
+            };
         }
 
         private void TraPhong(int maThue)
@@ -723,16 +980,20 @@ WHERE " + keyFilter + roomFilter,
                     : string.Empty;
             string keyColumn = string.IsNullOrWhiteSpace(bangPhatSinh)
                 ? string.Empty
-                : GetFirstExistingColumn(bangPhatSinh, "MaPhatSinh", "MaCTPhatSinh", "MaChiTiet", "ID", "Ma");
+                : GetFirstExistingColumn(bangPhatSinh, "MaPhatSinh", "MaCTPhatSinh", "MaCTPS", "MaChiTiet", "ID", "Ma");
 
             if (string.IsNullOrWhiteSpace(bangPhatSinh) || string.IsNullOrWhiteSpace(keyColumn))
             {
                 throw new InvalidOperationException("Không xác định được dòng dịch vụ phát sinh để xóa.");
             }
 
-            ConnectDB.ExecuteNonQuery(
+            int affected = ConnectDB.ExecuteNonQuery(
                 $"DELETE FROM dbo.{bangPhatSinh} WHERE [{keyColumn}] = @MaPhatSinh",
                 new SqlParameter("@MaPhatSinh", maPhatSinh));
+            if (affected <= 0)
+            {
+                throw new InvalidOperationException("Dịch vụ phát sinh không còn tồn tại hoặc chưa được xóa khỏi database.");
+            }
         }
 
         private static string TienPhongSql(string startExpr, string plannedEndExpr, string actualEndExpr)
@@ -931,11 +1192,14 @@ END AS decimal(18, 2))";
             public int? MaDatPhong { get; set; }
             public string HoTen { get; set; } = string.Empty;
             public string SDT { get; set; } = string.Empty;
+            public string LoaiKhach { get; set; } = string.Empty;
             public int SoNguoi { get; set; }
-            public DateTime? NgayNhan { get; set; }
-            public DateTime? NgayTra { get; set; }
+            public DateTime? NgayNhanThucTe { get; set; }
+            public DateTime? NgayNhanDat { get; set; }
+            public DateTime? NgayTraDat { get; set; }
             public decimal TienCoc { get; set; }
             public decimal TienPhong { get; set; }
+            public decimal PhuPhi { get; set; }
             public string GhiChu { get; set; } = string.Empty;
             public string TrangThai { get; set; } = string.Empty;
             public int SoPhongDoan { get; set; } = 1;

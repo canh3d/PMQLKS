@@ -58,5 +58,11 @@ namespace QLKS_AnPhu.View
                 SizeToContent = SizeToContent.Manual
             };
         }
+
+        public static bool XacNhanThanhToanCheckIn(Window? owner, string moTa, decimal tienPhong, decimal tienDichVu, decimal phuPhi = 0, decimal datCoc = 0, decimal giamGia = 0)
+        {
+            ThanhToanCheckInWindow dialog = new(moTa, tienPhong, tienDichVu, phuPhi, datCoc, giamGia);
+            return ShowDimmedDialog(dialog, owner);
+        }
     }
 }

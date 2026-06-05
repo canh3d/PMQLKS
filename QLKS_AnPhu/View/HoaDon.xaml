@@ -7,7 +7,11 @@
              mc:Ignorable="d"
              d:DesignHeight="720"
              d:DesignWidth="1120"
-             Background="White">
+             Background="#F7F8FA"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
        
     <UserControl.Resources>
                
@@ -19,8 +23,6 @@
         <SolidColorBrush x:Key="OrangeBrush" Color="#E57900" />
         <SolidColorBrush x:Key="RedBrush" Color="#D62828" />
         <SolidColorBrush x:Key="SlateBrush" Color="#334155" />
-
-        <DropShadowEffect x:Key="CardShadow" BlurRadius="8" ShadowDepth="1" Opacity="0.10" />
 
                
         <Style x:Key="InputBoxStyle" TargetType="Control">
@@ -76,7 +78,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
                                                        
                             <ContentPresenter HorizontalAlignment="Center"
@@ -115,7 +117,7 @@
     </UserControl.Resources>
 
        
-    <Grid Margin="24,24,24,18">
+    <Grid Margin="18,12,18,12">
                
         <Grid.RowDefinitions>
                        
@@ -132,7 +134,7 @@
         </Grid.RowDefinitions>
 
                
-        <StackPanel Grid.Row="0">
+        <StackPanel Grid.Row="0" Visibility="Collapsed">
                        
             <TextBlock Text="Quản lý hóa đơn" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
                        
@@ -142,11 +144,10 @@
 
                
         <Border Grid.Row="1"
-                Background="White"
-                BorderBrush="#D5DFEA"
+                Background="#FAFAFA"
+                BorderBrush="#D8DEE8"
                 BorderThickness="1"
-                CornerRadius="5"
-                Effect="{StaticResource CardShadow}">
+                CornerRadius="12">
                        
             <Grid Margin="18,13">
                                
@@ -281,7 +282,7 @@
             </Grid.ColumnDefinitions>
 
                        
-            <Border Background="White" BorderBrush="#D5DFEA" BorderThickness="1" CornerRadius="5" Effect="{StaticResource CardShadow}" Padding="14">
+            <Border Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
                                
                 <StackPanel Orientation="Horizontal">
                                        
@@ -304,7 +305,7 @@
             </Border>
 
                        
-            <Border Grid.Column="2" Background="White" BorderBrush="#D5DFEA" BorderThickness="1" CornerRadius="5" Effect="{StaticResource CardShadow}" Padding="14">
+            <Border Grid.Column="2" Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
                                
                 <StackPanel Orientation="Horizontal">
                                        
@@ -327,7 +328,7 @@
             </Border>
 
                        
-            <Border Grid.Column="4" Background="White" BorderBrush="#D5DFEA" BorderThickness="1" CornerRadius="5" Effect="{StaticResource CardShadow}" Padding="14">
+            <Border Grid.Column="4" Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
                                
                 <StackPanel Orientation="Horizontal">
                                        
@@ -350,7 +351,7 @@
             </Border>
 
                        
-            <Border Grid.Column="6" Background="White" BorderBrush="#D5DFEA" BorderThickness="1" CornerRadius="5" Effect="{StaticResource CardShadow}" Padding="14">
+            <Border Grid.Column="6" Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
                                
                 <StackPanel Orientation="Horizontal">
                                        
@@ -377,17 +378,18 @@
                
         <Border Grid.Row="3"
                 Margin="0,12,0,0"
-                Background="White"
-                BorderBrush="#D5DFEA"
+                Background="#FAFAFA"
+                BorderBrush="#D8DEE8"
                 BorderThickness="1"
-                CornerRadius="5"
-                Effect="{StaticResource CardShadow}">
+                CornerRadius="12">
                        
             <Grid>
                                
                 <Grid.RowDefinitions>
                                        
                     <RowDefinition Height="40" />
+                                       
+                    <RowDefinition Height="42" />
                                        
                     <RowDefinition Height="*" />
                                        
@@ -404,9 +406,13 @@
                                    
                 </Grid>
 
+                <TabControl x:Name="TabLoaiHoaDon" Grid.Row="1" Margin="12,0,12,6" SelectionChanged="TabLoaiHoaDon_SelectionChanged">
+                    <TabItem Header="Thanh toán lúc nhận phòng" Tag="CHECKIN" />
+                    <TabItem Header="Thanh toán phát sinh thêm" Tag="PHATSINH" />
+                </TabControl>
                                
                 <DataGrid x:Name="DgHoaDon"
-                          Grid.Row="1"
+                          Grid.Row="2"
                           Margin="12,0"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
@@ -416,8 +422,9 @@
                           HeadersVisibility="Column"
                           SelectionMode="Single"
                           GridLinesVisibility="Horizontal"
+                          AlternationCount="2"
                           AlternatingRowBackground="#F8FAFC"
-                          BorderBrush="#D5DFEA"
+                          BorderBrush="#D8DEE8"
                           BorderThickness="0"
                           SelectionChanged="DgHoaDon_SelectionChanged"
                           MouseDoubleClick="DgHoaDon_MouseDoubleClick">
@@ -426,22 +433,41 @@
                                                
                         <Style TargetType="DataGridColumnHeader">
                                                        
-                            <Setter Property="Height" Value="38" />
+                            <Setter Property="Height" Value="34" />
                                                        
-                            <Setter Property="FontSize" Value="14" />
+                            <Setter Property="FontSize" Value="13" />
                                                        
                             <Setter Property="FontWeight" Value="SemiBold" />
                                                        
-                            <Setter Property="Background" Value="#DEE5EE" />
-                            <Setter Property="Foreground" Value="{StaticResource TextMainBrush}" />
+                            <Setter Property="Background" Value="#EEF2F7" />
+                            <Setter Property="Foreground" Value="#334155" />
                                                        
-                            <Setter Property="BorderBrush" Value="#AAB4C2" />
+                            <Setter Property="BorderBrush" Value="#CBD5E1" />
                                                        
                             <Setter Property="BorderThickness" Value="0,0,1,1" />
                                                    
                         </Style>
                                            
                     </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="White" />
+                            <Setter Property="Foreground" Value="#334155" />
+                            <Setter Property="SnapsToDevicePixels" Value="True" />
+                            <Style.Triggers>
+                                <Trigger Property="AlternationIndex" Value="1">
+                                    <Setter Property="Background" Value="#F8FAFC" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#EEF4FF" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#DBEAFE" />
+                                    <Setter Property="Foreground" Value="#111827" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                                        
                     <DataGrid.Columns>
                                                
@@ -457,13 +483,15 @@
                                                
                         <DataGridTextColumn Header="Ngày trả phòng" Binding="{Binding NgayTraText}" Width="128" />
                                                
-                        <DataGridTextColumn Header="Tiền phòng" Binding="{Binding TienPhongText}" Width="104" />
+                        <DataGridTextColumn x:Name="ColTienPhong" Header="Tiền phòng lúc check-in" Binding="{Binding TienPhongText}" Width="148" />
                                                
                         <DataGridTextColumn Header="Tiền dịch vụ" Binding="{Binding TienDichVuText}" Width="104" />
                                                
                         <DataGridTextColumn Header="Phụ phí" Binding="{Binding PhuPhiText}" Width="92" />
                                                
                         <DataGridTextColumn Header="Giảm giá" Binding="{Binding GiamGiaText}" Width="92" />
+                                               
+                        <DataGridTextColumn Header="Thuế VAT" Binding="{Binding ThueVatText}" Width="92" />
                                                
                         <DataGridTextColumn Header="Tổng tiền" Binding="{Binding TongTienText}" Width="106" />
                                                
@@ -492,7 +520,7 @@
                 </DataGrid>
 
                                
-                <Grid Grid.Row="2" Margin="12,0" Background="#F8FAFC">
+                <Grid Grid.Row="3" Margin="12,0" Background="#F8FAFC">
                                        
                     <TextBlock x:Name="TxtTrang" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextMainBrush}" FontSize="14" />
                                    
@@ -569,3 +597,4 @@
            
     </Grid>
 </UserControl>
+

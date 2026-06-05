@@ -7,17 +7,51 @@
              mc:Ignorable="d"
              d:DesignHeight="720"
              d:DesignWidth="1120"
-             Background="#F3F7FA">
+             Background="#F7F8FA"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
     <UserControl.Resources>
-        <DropShadowEffect x:Key="SoftShadow" BlurRadius="8" ShadowDepth="1" Opacity="0.18" />
-
         <Style x:Key="ToolButtonStyle" TargetType="Button">
+            <Style.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                </Style>
+                <Style TargetType="iconPacks:PackIconMaterial">
+                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                </Style>
+            </Style.Resources>
             <Setter Property="Height" Value="34" />
             <Setter Property="Padding" Value="14,0" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.92" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.82" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="InputStyle" TargetType="Control">
@@ -25,17 +59,30 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="BorderBrush" Value="#CBD5E1" />
         </Style>
+
+        <Style x:Key="PanelStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FAFAFA" />
+            <Setter Property="BorderBrush" Value="#D8DEE8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20,18">
+    <Grid Margin="18,12,18,12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="76" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="62" />
             <RowDefinition Height="*" />
             <RowDefinition Height="44" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" BorderBrush="#0F766E" BorderThickness="3,0,0,0" Padding="16,2,0,0">
+        <Border Grid.Row="0" BorderBrush="#0F766E" BorderThickness="3,0,0,0" Padding="16,2,0,0" Visibility="Collapsed">
             <StackPanel>
                 <TextBlock Text="TÌM KIẾM PHIẾU THUÊ"
                            FontSize="20"
@@ -49,11 +96,7 @@
         </Border>
 
         <Border Grid.Row="1"
-                Background="White"
-                BorderBrush="#D7DEE8"
-                BorderThickness="1"
-                CornerRadius="6"
-                Effect="{StaticResource SoftShadow}">
+                Style="{StaticResource PanelStyle}">
             <Grid Margin="12,9">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="116" />
@@ -153,11 +196,7 @@
 
         <Border Grid.Row="2"
                 Margin="0,14,0,0"
-                Background="White"
-                BorderBrush="#D7DEE8"
-                BorderThickness="1"
-                CornerRadius="6"
-                Effect="{StaticResource SoftShadow}">
+                Style="{StaticResource PanelStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="44" />
@@ -188,20 +227,40 @@
                           HeadersVisibility="Column"
                           SelectionMode="Single"
                           GridLinesVisibility="Horizontal"
-                          BorderBrush="#E5E7EB"
-                          BorderThickness="1"
+                          BorderThickness="0"
+                          AlternationCount="2"
+                          AlternatingRowBackground="#F8FAFC"
                           MouseDoubleClick="DgPhieuThue_MouseDoubleClick">
                     <DataGrid.ColumnHeaderStyle>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="Height" Value="32" />
                             <Setter Property="FontSize" Value="12" />
                             <Setter Property="FontWeight" Value="SemiBold" />
-                            <Setter Property="Background" Value="#E9EEF5" />
-                            <Setter Property="Foreground" Value="#1F2937" />
+                            <Setter Property="Background" Value="#EEF2F7" />
+                            <Setter Property="Foreground" Value="#334155" />
                             <Setter Property="BorderBrush" Value="#CBD5E1" />
                             <Setter Property="BorderThickness" Value="0,0,1,1" />
                         </Style>
                     </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="White" />
+                            <Setter Property="Foreground" Value="#334155" />
+                            <Setter Property="SnapsToDevicePixels" Value="True" />
+                            <Style.Triggers>
+                                <Trigger Property="AlternationIndex" Value="1">
+                                    <Setter Property="Background" Value="#F8FAFC" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#EEF4FF" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#DBEAFE" />
+                                    <Setter Property="Foreground" Value="#111827" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="#" Binding="{Binding STT}" Width="46" />
                         <DataGridTextColumn Header="Mã phiếu" Binding="{Binding MaPhieuThue}" Width="84" />
@@ -234,17 +293,17 @@
                     </DataGrid.Columns>
                 </DataGrid>
 
-                <Grid Grid.Row="2" Margin="14,0" Background="#233446">
+                <Grid Grid.Row="2" Margin="14,0" Background="#F8FAFC">
                     <TextBlock Text="Hiển thị 10 bản ghi trên trang"
                                Margin="8,0,0,0"
                                VerticalAlignment="Center"
-                               Foreground="White"
+                               Foreground="#64748B"
                                FontSize="12" />
                     <TextBlock Text="Trang  &lt;  1  &gt;"
                                Margin="0,0,8,0"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center"
-                               Foreground="White"
+                               Foreground="#64748B"
                                FontSize="12" />
                 </Grid>
             </Grid>

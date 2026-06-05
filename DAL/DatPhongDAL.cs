@@ -7,7 +7,7 @@ namespace QLKS_AnPhu.DAL
 {
     public class DatPhongDAL
     {
-        public void LuuDatPhong(DatPhongRequestDTO request)
+        public int LuuDatPhong(DatPhongRequestDTO request)
         {
             using SqlConnection conn = ConnectDB.GetConnection();
             using SqlTransaction tran = conn.BeginTransaction();
@@ -37,6 +37,7 @@ namespace QLKS_AnPhu.DAL
                 }
 
                 tran.Commit();
+                return maDatPhong;
             }
             catch
             {
@@ -45,7 +46,7 @@ namespace QLKS_AnPhu.DAL
             }
         }
 
-        public void LuuDatPhongDoan(IEnumerable<DatPhongRequestDTO> requests)
+        public int LuuDatPhongDoan(IEnumerable<DatPhongRequestDTO> requests)
         {
             List<DatPhongRequestDTO> danhSach = requests.ToList();
             if (danhSach.Count == 0)
@@ -109,6 +110,7 @@ namespace QLKS_AnPhu.DAL
                 }
 
                 tran.Commit();
+                return maDatPhong;
             }
             catch
             {
@@ -318,10 +320,6 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
             DateTime now = DateTime.Now;
             DateTime? ngayNhanDuKien = reader["NgayNhanDuKien"] == DBNull.Value ? null : Convert.ToDateTime(reader["NgayNhanDuKien"]);
             DateTime? ngayTraDuKien = reader["NgayTraDuKien"] == DBNull.Value ? null : Convert.ToDateTime(reader["NgayTraDuKien"]);
-            TimeSpan thoiLuong = ngayNhanDuKien.HasValue && ngayTraDuKien.HasValue && ngayTraDuKien.Value > ngayNhanDuKien.Value
-                ? ngayTraDuKien.Value - ngayNhanDuKien.Value
-                : TimeSpan.FromDays(1);
-
             return new ThongTinNhanPhong
             {
                 MaKhachHang = Convert.ToInt32(reader["MaKH"]),
@@ -329,7 +327,7 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
                 MaPhong = Convert.ToInt32(reader["MaPhong"]),
                 SoNguoi = Convert.ToInt32(reader["SoNguoi"]),
                 NgayNhanThucTe = now,
-                NgayTraDuKienMoi = now.Add(thoiLuong),
+                NgayTraDuKienMoi = ngayTraDuKien ?? now.AddDays(1),
                 TienCoc = reader["TienCoc"] == DBNull.Value ? 0 : Convert.ToDecimal(reader["TienCoc"]),
                 GhiChu = reader["GhiChu"] == DBNull.Value ? null : reader["GhiChu"]?.ToString()
             };

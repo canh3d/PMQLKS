@@ -100,7 +100,7 @@
                             <TextBlock x:Name="TxtMaHoaDon" Margin="0,8,0,0" FontSize="16" Foreground="#0F172A" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="18,24,0,0">
-                            <TextBlock Text="Hóa đơn" FontSize="30" FontWeight="SemiBold" Foreground="#0B2545" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="TxtTieuDeHoaDon" Text="Hóa đơn" FontSize="30" FontWeight="SemiBold" Foreground="#0B2545" HorizontalAlignment="Center" />
                             <TextBlock x:Name="TxtSoPhong" Margin="0,24,0,0" FontSize="16" Foreground="#0F172A" />
                             <TextBlock Text="Người lập: admin" Margin="0,8,0,0" FontSize="16" Foreground="#0F172A" />
                         </StackPanel>

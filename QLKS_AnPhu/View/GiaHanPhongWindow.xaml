@@ -1,0 +1,73 @@
+<Window x:Class="QLKS_AnPhu.View.GiaHanPhongWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        Title="Gia hạn phòng" Width="620" Height="560"
+        MinWidth="620" MinHeight="560"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
+        Background="#F8FAFC">
+    <Window.Resources>
+        <Style x:Key="ActionButton" TargetType="Button">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="26">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="Gia hạn phòng" FontSize="24" FontWeight="Bold" Foreground="#0F172A" />
+            <TextBlock x:Name="TxtPhong" Margin="0,6,0,0" FontSize="15" Foreground="#475569" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Margin="0,22,0,22" Padding="20" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="48" />
+                    <RowDefinition Height="48" />
+                    <RowDefinition Height="48" />
+                    <RowDefinition Height="58" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="Giờ trả hiện tại" VerticalAlignment="Center" Foreground="#334155" />
+                <TextBlock x:Name="TxtNgayTraCu" Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#0F172A" />
+
+                <TextBlock Grid.Row="1" Text="Ngày trả mới" VerticalAlignment="Center" Foreground="#334155" />
+                <DatePicker x:Name="DpNgayTraMoi" Grid.Row="1" Grid.Column="1" Height="34" VerticalContentAlignment="Center" />
+
+                <TextBlock Grid.Row="2" Text="Giờ trả mới" VerticalAlignment="Center" Foreground="#334155" />
+                <TextBox x:Name="TxtGioTraMoi" Grid.Row="2" Grid.Column="1" Height="34" Padding="8,5" VerticalContentAlignment="Center" />
+
+                <TextBlock Grid.Row="3" Grid.ColumnSpan="2" Margin="0,12,0,0"
+                           Text="Hệ thống sẽ kiểm tra lịch đặt của phòng trước khi gia hạn."
+                           TextWrapping="Wrap" Foreground="#64748B" />
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Style="{StaticResource ActionButton}" Background="#16A34A" BorderBrush="#15803D" Click="BtnXacNhan_Click">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="CalendarPlus" Width="16" Height="16" Margin="0,0,7,0" />
+                    <TextBlock Text="Xác nhận gia hạn" />
+                </StackPanel>
+            </Button>
+            <Button Margin="10,0,0,0" Style="{StaticResource ActionButton}" Background="#64748B" BorderBrush="#475569" Click="BtnDong_Click">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="Close" Width="16" Height="16" Margin="0,0,7,0" />
+                    <TextBlock Text="Đóng" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

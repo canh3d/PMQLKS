@@ -8,7 +8,11 @@
         MinWidth="1120"
         MinHeight="720"
         WindowStartupLocation="CenterOwner"
-        Background="#F4F8FB">
+        Background="#F4F8FB"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
     <Window.Resources>
         <DropShadowEffect x:Key="PanelShadow" BlurRadius="8" Direction="270" ShadowDepth="2" Opacity="0.20" />
 
@@ -17,7 +21,6 @@
             <Setter Property="Background" Value="White" />
             <Setter Property="BorderBrush" Value="#B9C6D8" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Effect" Value="{StaticResource PanelShadow}" />
         </Style>
 
         <Style x:Key="InfoBoxStyle" TargetType="Border">
@@ -365,12 +368,50 @@
                     <Grid Grid.Row="1" Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="64" />
+                            <ColumnDefinition Width="108" />
                             <ColumnDefinition Width="90" />
                             <ColumnDefinition Width="90" />
                         </Grid.ColumnDefinitions>
                         <ComboBox x:Name="CboDichVuThem" Grid.Column="0" Height="30" DisplayMemberPath="Ten" />
-                        <TextBox x:Name="TxtSoLuongDichVu" Grid.Column="1" Margin="8,0,0,0" Text="1" Height="30" VerticalContentAlignment="Center" />
+                        <Grid Grid.Column="1" Margin="8,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="28" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="BtnGiamSoLuongDichVu"
+                                    Grid.Column="0"
+                                    Content="-"
+                                    FontSize="15"
+                                    FontWeight="Bold"
+                                    Foreground="#111827"
+                                    Background="#F8FAFC"
+                                    BorderBrush="#CBD5E1"
+                                    Click="BtnGiamSoLuongDichVu_Click" />
+                            <TextBox x:Name="TxtSoLuongDichVu"
+                                     Grid.Column="1"
+                                     Text="1"
+                                     Height="30"
+                                     Margin="4,0"
+                                     Padding="0"
+                                     HorizontalContentAlignment="Center"
+                                     VerticalContentAlignment="Center"
+                                     FontWeight="SemiBold"
+                                     Foreground="#111827"
+                                     Background="White"
+                                     BorderBrush="#94A3B8"
+                                     PreviewTextInput="TxtSoLuongDichVu_PreviewTextInput"
+                                     LostFocus="TxtSoLuongDichVu_LostFocus" />
+                            <Button x:Name="BtnTangSoLuongDichVu"
+                                    Grid.Column="2"
+                                    Content="+"
+                                    FontSize="15"
+                                    FontWeight="Bold"
+                                    Foreground="#111827"
+                                    Background="#F8FAFC"
+                                    BorderBrush="#CBD5E1"
+                                    Click="BtnTangSoLuongDichVu_Click" />
+                        </Grid>
                         <Button Grid.Column="2" Margin="8,0,0,0" Background="#16A34A" BorderBrush="#15803D" Foreground="White" Click="BtnThemDichVu_Click">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="PlusCircle" Width="15" Height="15" Margin="0,0,5,0" />
@@ -428,10 +469,10 @@
                         <TextBlock x:Name="TxtKhaDung" Margin="0,10,0,0" HorizontalAlignment="Right" FontSize="24" FontWeight="Bold" Foreground="#DC2626" />
                     </StackPanel>
 
-                    <Button Grid.Row="1" HorizontalAlignment="Right" Width="126" Background="White" BorderBrush="#D0D5DD">
+                    <Button Grid.Row="1" HorizontalAlignment="Right" Width="126" Background="White" BorderBrush="#D0D5DD" Foreground="#111827" Click="BtnInHoaDon_Click">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <iconPacks:PackIconMaterial Kind="Printer" Width="15" Height="15" Margin="0,0,6,0" />
-                            <TextBlock Text="In hóa đơn" />
+                            <iconPacks:PackIconMaterial Kind="Printer" Width="15" Height="15" Margin="0,0,6,0" Foreground="#111827" />
+                            <TextBlock Text="In hóa đơn" Foreground="#111827" />
                         </StackPanel>
                     </Button>
                 </Grid>
@@ -446,7 +487,7 @@
                         <TextBlock Text="Nhận phòng" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnHuyDat" Width="104" Style="{StaticResource PinkActionButtonStyle}" Margin="10,0,0,0">
+                <Button x:Name="BtnHuyDat" Width="104" Style="{StaticResource PinkActionButtonStyle}" Margin="10,0,0,0" Click="BtnHuyDat_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="CloseCircle" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Hủy đặt" />
@@ -458,19 +499,31 @@
                         <TextBlock Text="Trả phòng" />
                     </StackPanel>
                 </Button>
+                <Button x:Name="BtnGiaHanPhong" Width="116" Style="{StaticResource BlueActionButtonStyle}" Margin="10,0,0,0" Click="BtnGiaHanPhong_Click">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="CalendarPlus" Width="16" Height="16" Margin="0,0,6,0" />
+                        <TextBlock Text="Gia hạn phòng" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BtnDoiPhong" Width="108" Style="{StaticResource BlueActionButtonStyle}" Margin="10,0,0,0" Click="BtnDoiPhong_Click">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <iconPacks:PackIconMaterial Kind="SwapHorizontal" Width="16" Height="16" Margin="0,0,6,0" />
+                        <TextBlock Text="Đổi phòng" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="BtnDonDep" Width="138" Style="{StaticResource OrangeActionButtonStyle}" Margin="10,0,0,0" Click="BtnDonDep_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="Broom" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Dọn dẹp xong" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnThanhToan" Width="124" Style="{StaticResource BlueActionButtonStyle}" Margin="10,0,0,0">
+                <Button x:Name="BtnThanhToan" Width="124" Style="{StaticResource BlueActionButtonStyle}" Margin="10,0,0,0" Click="BtnThanhToan_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="CashRegister" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Thanh toán" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnLuu" Width="86" Style="{StaticResource GreenActionButtonStyle}" Margin="10,0,0,0">
+                <Button x:Name="BtnLuu" Width="86" Style="{StaticResource GreenActionButtonStyle}" Margin="10,0,0,0" Click="BtnLuu_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="ContentSave" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Lưu" />

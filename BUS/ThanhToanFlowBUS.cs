@@ -7,14 +7,15 @@ namespace QLKS_AnPhu.BUS
     {
         private readonly ThanhToanFlowDAL thanhToanDAL = new();
 
-        public KetQuaCheckInThanhToanDTO CheckInTuDatPhong(int maDatPhong, decimal tongTienDuKien, decimal tienDatCocTruoc)
+        public KetQuaCheckInThanhToanDTO CheckInTuDatPhong(int maDatPhong, decimal tongTienDuKien, decimal tienDatCocTruoc, decimal? giaTriTinhThue = null)
         {
             if (maDatPhong <= 0)
             {
                 throw new InvalidOperationException("Phieu dat phong khong hop le.");
             }
 
-            decimal tienThucThuTaiQuay = Math.Max(0, tongTienDuKien - tienDatCocTruoc);
+            decimal thueVat = Math.Round(Math.Max(0, giaTriTinhThue ?? tongTienDuKien) * 0.1m, 0);
+            decimal tienThucThuTaiQuay = Math.Max(0, tongTienDuKien + thueVat - tienDatCocTruoc);
             return thanhToanDAL.CheckInTuDatPhong(maDatPhong, tienThucThuTaiQuay);
         }
 

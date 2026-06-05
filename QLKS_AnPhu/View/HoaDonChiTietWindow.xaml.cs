@@ -36,11 +36,21 @@ namespace QLKS_AnPhu.View
             TxtLoaiPhong.Text = hoaDon.LoaiPhong;
             TxtThoiGianThue.Text = hoaDon.NgayNhanPhong.ToString("dd/MM/yyyy HH:mm") + " - " + hoaDon.NgayTraPhong.ToString("dd/MM/yyyy HH:mm");
             TxtThoiLuong.Text = TinhThoiLuong(hoaDon.NgayNhanPhong, hoaDon.NgayTraPhong);
+            LblTienPhong.Text = hoaDon.LoaiThanhToan == "PHATSINH"
+                ? "Tiền gia hạn phòng:"
+                : "Tiền phòng lúc check-in:";
             TxtTienPhong.Text = hoaDon.TienPhong.ToString("N0") + " VND";
-            TxtNhanSom.Text = "Nhận ngay - không tính phụ phí nhận sớm (0 VND)";
-            TxtTraMuon.Text = hoaDon.PhuPhi > 0 ? "Có phụ phí phát sinh (" + hoaDon.PhuPhi.ToString("N0") + " VND)" : "Không phát sinh phụ phí (0 VND)";
+            LblNhanSom.Text = hoaDon.LoaiThanhToan == "PHATSINH" ? "Nhận sớm:" : "Nhận sớm:";
+            LblPhuPhi.Text = hoaDon.LoaiThanhToan == "PHATSINH" ? "Phụ phí trả muộn:" : "Phụ phí nhận sớm:";
+            TxtNhanSom.Text = hoaDon.LoaiThanhToan == "PHATSINH"
+                ? "Không áp dụng trong hóa đơn phát sinh"
+                : TaoNoiDungNhanSom(hoaDon.NgayNhanThucTe, hoaDon.NgayNhanPhong, hoaDon.PhuPhi);
+            TxtTraMuon.Text = hoaDon.LoaiThanhToan == "PHATSINH" && hoaDon.PhuPhi > 0
+                ? "Có phụ phí trả muộn (" + hoaDon.PhuPhi.ToString("N0") + " VND)"
+                : "Phụ phí trả muộn chỉ được chốt khi thực hiện trả phòng.";
             TxtPhuPhi.Text = hoaDon.PhuPhi.ToString("N0") + " VND";
             TxtTrangThai.Text = hoaDon.TrangThai;
+            TxtThueVat.Text = hoaDon.ThueVat.ToString("N0") + " VND";
             TxtGiamGia.Text = hoaDon.GiamGia.ToString("N0") + " VND";
             TxtTongTien.Text = hoaDon.TongTien.ToString("N0") + " VND";
             DgDichVu.ItemsSource = LoadDichVu();
@@ -231,6 +241,25 @@ namespace QLKS_AnPhu.View
             }
 
             return Math.Max(1, (int)Math.Ceiling((end - start).TotalDays)) + " ngày";
+        }
+
+        private static string TaoNoiDungNhanSom(DateTime? actualStart, DateTime plannedStart, decimal fee)
+        {
+            if (!actualStart.HasValue)
+            {
+                return "Chưa nhận phòng (0 VND)";
+            }
+
+            int earlyMinutes = Math.Max(0, (int)Math.Round((plannedStart - actualStart.Value).TotalMinutes));
+            if (earlyMinutes == 0)
+            {
+                return "Nhận đúng hoặc sau giờ đặt (0 VND)";
+            }
+
+            string duration = earlyMinutes >= 60
+                ? (earlyMinutes / 60) + " giờ " + (earlyMinutes % 60) + " phút"
+                : earlyMinutes + " phút";
+            return "Nhận sớm " + duration + " (" + fee.ToString("N0") + " VND)";
         }
 
         private static decimal GetDecimal(DataRow row, string column)

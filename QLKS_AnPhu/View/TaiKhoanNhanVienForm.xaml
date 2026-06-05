@@ -1,0 +1,123 @@
+<Window x:Class="QLKS_AnPhu.View.TaiKhoanNhanVienForm"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Tài khoản nhân viên"
+        Width="520"
+        Height="560"
+        MinWidth="520"
+        MinHeight="560"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F7FB"
+        FontFamily="Segoe UI">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2556D9" />
+        <Style x:Key="InputStyle" TargetType="TextBox">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="materialDesign:TextFieldAssist.HasOutlinedTextField" Value="True" />
+        </Style>
+        <Style x:Key="ComboStyle" TargetType="ComboBox">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="materialDesign:TextFieldAssist.HasOutlinedTextField" Value="True" />
+        </Style>
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="MinWidth" Value="108" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="82" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="70" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}">
+            <StackPanel Margin="22,0" VerticalAlignment="Center">
+                <TextBlock x:Name="TxtTieuDe" Text="THÊM TÀI KHOẢN" Foreground="White" FontSize="22" FontWeight="Bold" />
+                <TextBlock Text="Quản lý tài khoản đăng nhập của nhân viên" Margin="0,5,0,0" Foreground="#DBEAFE" />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Border Margin="20" Padding="22" Background="White" CornerRadius="16" BorderBrush="#E5E7EB" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Tên đăng nhập *" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <TextBox x:Name="TxtTenDangNhap" Style="{StaticResource InputStyle}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1">
+                        <TextBlock x:Name="TxtMatKhauLabel" Text="Mật khẩu *" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <TextBox x:Name="TxtMatKhau" Style="{StaticResource InputStyle}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2">
+                        <TextBlock Text="Vai trò" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <ComboBox x:Name="CboVaiTro" Style="{StaticResource ComboStyle}" IsEditable="False">
+                            <ComboBoxItem Content="Quản lý" />
+                            <ComboBoxItem Content="Nhân viên" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <Border Grid.Row="3" Margin="0,4,0,0" Padding="12" Background="#F8FAFC" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1">
+                        <CheckBox x:Name="ChkHoatDong" Content="Tài khoản đang hoạt động" IsChecked="True" FontWeight="SemiBold" />
+                    </Border>
+
+                    <StackPanel Grid.Row="4" Margin="0,16,0,0">
+                        <TextBlock Text="Phân quyền truy cập form" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <Border Padding="12" Background="#F8FAFC" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1">
+                            <ItemsControl x:Name="LstQuyen">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}"
+                                                  Tag="{Binding Code}"
+                                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                  Margin="0,4"
+                                                  FontWeight="SemiBold" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Padding="20,14">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource ActionButtonStyle}" Background="White" BorderBrush="#CBD5E1" Click="BtnHuy_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Close" Width="15" Height="15" Margin="0,0,6,0" />
+                        <TextBlock Text="Hủy" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="10,0,0,0" Style="{StaticResource ActionButtonStyle}" Background="{StaticResource PrimaryBrush}" BorderBrush="{StaticResource PrimaryBrush}" Foreground="White" Click="BtnLuu_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="ContentSave" Width="15" Height="15" Margin="0,0,6,0" />
+                        <TextBlock Text="Lưu" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

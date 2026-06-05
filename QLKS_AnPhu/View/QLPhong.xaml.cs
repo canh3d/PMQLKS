@@ -17,6 +17,7 @@ namespace QLKS_AnPhu.View
         private List<PhongDTO> danhSachGoc = new();
         private List<PhongDTO> danhSachHienThi = new();
         private PhongDTO? phongDangChon;
+        private bool dangChonGoiY;
 
         public QLPhong()
         {
@@ -79,13 +80,13 @@ namespace QLKS_AnPhu.View
 
             foreach (IGrouping<int, PhongDTO> group in danhSach.GroupBy(item => item.Tang).OrderBy(item => item.Key))
             {
-                StackPanel header = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+                StackPanel header = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
                 header.Children.Add(new TextBlock
                 {
                     Text = $"TẦNG {group.Key}",
                     FontWeight = FontWeights.Bold,
                     Foreground = System.Windows.Media.Brushes.DimGray,
-                    FontSize = 12
+                    FontSize = 13
                 });
                 header.Children.Add(new TextBlock
                 {
@@ -96,7 +97,7 @@ namespace QLKS_AnPhu.View
                 });
                 PanelPhongTheoTang.Children.Add(header);
 
-                WrapPanel wrapPanel = new() { Margin = new Thickness(0, 0, 0, 15) };
+                WrapPanel wrapPanel = new() { Margin = new Thickness(0, 0, 0, 18) };
 
                 foreach (PhongDTO phong in group)
                 {
@@ -151,11 +152,12 @@ namespace QLKS_AnPhu.View
             TxtCTKhach.Text = $"Khách hiện tại: {phong.KhachHienTai}";
             TxtCTGioNhan.Text = $"Giờ nhận phòng: {phong.GioNhanPhong}";
             TxtCTGioTra.Text = $"Giờ trả dự kiến: {phong.GioTraDuKien}";
-            TxtCTGhiChu.Text = phong.GhiChu;
+            TxtCTGhiChu.Text = phong.GhiChuHienThi;
         }
 
         private void BtnTim_Click(object sender, RoutedEventArgs e)
         {
+            PopupGoiYTimKiem.IsOpen = false;
             string trangThai = GetComboText(CboTrangThai);
             string tang = GetComboText(CboTang);
             string tuKhoa = TxtTimKiem.Text.Trim();
@@ -213,6 +215,11 @@ namespace QLKS_AnPhu.View
                     DatPhongRequestDTO request = ucDatPhong.TaoYeuCauDatPhong();
                     if (nhanNgay)
                     {
+                        decimal giamGia = request.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round(request.TienPhong * 0.1m, 0) : 0;
+                        if (!DialogService.XacNhanThanhToanCheckIn(Window.GetWindow(this), "Phòng " + request.Phong.MaHienThi, request.TienPhong, request.TienDichVu, giamGia: giamGia))
+                        {
+                            return;
+                        }
                         phongBUS.NhanPhong(request);
                     }
                     else
@@ -271,8 +278,17 @@ namespace QLKS_AnPhu.View
         {
             try
             {
-                phongBUS.LuuDatPhongDoan(requests);
                 bool nhanNgay = requests.Any(item => item.NhanNgay);
+                if (nhanNgay && !DialogService.XacNhanThanhToanCheckIn(
+                        Window.GetWindow(this),
+                        "Nhận phòng cho đoàn",
+                        requests.Sum(item => item.TienPhong),
+                        requests.Sum(item => item.TienDichVu),
+                        giamGia: requests.Sum(item => item.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round(item.TienPhong * 0.1m, 0) : 0)))
+                {
+                    return;
+                }
+                phongBUS.LuuDatPhongDoan(requests);
                 MessageBox.Show(nhanNgay ? "Nhận phòng cho đoàn thành công." : "Đặt phòng cho đoàn thành công.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 if (sender is FrameworkElement element)
                 {
@@ -289,15 +305,108 @@ namespace QLKS_AnPhu.View
 
         private void TxtTimKiem_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Down && PopupGoiYTimKiem.IsOpen && LbGoiYTimKiem.Items.Count > 0)
+            {
+                LbGoiYTimKiem.Focus();
+                LbGoiYTimKiem.SelectedIndex = 0;
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Enter)
             {
                 BtnTim_Click(sender, e);
             }
         }
 
+        private void TxtTimKiem_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!dangChonGoiY)
+            {
+                CapNhatGoiYTimKiem();
+            }
+        }
+
+        private void TxtTimKiem_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            CapNhatGoiYTimKiem();
+        }
+
+        private void LbGoiYTimKiem_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            ChonGoiYTimKiem();
+        }
+
+        private void LbGoiYTimKiem_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ChonGoiYTimKiem();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Escape)
+            {
+                PopupGoiYTimKiem.IsOpen = false;
+                TxtTimKiem.Focus();
+                e.Handled = true;
+            }
+        }
+
+        private void CapNhatGoiYTimKiem()
+        {
+            string tuKhoa = TxtTimKiem.Text.Trim();
+
+            if (tuKhoa.Length == 0 || danhSachGoc.Count == 0)
+            {
+                PopupGoiYTimKiem.IsOpen = false;
+                return;
+            }
+
+            List<GoiYTimKiemPhong> goiY = danhSachGoc
+                .Where(phong => ChuaTuKhoa(phong.MaHienThi, tuKhoa)
+                    || ChuaTuKhoa(phong.LoaiPhong, tuKhoa)
+                    || ChuaTuKhoa(phong.TrangThai, tuKhoa)
+                    || ChuaTuKhoa(phong.KhachHienTai, tuKhoa))
+                .OrderBy(phong => phong.MaHienThi)
+                .Take(8)
+                .Select(phong => new GoiYTimKiemPhong(
+                    phong.MaHienThi,
+                    $"{phong.MaHienThi} - {phong.LoaiPhong} - {phong.TrangThai}"))
+                .ToList();
+
+            LbGoiYTimKiem.ItemsSource = goiY;
+            PopupGoiYTimKiem.IsOpen = goiY.Count > 0;
+        }
+
+        private void ChonGoiYTimKiem()
+        {
+            if (LbGoiYTimKiem.SelectedItem is not GoiYTimKiemPhong goiY)
+            {
+                return;
+            }
+
+            dangChonGoiY = true;
+            TxtTimKiem.Text = goiY.Value;
+            TxtTimKiem.CaretIndex = TxtTimKiem.Text.Length;
+            dangChonGoiY = false;
+
+            PopupGoiYTimKiem.IsOpen = false;
+            BtnTim_Click(TxtTimKiem, new RoutedEventArgs());
+        }
+
+        private static bool ChuaTuKhoa(string? giaTri, string tuKhoa)
+        {
+            return !string.IsNullOrWhiteSpace(giaTri)
+                && giaTri.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string GetComboText(ComboBox comboBox)
         {
             return (comboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? string.Empty;
         }
+
+        private sealed record GoiYTimKiemPhong(string Value, string Display);
     }
 }

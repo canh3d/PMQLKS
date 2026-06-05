@@ -101,18 +101,18 @@
             <TextBlock Grid.Row="1" Text="Thời lượng:" FontSize="16" Foreground="#0F172A" />
             <TextBlock x:Name="TxtThoiLuong" Grid.Row="1" Margin="150,0,0,0" FontSize="16" Foreground="#0B2545" />
 
-            <TextBlock Grid.Row="2" Text="Tiền phòng:" FontSize="16" Foreground="#0F172A" />
-            <TextBlock x:Name="TxtTienPhong" Grid.Row="2" Margin="150,0,0,0" FontSize="16" Foreground="#0B2545" />
+            <TextBlock x:Name="LblTienPhong" Grid.Row="2" Text="Tiền phòng lúc check-in:" FontSize="16" Foreground="#0F172A" />
+            <TextBlock x:Name="TxtTienPhong" Grid.Row="2" Margin="230,0,0,0" FontSize="16" Foreground="#0B2545" />
 
             <TextBlock Grid.Row="3" Text="CHI TIẾT PHỤ PHÍ" FontSize="16" Foreground="#2563EB" />
 
-            <TextBlock Grid.Row="4" Text="Nhận sớm:" FontSize="16" Foreground="#0F172A" />
+            <TextBlock x:Name="LblNhanSom" Grid.Row="4" Text="Nhận sớm:" FontSize="16" Foreground="#0F172A" />
             <TextBlock x:Name="TxtNhanSom" Grid.Row="4" Margin="150,0,0,0" FontSize="16" Foreground="#0B2545" />
 
-            <TextBlock Grid.Row="5" Text="Trả muộn:" FontSize="16" Foreground="#0F172A" />
+            <TextBlock Grid.Row="5" Text="Ghi chú:" FontSize="16" Foreground="#0F172A" />
             <TextBlock x:Name="TxtTraMuon" Grid.Row="5" Margin="150,0,0,0" FontSize="16" Foreground="#0B2545" />
 
-            <TextBlock Grid.Row="6" Text="Tổng phụ phí:" FontSize="16" Foreground="#0F172A" />
+            <TextBlock x:Name="LblPhuPhi" Grid.Row="6" Text="Phụ phí nhận sớm:" FontSize="16" Foreground="#0F172A" />
             <TextBlock x:Name="TxtPhuPhi" Grid.Row="6" Margin="150,0,0,0" FontSize="16" Foreground="#0B2545" />
 
             <TextBlock Grid.Column="2" Text="Trạng thái:" FontSize="16" Foreground="#0F172A" />
@@ -122,6 +122,9 @@
 
             <TextBlock Grid.Row="6" Grid.Column="2" Text="Giảm giá:" FontSize="16" Foreground="#0F172A" />
             <TextBlock x:Name="TxtGiamGia" Grid.Row="6" Grid.Column="2" Margin="130,0,0,0" FontSize="16" Foreground="#0B2545" />
+
+            <TextBlock Grid.Row="5" Grid.Column="2" Text="Thuế VAT (10%):" FontSize="16" Foreground="#0F172A" />
+            <TextBlock x:Name="TxtThueVat" Grid.Row="5" Grid.Column="2" Margin="130,0,0,0" FontSize="16" Foreground="#0B2545" />
 
             <StackPanel Grid.Row="7" Grid.ColumnSpan="3" Margin="4,12,4,0">
                 <TextBlock Text="DỊCH VỤ / VẬT TƯ SỬ DỤNG" FontSize="16" Foreground="#2563EB" />

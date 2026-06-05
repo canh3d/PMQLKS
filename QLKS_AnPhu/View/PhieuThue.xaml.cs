@@ -545,6 +545,11 @@ ORDER BY X.NgayNhanPhong DESC";
                     DatPhongRequestDTO request = ucDatPhong.TaoYeuCauDatPhong();
                     if (ucDatPhong.NhanNgay)
                     {
+                        decimal giamGia = request.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round(request.TienPhong * 0.1m, 0) : 0;
+                        if (!DialogService.XacNhanThanhToanCheckIn(Window.GetWindow(this), "Phòng " + request.Phong.MaHienThi, request.TienPhong, request.TienDichVu, giamGia: giamGia))
+                        {
+                            return;
+                        }
                         phongBUS.NhanPhong(request);
                     }
                     else

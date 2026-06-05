@@ -193,7 +193,7 @@
                     </Grid.RowDefinitions>
                     <TextBlock Text="Tiền phòng" />
                     <TextBlock x:Name="TxtTienPhong" Grid.Column="1" HorizontalAlignment="Right" />
-                    <TextBlock Grid.Row="1" Text="Phụ thu" />
+                    <TextBlock x:Name="TxtPhuThuLabel" Grid.Row="1" Text="Phụ phí nhận sớm" />
                     <TextBlock x:Name="TxtPhuThu" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" />
                     <TextBlock Grid.Row="2" Text="Giảm giá" />
                     <TextBlock x:Name="TxtGiamGia" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" />

@@ -35,6 +35,7 @@ namespace QLKS_AnPhu.View
         {
             TxtNgayLap.Text = "Ngay lap: " + hoaDon.NgayLapHoaDon.ToString("dd/MM/yyyy HH:mm");
             TxtMaHoaDon.Text = "Ma hoa don: " + hoaDon.MaHoaDon;
+            TxtTieuDeHoaDon.Text = hoaDon.LoaiThanhToan == "PHATSINH" ? "Hóa đơn phát sinh thêm" : "Hóa đơn nhận phòng";
             TxtSoPhong.Text = "So phong: " + hoaDon.SoPhong;
             TxtKhachHang.Text = "Khach hang: " + hoaDon.TenKhachHang;
             TxtSdt.Text = "SDT: " + hoaDon.SoDienThoai;
@@ -53,10 +54,21 @@ namespace QLKS_AnPhu.View
                     TienPhong = hoaDon.TienPhong
                 });
             }
+            else
+            {
+                rooms = GioiHanTienPhongTheoHoaDon(rooms, hoaDon.TienPhong);
+            }
 
             foreach (RoomPrintGroup room in rooms)
             {
-                room.Items.Add(new PrintLineItem("Thue phong", room.TienPhong, 1, room.TienPhong));
+                if (hoaDon.LoaiThanhToan != "PHATSINH" && room.TienPhong > 0)
+                {
+                    room.Items.Add(new PrintLineItem("Tien phong luc check-in", room.TienPhong, 1, room.TienPhong));
+                }
+                else if (hoaDon.LoaiThanhToan == "PHATSINH" && room.TienPhong > 0)
+                {
+                    room.Items.Add(new PrintLineItem("Gia han phong", room.TienPhong, 1, room.TienPhong));
+                }
             }
 
             foreach (DichVuHoaDonItem item in LoadDichVu())
@@ -67,12 +79,21 @@ namespace QLKS_AnPhu.View
                 target.Items.Add(new PrintLineItem(item.TenDichVu, item.DonGia, item.SoLuong, item.ThanhTien));
             }
 
-            if (hoaDon.PhuPhi > 0)
+            if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.PhuPhi > 0)
+            {
+                rooms[0].Items.Add(new PrintLineItem("Phu phi nhan som", 0, 0, hoaDon.PhuPhi));
+            }
+            else if (hoaDon.LoaiThanhToan == "PHATSINH" && hoaDon.PhuPhi > 0)
             {
                 rooms[0].Items.Add(new PrintLineItem("Phu phi tra muon", 0, 0, hoaDon.PhuPhi));
             }
 
-            if (hoaDon.GiamGia > 0)
+            if (hoaDon.ThueVat > 0)
+            {
+                rooms[0].Items.Add(new PrintLineItem("Thue VAT (10%)", 0, 0, hoaDon.ThueVat));
+            }
+
+            if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.GiamGia > 0)
             {
                 rooms[0].Items.Add(new PrintLineItem("Giam gia / coc", 0, 0, -hoaDon.GiamGia));
             }
@@ -177,6 +198,8 @@ ORDER BY P.MaPhong",
             string donGia = ColumnExists(table, "DonGia") ? "ISNULL(PS.DonGia, DV.DonGia)" : "DV.DonGia";
             string thanhTien = ColumnExists(table, "ThanhTien") ? "PS.ThanhTien" : "(" + soLuong + " * " + donGia + ")";
             string maPhongExpr = ColumnExists(table, "MaPhong") ? "PS.MaPhong" : "CAST(NULL AS int)";
+            string ngayPhatSinhColumn = ColumnExists(table, "NgayPhatSinh") ? "NgayPhatSinh" : ColumnExists(table, "NgaySuDung") ? "NgaySuDung" : string.Empty;
+            string orderBy = string.IsNullOrWhiteSpace(ngayPhatSinhColumn) ? string.Empty : " ORDER BY PS." + ngayPhatSinhColumn;
 
             DataTable data = ConnectDB.GetData(
                 @"SELECT DV." + tenDichVu + @" AS TenDichVu,
@@ -186,7 +209,7 @@ ORDER BY P.MaPhong",
                          " + thanhTien + @" AS ThanhTien
                   FROM dbo." + table + @" PS
                   JOIN dbo.DICHVUVATTU DV ON PS." + maDvPs + " = DV." + maDv + @"
-                  WHERE PS." + keyColumn + " = @Ma",
+                  WHERE PS." + keyColumn + " = @Ma" + orderBy,
                 new SqlParameter("@Ma", hoaDon.MaGoc));
 
             int stt = 1;
@@ -203,7 +226,38 @@ ORDER BY P.MaPhong",
                 });
             }
 
-            return result;
+            return GioiHanDichVuTheoTongTien(result, hoaDon.TienDichVu, hoaDon.LoaiThanhToan == "PHATSINH");
+        }
+
+        private static ObservableCollection<DichVuHoaDonItem> GioiHanDichVuTheoTongTien(IEnumerable<DichVuHoaDonItem> source, decimal targetTotal, bool layTuCuoi)
+        {
+            ObservableCollection<DichVuHoaDonItem> result = new();
+            decimal remaining = Math.Max(0, targetTotal);
+            IEnumerable<DichVuHoaDonItem> ordered = layTuCuoi ? source.Reverse() : source;
+            foreach (DichVuHoaDonItem item in ordered)
+            {
+                if (remaining <= 0)
+                {
+                    break;
+                }
+
+                decimal amount = Math.Min(item.ThanhTien, remaining);
+                decimal quantity = item.DonGia > 0 ? amount / item.DonGia : item.SoLuong;
+                result.Add(new DichVuHoaDonItem
+                {
+                    Stt = result.Count + 1,
+                    MaPhong = item.MaPhong,
+                    TenDichVu = item.TenDichVu,
+                    SoLuong = quantity,
+                    DonGia = item.DonGia,
+                    ThanhTien = amount
+                });
+                remaining -= amount;
+            }
+
+            return layTuCuoi
+                ? new ObservableCollection<DichVuHoaDonItem>(result.Reverse())
+                : result;
         }
 
         private static List<RoomPrintGroup> MapPhongHoaDon(DataTable data)
@@ -217,6 +271,25 @@ ORDER BY P.MaPhong",
                 })
                 .Where(room => !string.IsNullOrWhiteSpace(room.SoPhong))
                 .ToList();
+        }
+
+        private static List<RoomPrintGroup> GioiHanTienPhongTheoHoaDon(IEnumerable<RoomPrintGroup> source, decimal targetTotal)
+        {
+            List<RoomPrintGroup> result = new();
+            decimal remaining = Math.Max(0, targetTotal);
+            foreach (RoomPrintGroup room in source)
+            {
+                decimal amount = Math.Min(room.TienPhong, remaining);
+                result.Add(new RoomPrintGroup
+                {
+                    MaPhong = room.MaPhong,
+                    SoPhong = room.SoPhong,
+                    TienPhong = amount
+                });
+                remaining -= amount;
+            }
+
+            return result;
         }
 
         private void BtnIn_Click(object sender, RoutedEventArgs e)

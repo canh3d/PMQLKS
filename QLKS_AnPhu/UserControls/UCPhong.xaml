@@ -5,70 +5,126 @@
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="128"
-             d:DesignWidth="142">
-    <Border x:Name="RootBorder"
-            Width="142"
-            Height="128"
-            Margin="0,0,12,12"
-            Padding="12"
-            Background="#ECFDF3"
-            BorderBrush="#6EC491"
-            BorderThickness="1"
-            CornerRadius="7"
-            Cursor="Hand"
-            MouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
-        <Grid>
-            <StackPanel>
-                <DockPanel>
-                    <TextBlock x:Name="TxtMaPhong"
-                               Text="P101"
-                               FontSize="21"
-                               FontWeight="Bold"
-                               Foreground="#0D9E4D"
-                               DockPanel.Dock="Left" />
-                    <iconPacks:PackIconMaterial x:Name="IconStar"
-                                                Kind="Star"
-                                                Width="14"
-                                                Height="14"
-                                                Foreground="#087987"
-                                                HorizontalAlignment="Right"
-                                                Visibility="Collapsed" />
-                </DockPanel>
-                <TextBlock x:Name="TxtTrangThai"
-                           Text="Phòng trống"
-                           FontSize="12"
-                           FontWeight="SemiBold"
+             d:DesignHeight="150"
+             d:DesignWidth="172"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+    <Grid Width="178"
+          Height="146"
+          Margin="0,0,16,16"
+          RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+            <ScaleTransform ScaleX="1" ScaleY="1" />
+        </Grid.RenderTransform>
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Style.Triggers>
+                    <EventTrigger RoutedEvent="MouseEnter">
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1.035" Duration="0:0:0.16" />
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1.035" Duration="0:0:0.16" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                    <EventTrigger RoutedEvent="MouseLeave">
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.16" />
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.16" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
+
+        <Border Margin="3,4,3,2"
+                Background="#99000000"
+                CornerRadius="11"
+                IsHitTestVisible="False">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.20" Color="#111827" />
+            </Border.Effect>
+        </Border>
+
+        <Border x:Name="RootBorder"
+                Width="172"
+                Height="140"
+                Padding="14"
+                Background="#ECFDF3"
+                BorderBrush="#6EC491"
+                BorderThickness="1.4"
+                CornerRadius="9"
+                Cursor="Hand"
+                MouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
+            <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" LastChildFill="False">
+                <TextBlock x:Name="TxtMaPhong"
+                           Text="101"
+                           FontSize="22"
+                           FontWeight="Bold"
                            Foreground="#0D9E4D"
-                           Margin="0,6,0,0"
-                           TextTrimming="CharacterEllipsis" />
-                <TextBlock x:Name="TxtLoaiPhong"
-                           Text="Phòng đơn"
-                           FontSize="12"
-                           Foreground="#344054"
-                           Margin="0,6,0,0"
-                           TextTrimming="CharacterEllipsis" />
+                           DockPanel.Dock="Left" />
+                <iconPacks:PackIconMaterial x:Name="IconStar"
+                                            Kind="Star"
+                                            Width="15"
+                                            Height="15"
+                                            Foreground="#087987"
+                                            DockPanel.Dock="Right"
+                                            Visibility="Collapsed" />
+            </DockPanel>
+
+            <TextBlock x:Name="TxtTrangThai"
+                       Grid.Row="1"
+                       Text="Phòng trống"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Foreground="#0D9E4D"
+                       Margin="0,6,0,0"
+                       TextTrimming="CharacterEllipsis" />
+
+            <TextBlock x:Name="TxtLoaiPhong"
+                       Grid.Row="2"
+                       Text="Phòng đơn"
+                       FontSize="12.5"
+                       Foreground="#344054"
+                       Margin="0,5,0,0"
+                       TextTrimming="CharacterEllipsis" />
+
+            <StackPanel Grid.Row="4">
                 <TextBlock x:Name="TxtGiaPhong"
                            Text="450,000 đ"
                            FontSize="13"
-                           FontWeight="SemiBold"
-                           Margin="0,4,0,0" />
+                           FontWeight="Bold"
+                           Foreground="#111827"
+                           TextTrimming="CharacterEllipsis" />
+                <DockPanel LastChildFill="False">
+                    <TextBlock x:Name="TxtDonDep"
+                               Text="Đã dọn dẹp"
+                               DockPanel.Dock="Left"
+                               MaxWidth="120"
+                               FontSize="11"
+                               Foreground="#475467"
+                               TextTrimming="CharacterEllipsis" />
+                    <iconPacks:PackIconMaterial Kind="Bed"
+                                                Width="22"
+                                                Height="22"
+                                                DockPanel.Dock="Right"
+                                                Foreground="#475467" />
+                </DockPanel>
             </StackPanel>
-
-            <TextBlock x:Name="TxtDonDep"
-                       Text="Đã dọn dẹp"
-                       VerticalAlignment="Bottom"
-                       HorizontalAlignment="Left"
-                       MaxWidth="92"
-                       FontSize="10"
-                       Foreground="#475467"
-                       TextTrimming="CharacterEllipsis" />
-            <iconPacks:PackIconMaterial Kind="Bed"
-                                        Width="22"
-                                        Height="22"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Bottom"
-                                        Foreground="#475467" />
         </Grid>
-    </Border>
+        </Border>
+    </Grid>
 </UserControl>

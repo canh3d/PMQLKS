@@ -1,26 +1,108 @@
 using System.Windows;
 using System.Windows.Controls;
+using QLKS_AnPhu.Security;
 using QLKS_AnPhu.View;
 
 namespace QLKS_AnPhu
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         private bool isSidebarExpanded = true;
+        private readonly AppUser currentUser;
+        private Button? activeMenuButton;
 
-        public MainWindow()
+        public MainWindow() : this(new AppUser
+        {
+            MaTK = 0,
+            TenDangNhap = "admin",
+            VaiTro = "Quản lý",
+            HoTenNhanVien = "Admin",
+            Permissions = PermissionService.AllPermissions.Select(item => item.Code).ToHashSet(StringComparer.OrdinalIgnoreCase)
+        })
+        {
+        }
+
+        public MainWindow(AppUser user)
         {
             InitializeComponent();
-            MainContent.Content = new TrangChu();
+            currentUser = user;
+            LblDichVu.Text = "Dịch vụ - vật tư";
+            BtnMenuVatTu.Visibility = Visibility.Collapsed;
+            BtnMenuCaiDat.Visibility = Visibility.Collapsed;
+            TxtXinChao.Text = $"Xin chào: {GetDisplayName()} ({currentUser.VaiTro})";
+            ApplyPermissions();
+            Navigate(PermissionService.TrangChu, () => new TrangChu(), BtnTrangChu, "Dashboard khách sạn");
+        }
+
+        private string GetDisplayName()
+        {
+            return string.IsNullOrWhiteSpace(currentUser.HoTenNhanVien) ? currentUser.TenDangNhap : currentUser.HoTenNhanVien;
+        }
+
+        private void ApplyPermissions()
+        {
+            SetMenuVisibility(BtnTrangChu, PermissionService.TrangChu);
+            SetMenuVisibility(BtnMenuQLPhong, PermissionService.QLPhong);
+            SetMenuVisibility(BtnMenuPhieuThue, PermissionService.PhieuThue);
+            SetMenuVisibility(BtnMenuKhachHang, PermissionService.KhachHang);
+            SetMenuVisibility(BtnMenuHoaDon, PermissionService.HoaDon);
+            SetMenuVisibility(BtnMenuDichVuVatTu, PermissionService.DichVuVatTu);
+            BtnMenuVatTu.Visibility = Visibility.Collapsed;
+            BtnMenuCaiDat.Visibility = Visibility.Collapsed;
+            SetMenuVisibility(BtnMenuNhanVien, PermissionService.NhanVien);
+            SetMenuVisibility(BtnMenuBaoCao, PermissionService.BaoCao);
+        }
+
+        private void SetMenuVisibility(Button button, string permissionCode)
+        {
+            button.Visibility = currentUser.CanAccess(permissionCode) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private bool EnsurePermission(string permissionCode)
+        {
+            if (currentUser.CanAccess(permissionCode))
+            {
+                return true;
+            }
+
+            MessageBox.Show("Tài khoản của bạn không có quyền truy cập chức năng này.", "Không có quyền", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
+        private void Navigate(string permissionCode, Func<UserControl> createView, Button? menuButton = null, string? title = null)
+        {
+            if (!EnsurePermission(permissionCode))
+            {
+                return;
+            }
+
+            MainContent.Content = createView();
+            if (menuButton != null)
+            {
+                SetActiveMenu(menuButton);
+            }
+
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                TxtPageTitle.Text = title;
+            }
+        }
+
+        private void SetActiveMenu(Button button)
+        {
+            if (activeMenuButton != null)
+            {
+                activeMenuButton.Style = (Style)FindResource("SidebarButtonStyle");
+            }
+
+            button.Style = (Style)FindResource("SidebarButtonActiveStyle");
+            activeMenuButton = button;
         }
 
         private void BtnToggleMenu_Click(object sender, RoutedEventArgs e)
         {
             isSidebarExpanded = !isSidebarExpanded;
-            SidebarColumn.Width = new GridLength(isSidebarExpanded ? 244 : 72);
+            SidebarColumn.Width = new GridLength(isSidebarExpanded ? 292 : 82);
 
             Visibility labelVisibility = isSidebarExpanded ? Visibility.Visible : Visibility.Collapsed;
             LblTrangChu.Visibility = labelVisibility;
@@ -32,36 +114,60 @@ namespace QLKS_AnPhu
             LblNhanVien.Visibility = labelVisibility;
             LblBaoCao.Visibility = labelVisibility;
             LblDangXuat.Visibility = labelVisibility;
+            LblBrandTitle.Visibility = labelVisibility;
+            LblBrandSubtitle.Visibility = labelVisibility;
         }
 
         private void BtnTrangChu_Click(object sender, RoutedEventArgs e)
         {
-            MainContent.Content = new TrangChu();
+            Navigate(PermissionService.TrangChu, () => new TrangChu(), BtnTrangChu, "Dashboard khách sạn");
         }
 
         private void BtnQLPhong_Click(object sender, RoutedEventArgs e)
         {
-            MainContent.Content = new QLPhong();
+            Navigate(PermissionService.QLPhong, () => new QLPhong(), BtnMenuQLPhong, "Quản lý phòng");
         }
 
         private void BtnPhieuThue_Click(object sender, RoutedEventArgs e)
         {
-            MainContent.Content = new PhieuThue();
+            Navigate(PermissionService.PhieuThue, () => new PhieuThue(), BtnMenuPhieuThue, "Phiếu thuê");
         }
 
         private void BtnDichVuVatTu_Click(object sender, RoutedEventArgs e)
         {
-            MainContent.Content = new DichVuVatTu();
+            Navigate(PermissionService.DichVuVatTu, () => new DichVuVatTu(), BtnMenuDichVuVatTu, "Dịch vụ - vật tư");
+        }
+
+        private void BtnVatTu_Click(object sender, RoutedEventArgs e)
+        {
+            Navigate(PermissionService.DichVuVatTu, () => new DichVuVatTu(), BtnMenuVatTu, "Vật tư");
         }
 
         private void BtnKhachHang_Click(object sender, RoutedEventArgs e)
         {
-            MainContent.Content = new KhachHang();
+            Navigate(PermissionService.KhachHang, () => new KhachHang(), BtnMenuKhachHang, "Khách hàng");
         }
 
         private void BtnHoaDon_Click(object sender, RoutedEventArgs e)
         {
-            MainContent.Content = new HoaDon();
+            Navigate(PermissionService.HoaDon, () => new HoaDon(), BtnMenuHoaDon, "Hóa đơn");
+        }
+
+        private void BtnNhanVien_Click(object sender, RoutedEventArgs e)
+        {
+            Navigate(PermissionService.NhanVien, () => new NhanVien(), BtnMenuNhanVien, "Nhân viên");
+        }
+
+        private void BtnBaoCao_Click(object sender, RoutedEventArgs e)
+        {
+            Navigate(PermissionService.BaoCao, () => new BaoCao(), BtnMenuBaoCao, "Báo cáo - thống kê");
+        }
+
+        private void BtnCaiDat_Click(object sender, RoutedEventArgs e)
+        {
+            SetActiveMenu(BtnMenuCaiDat);
+            TxtPageTitle.Text = "Cài đặt";
+            MessageBox.Show("Màn hình cài đặt sẽ được bổ sung sau.", "Cài đặt", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BtnDangXuat_Click(object sender, RoutedEventArgs e)

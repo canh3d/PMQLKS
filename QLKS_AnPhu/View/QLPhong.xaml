@@ -5,157 +5,227 @@
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="560"
-             d:DesignWidth="1024"
-             Background="#EEF3F7">
+             d:DesignHeight="620"
+             d:DesignWidth="1120"
+             Background="#F7F8FA"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
     <UserControl.Resources>
-        <SolidColorBrush x:Key="TextMainBrush" Color="#172033" />
-        <SolidColorBrush x:Key="TextMutedBrush" Color="#5D6B82" />
+        <SolidColorBrush x:Key="TextMainBrush" Color="#111827" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B" />
+        <SolidColorBrush x:Key="GreenBrush" Color="#15803D" />
+        <SolidColorBrush x:Key="PrimaryBrushLocal" Color="#2563EB" />
         <SolidColorBrush x:Key="TealBrush" Color="#087987" />
-        <SolidColorBrush x:Key="GreenBrush" Color="#0D9E4D" />
         <SolidColorBrush x:Key="RedBrush" Color="#C0392B" />
-        <SolidColorBrush x:Key="AmberBrush" Color="#B7791F" />
 
-        <DropShadowEffect x:Key="SoftShadow" BlurRadius="10" Direction="270" ShadowDepth="2" Opacity="0.12" />
+        <DropShadowEffect x:Key="RoomShadow" BlurRadius="16" ShadowDepth="3" Opacity="0.16" Color="#111827" />
+        <DropShadowEffect x:Key="RoomShadowStrong" BlurRadius="26" ShadowDepth="6" Opacity="0.22" Color="#111827" />
 
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#DAE3EE" />
+        <Style x:Key="RoomPanelStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FAFAFA" />
+            <Setter Property="BorderBrush" Value="#D8DEE8" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Effect" Value="{StaticResource SoftShadow}" />
+            <Setter Property="CornerRadius" Value="12" />
         </Style>
 
-        <Style x:Key="ActionButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="32" />
+        <Style x:Key="RoomButtonStyle" TargetType="Button" BasedOn="{StaticResource AppOutlineButtonStyle}">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="14,0" />
             <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="BorderThickness" Value="1" />
         </Style>
     </UserControl.Resources>
 
-    <Grid>
-    <Grid x:Name="MainContent" Margin="20,20,20,10">
+    <Grid Margin="18,12,18,12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="65" />
-            <RowDefinition Height="35" />
+            <RowDefinition Height="44" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="45" />
-            <RowDefinition Height="25" />
+            <RowDefinition Height="52" />
+            <RowDefinition Height="24" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
-            <TextBlock Text="Sơ đồ phòng" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-            <TextBlock Text="Theo dõi trạng thái phòng theo dữ liệu thật" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-            <TextBlock x:Name="TxtLoi" Margin="0,4,0,0" FontSize="11" Foreground="{StaticResource RedBrush}" TextWrapping="Wrap" />
-        </StackPanel>
-
-        <Grid Grid.Row="1" Margin="0,0,0,5">
+        <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="100" />
-                <ColumnDefinition Width="15" />
+                <ColumnDefinition Width="14" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="100" />
-                <ColumnDefinition Width="15" />
+                <ColumnDefinition Width="14" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="10" />
                 <ColumnDefinition Width="80" />
-                <ColumnDefinition Width="15" />
-                <ColumnDefinition Width="140" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="150" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" Text="Trạng thái" Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12" />
-            <ComboBox x:Name="CboTrangThai" Grid.Column="1" Height="26" SelectedIndex="0">
+            <TextBlock Grid.Column="0" Text="Trạng thái" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" Foreground="{StaticResource TextMainBrush}" />
+            <ComboBox x:Name="CboTrangThai" Grid.Column="1" Height="30" SelectedIndex="0">
                 <ComboBoxItem Content="Tất cả" />
                 <ComboBoxItem Content="Phòng trống" />
                 <ComboBoxItem Content="Đang thuê" />
                 <ComboBoxItem Content="Đang sửa chữa" />
             </ComboBox>
 
-            <TextBlock Grid.Column="3" Text="Tầng" Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12" />
-            <ComboBox x:Name="CboTang" Grid.Column="4" Height="26" SelectedIndex="0" />
+            <TextBlock Grid.Column="3" Text="Tầng" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" Foreground="{StaticResource TextMainBrush}" />
+            <ComboBox x:Name="CboTang" Grid.Column="4" Height="30" SelectedIndex="0" />
 
             <Grid Grid.Column="6">
-                <TextBox x:Name="TxtTimKiem" Height="26" Padding="8,0,28,0" VerticalContentAlignment="Center" FontSize="11" KeyDown="TxtTimKiem_KeyDown" />
-                <iconPacks:PackIconMaterial Kind="Calendar" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#667085" />
+                <TextBox x:Name="TxtTimKiem"
+                         Height="32"
+                         Padding="14,0,34,0"
+                         VerticalContentAlignment="Center"
+                         FontSize="12"
+                         TextChanged="TxtTimKiem_TextChanged"
+                         GotKeyboardFocus="TxtTimKiem_GotKeyboardFocus"
+                         KeyDown="TxtTimKiem_KeyDown" />
+                <iconPacks:PackIconMaterial Kind="Magnify" Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#667085" />
+
+                <Popup x:Name="PopupGoiYTimKiem"
+                       PlacementTarget="{Binding ElementName=TxtTimKiem}"
+                       Placement="Bottom"
+                       AllowsTransparency="True"
+                       StaysOpen="False"
+                       PopupAnimation="Slide">
+                    <Grid MinWidth="{Binding ActualWidth, ElementName=TxtTimKiem}"
+                          MaxHeight="230"
+                          Margin="0,6,0,0"
+                          SnapsToDevicePixels="True">
+                        <Border Margin="3"
+                                Background="#33000000"
+                                CornerRadius="12"
+                                IsHitTestVisible="False">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.16" Color="#111827" />
+                            </Border.Effect>
+                        </Border>
+                        <Border Background="White"
+                                BorderBrush="#D8DEE8"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                            <ListBox x:Name="LbGoiYTimKiem"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     DisplayMemberPath="Display"
+                                     FontSize="12"
+                                     Foreground="#111827"
+                                     Padding="6"
+                                     KeyDown="LbGoiYTimKiem_KeyDown"
+                                     PreviewMouseLeftButtonUp="LbGoiYTimKiem_PreviewMouseLeftButtonUp">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="10,8" />
+                                        <Setter Property="Margin" Value="0,1" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#EEF4FF" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#DBEAFE" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+                        </Border>
+                    </Grid>
+                </Popup>
             </Grid>
 
-            <Button Grid.Column="8" Style="{StaticResource ActionButtonStyle}" Background="{StaticResource TealBrush}" BorderBrush="{StaticResource TealBrush}" Foreground="White" Click="BtnTim_Click">
+            <Button Grid.Column="8" Style="{StaticResource RoomButtonStyle}" Click="BtnTim_Click">
                 <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial Kind="Magnify" Width="12" Height="12" Margin="0,0,4,0" />
-                    <TextBlock Text="Tìm" />
+                    <iconPacks:PackIconMaterial Kind="Magnify" Width="14" Height="14" Margin="0,0,6,0" />
+                    <TextBlock Text="Tìm" Style="{StaticResource ButtonContentTextStyle}" />
                 </StackPanel>
             </Button>
 
-            <Button Grid.Column="10" Style="{StaticResource ActionButtonStyle}" Background="White" BorderBrush="#D8E0EA" Foreground="{StaticResource TextMainBrush}" Click="BtnDanhSachPhong_Click">
+            <Button Grid.Column="10" Style="{StaticResource RoomButtonStyle}" Click="BtnDanhSachPhong_Click">
                 <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial Kind="FormatListBulleted" Width="12" Height="12" Margin="0,0,6,0" />
-                    <TextBlock Text="Danh sách phòng" />
+                    <iconPacks:PackIconMaterial Kind="FormatListBulleted" Width="14" Height="14" Margin="0,0,6,0" />
+                    <TextBlock Text="Danh sách phòng" Style="{StaticResource ButtonContentTextStyle}" />
                 </StackPanel>
             </Button>
         </Grid>
 
-        <Grid Grid.Row="2" Margin="0,10">
+        <Grid Grid.Row="1" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2.4*" />
-                <ColumnDefinition Width="15" />
+                <ColumnDefinition Width="2.45*" />
+                <ColumnDefinition Width="18" />
                 <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Padding="15">
+            <Border Grid.Column="0" Style="{StaticResource RoomPanelStyle}" Padding="14">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="PanelPhongTheoTang" />
                 </ScrollViewer>
             </Border>
 
-            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="18">
+            <Border Grid.Column="2" Style="{StaticResource RoomPanelStyle}" Padding="18">
                 <StackPanel>
                     <TextBlock Text="CHI TIẾT PHÒNG" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                    <Grid Margin="0,12,0,12">
-                        <TextBlock x:Name="TxtCTMaPhong" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TealBrush}" VerticalAlignment="Center" />
-                        <Border HorizontalAlignment="Right" Background="#E8F7EE" Padding="10,4" CornerRadius="4">
+                    <Grid Margin="0,14,0,12">
+                        <TextBlock x:Name="TxtCTMaPhong" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" VerticalAlignment="Center" />
+                        <Border HorizontalAlignment="Right" Background="#DCFCE7" Padding="10,4" CornerRadius="5">
                             <TextBlock x:Name="TxtCTTrangThai" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GreenBrush}" />
                         </Border>
                     </Grid>
-                    <Border Height="1" Background="#EAECF0" Margin="0,0,0,15" />
-                    <TextBlock x:Name="TxtCTTang" FontSize="12" Margin="0,0,0,12" Foreground="#344054" />
-                    <TextBlock x:Name="TxtCTLoaiPhong" FontSize="12" Margin="0,0,0,12" Foreground="#344054" />
-                    <TextBlock x:Name="TxtCTGiaPhong" FontSize="12" Margin="0,0,0,12" Foreground="#344054" />
-                    <TextBlock x:Name="TxtCTKhach" FontSize="12" Margin="0,0,0,12" Foreground="#344054" />
-                    <TextBlock x:Name="TxtCTGioNhan" FontSize="12" Margin="0,0,0,12" Foreground="#344054" />
-                    <TextBlock x:Name="TxtCTGioTra" FontSize="12" Margin="0,0,0,12" Foreground="#344054" />
-                    <TextBox x:Name="TxtCTGhiChu" Height="50" Padding="8" FontSize="11" Background="#F4F6F8" BorderBrush="#CDD6E1" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                    <Border Height="1" Background="#E5E7EB" Margin="0,0,0,16" />
+                    <TextBlock x:Name="TxtCTTang" FontSize="12" Margin="0,0,0,13" Foreground="#374151" />
+                    <TextBlock x:Name="TxtCTLoaiPhong" FontSize="12" Margin="0,0,0,13" Foreground="#374151" />
+                    <TextBlock x:Name="TxtCTGiaPhong" FontSize="12" Margin="0,0,0,13" Foreground="#374151" />
+                    <TextBlock x:Name="TxtCTKhach" FontSize="12" Margin="0,0,0,13" Foreground="#374151" />
+                    <TextBlock x:Name="TxtCTGioNhan" FontSize="12" Margin="0,0,0,13" Foreground="#374151" />
+                    <TextBlock x:Name="TxtCTGioTra" FontSize="12" Margin="0,0,0,13" Foreground="#374151" />
+                    <TextBox x:Name="TxtCTGhiChu" Height="46" Padding="12,8" FontSize="11" Background="#F3F4F6" BorderBrush="#D1D5DB" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                    <TextBlock x:Name="TxtLoi" Margin="0,10,0,0" FontSize="11" Foreground="{StaticResource RedBrush}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <Grid Grid.Row="3" VerticalAlignment="Center">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="160" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="180" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="140" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Style="{StaticResource ActionButtonStyle}" Background="{StaticResource TealBrush}" BorderBrush="{StaticResource TealBrush}" Foreground="White" Click="BtnDatPhong_Click">
-                <TextBlock Text="Đặt phòng" />
+        <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Width="150" Style="{StaticResource RoomButtonStyle}" Click="BtnDatPhong_Click">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14" Margin="0,0,7,0" />
+                    <TextBlock Text="Đặt phòng" Style="{StaticResource ButtonContentTextStyle}" />
+                </StackPanel>
             </Button>
-            <Button Grid.Column="2" Style="{StaticResource ActionButtonStyle}" Background="#F59E0B" BorderBrush="#F59E0B" Foreground="White" Click="BtnDatPhongTheoDoan_Click">
-                <TextBlock Text="Đặt phòng theo đoàn" />
+            <Button Width="190" Margin="10,0,0,0" Style="{StaticResource RoomButtonStyle}" Click="BtnDatPhongTheoDoan_Click">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="AccountMultiplePlus" Width="14" Height="14" Margin="0,0,7,0" />
+                    <TextBlock Text="Đặt phòng theo đoàn" Style="{StaticResource ButtonContentTextStyle}" />
+                </StackPanel>
             </Button>
-            <Button Grid.Column="4" Style="{StaticResource ActionButtonStyle}" Background="White" BorderBrush="#D8E0EA" Foreground="{StaticResource TextMainBrush}" Click="BtnLamMoi_Click">
-                <TextBlock Text="Làm mới" />
+            <Button Width="130" Margin="10,0,0,0" Style="{StaticResource RoomButtonStyle}" Click="BtnLamMoi_Click">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14" Margin="0,0,7,0" />
+                    <TextBlock Text="Làm mới" Style="{StaticResource ButtonContentTextStyle}" />
+                </StackPanel>
             </Button>
-        </Grid>
+        </StackPanel>
 
-        <Grid Grid.Row="4" VerticalAlignment="Bottom" Margin="0,0,0,5">
-            <TextBlock Text="Chú thích: Xanh lá: Phòng trống | Đỏ: Đang thuê | Xanh dương: Đã đặt | Vàng: Chưa dọn dẹp | Xám: Đang sửa chữa" FontSize="11" Foreground="#5D6B82" HorizontalAlignment="Left" />
-            <TextBlock Text="Trạng thái hệ thống: Hoạt động tốt" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GreenBrush}" HorizontalAlignment="Right" />
+        <Grid Grid.Row="3">
+            <TextBlock Text="Chú thích: Xanh lá: Phòng trống | Đỏ: Đang thuê | Xanh dương: Đã đặt | Vàng: Chưa dọn dẹp | Xám: Đang sửa chữa"
+                       FontSize="11"
+                       Foreground="#64748B"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center" />
+            <TextBlock Text="Trạng thái hệ thống: Hoạt động tốt"
+                       FontSize="11"
+                       Foreground="{StaticResource GreenBrush}"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center" />
         </Grid>
-    </Grid>
-
     </Grid>
 </UserControl>

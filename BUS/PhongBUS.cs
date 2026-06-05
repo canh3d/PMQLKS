@@ -71,7 +71,21 @@ namespace QLKS_AnPhu.BUS
                 }
             }
 
-            datPhongDAL.LuuDatPhongDoan(requests);
+            int maDatPhong = datPhongDAL.LuuDatPhongDoan(requests);
+            if (requests.Any(item => item.NhanNgay))
+            {
+                decimal tongTien = requests.Sum(item =>
+                {
+                    decimal giamGia = LaKhachVip(item.KhachHang.LoaiKhach) ? Math.Round(item.TienPhong * 0.1m, 0) : 0;
+                    return Math.Max(0, item.TienPhong + item.TienDichVu - giamGia);
+                });
+                decimal giaTriTinhThue = requests.Sum(item =>
+                {
+                    decimal giamGia = LaKhachVip(item.KhachHang.LoaiKhach) ? Math.Round(item.TienPhong * 0.1m, 0) : 0;
+                    return Math.Max(0, item.TienPhong - giamGia);
+                });
+                thanhToanBUS.CheckInTuDatPhong(maDatPhong, tongTien, 0, giaTriTinhThue);
+            }
         }
 
         public void NhanPhong(PhongDTO phong)
@@ -88,7 +102,13 @@ namespace QLKS_AnPhu.BUS
         {
             request.NhanNgay = true;
             request.TienCoc = 0;
-            datPhongDAL.LuuDatPhong(request);
+            int maDatPhong = datPhongDAL.LuuDatPhong(request);
+            decimal giamGia = LaKhachVip(request.KhachHang.LoaiKhach) ? Math.Round(request.TienPhong * 0.1m, 0) : 0;
+            thanhToanBUS.CheckInTuDatPhong(
+                maDatPhong,
+                Math.Max(0, request.TienPhong + request.TienDichVu - giamGia),
+                0,
+                Math.Max(0, request.TienPhong - giamGia));
         }
 
         public void NhanPhongTuDatPhong(int maDatPhong)
@@ -96,10 +116,10 @@ namespace QLKS_AnPhu.BUS
             datPhongDAL.NhanPhongTuDatPhong(maDatPhong);
         }
 
-        public KetQuaCheckInThanhToanDTO NhanPhongTuDatPhong(int maDatPhong, decimal tongTienDuKien, decimal tienDatCocTruoc)
+        public KetQuaCheckInThanhToanDTO NhanPhongTuDatPhong(int maDatPhong, decimal tongTienDuKien, decimal tienDatCocTruoc, decimal? giaTriTinhThue = null)
         {
             datPhongDAL.NhanPhongTuDatPhong(maDatPhong);
-            return thanhToanBUS.CheckInTuDatPhong(maDatPhong, tongTienDuKien, tienDatCocTruoc);
+            return thanhToanBUS.CheckInTuDatPhong(maDatPhong, tongTienDuKien, tienDatCocTruoc, giaTriTinhThue);
         }
 
         public void NoShow(int maDatPhong)
@@ -152,6 +172,11 @@ namespace QLKS_AnPhu.BUS
                    phong.TrangThai.Contains("dang", StringComparison.OrdinalIgnoreCase) ||
                    phong.TrangThai.Contains("bận", StringComparison.OrdinalIgnoreCase) ||
                    phong.TrangThai.Contains("ban", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LaKhachVip(string value)
+        {
+            return (value ?? string.Empty).Contains("VIP", StringComparison.OrdinalIgnoreCase);
         }
 
         private void KiemTraTrungPhong(PhongDTO phong, bool isEdit)

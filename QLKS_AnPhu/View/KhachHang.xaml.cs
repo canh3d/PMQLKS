@@ -294,6 +294,11 @@ namespace QLKS_AnPhu.View
                     DatPhongRequestDTO request = ucDatPhong.TaoYeuCauDatPhong();
                     if (nhanNgay)
                     {
+                        decimal giamGia = request.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round(request.TienPhong * 0.1m, 0) : 0;
+                        if (!DialogService.XacNhanThanhToanCheckIn(Window.GetWindow(this), "Phòng " + request.Phong.MaHienThi, request.TienPhong, request.TienDichVu, giamGia: giamGia))
+                        {
+                            return;
+                        }
                         phongBUS.NhanPhong(request);
                     }
                     else
