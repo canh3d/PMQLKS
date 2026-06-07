@@ -697,40 +697,17 @@ END AS decimal(18, 2))";
 
         private static bool TableExists(string tableName)
         {
-            object? result = ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM sys.tables WHERE name = @Name", new SqlParameter("@Name", tableName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.TableExists(tableName);
         }
 
         private static bool ColumnExists(string tableName, string columnName)
         {
-            object? result = ConnectDB.ExecuteScalar(
-                @"SELECT COUNT(*)
-                  FROM sys.tables t
-                  JOIN sys.columns c ON t.object_id = c.object_id
-                  WHERE t.name = @TableName AND c.name = @ColumnName",
-                new SqlParameter("@TableName", tableName),
-                new SqlParameter("@ColumnName", columnName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.ColumnExists(tableName, columnName);
         }
 
         private static string TenPhongSql(string alias)
         {
-            if (ColumnExists("PHONG", "TenPhong"))
-            {
-                return alias + ".TenPhong";
-            }
-
-            if (ColumnExists("PHONG", "SoPhong"))
-            {
-                return alias + ".SoPhong";
-            }
-
-            if (ColumnExists("PHONG", "MaSoPhong"))
-            {
-                return alias + ".MaSoPhong";
-            }
-
-            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
+            return ViewSchemaHelper.TenPhongSql(alias);
         }
 
         private static string BoDau(string value)

@@ -143,10 +143,19 @@
             <TextBox x:Name="TxtTimKiem"
                      Grid.Column="0"
                      Height="32"
-                     Padding="12,0"
+                     Padding="34,0,12,0"
                      VerticalContentAlignment="Center"
                      FontSize="13"
                      KeyDown="TxtTimKiem_KeyDown" />
+            <iconPacks:PackIconMaterial Grid.Column="0"
+                                        Kind="Magnify"
+                                        Width="14"
+                                        Height="14"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Margin="12,0,0,0"
+                                        Foreground="#667085"
+                                        IsHitTestVisible="False" />
 
             <Button Grid.Column="2"
                     Style="{StaticResource ToolButtonStyle}"

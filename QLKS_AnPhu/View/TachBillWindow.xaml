@@ -1,0 +1,223 @@
+<Window x:Class="QLKS_AnPhu.View.TachBillWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        Title="Tách bill theo phòng"
+        Width="1040"
+        Height="680"
+        MinWidth="940"
+        MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Background="#F8FAFC"
+        FontFamily="Segoe UI"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
+        <SolidColorBrush x:Key="SuccessBrush" Color="#16A34A" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#D97706" />
+        <SolidColorBrush x:Key="TextMainBrush" Color="#111827" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B" />
+        <DropShadowEffect x:Key="SoftShadow" BlurRadius="18" ShadowDepth="3" Opacity="0.14" Color="#111827" />
+
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="BorderBrush" Value="#E2E8F0" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Effect" Value="{StaticResource SoftShadow}" />
+        </Style>
+
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="MinWidth" Value="110" />
+            <Setter Property="Padding" Value="15,0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.92" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Padding="22">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="TÁCH BILL THEO PHÒNG" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                    <TextBlock x:Name="TxtThongTinHoaDon" Margin="0,6,0,0" FontSize="14" Foreground="{StaticResource TextMutedBrush}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                    <TextBlock Text="Tổng hóa đơn gốc" FontSize="13" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right" />
+                    <TextBlock x:Name="TxtTongTien" Margin="0,4,0,0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Right" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.35*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Padding="18">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Chọn phòng chuyển sang HÓA ĐƠN 2" FontSize="17" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                    <DataGrid x:Name="DgPhong"
+                              Grid.Row="2"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              RowHeight="42"
+                              ColumnHeaderHeight="42"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8FAFC"
+                              BorderBrush="#E2E8F0"
+                              BorderThickness="1"
+                              CurrentCellChanged="DgPhong_CurrentCellChanged">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#EEF2F7" />
+                                <Setter Property="Foreground" Value="#334155" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="Padding" Value="10,0" />
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="HĐ 2" Width="70">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsBill2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Focusable="False"
+                                                  Checked="PhongBill2_Checked"
+                                                  Unchecked="PhongBill2_Checked" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Phòng" Binding="{Binding SoPhong}" IsReadOnly="True" Width="110" />
+                            <DataGridTextColumn Header="Dịch vụ" Binding="{Binding SoDichVu}" IsReadOnly="True" Width="90" />
+                            <DataGridTextColumn Header="Tổng tiền" Binding="{Binding TongPhongText}" IsReadOnly="True" Width="130" />
+                            <DataGridTextColumn Header="Ghi chú" Binding="{Binding GhiChu}" IsReadOnly="True" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock Grid.Row="3" Margin="0,10,0,0" Text="Ví dụ thuê 5 phòng: tick 2 phòng sang Hóa đơn 2, 3 phòng còn lại tự thuộc Hóa đơn 1." Foreground="{StaticResource TextMutedBrush}" />
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="18">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="16" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="16" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Thông tin tách bill" FontSize="17" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Background="#EFF6FF" CornerRadius="14" Padding="14">
+                            <StackPanel>
+                                <TextBlock Text="Hóa đơn 1" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" />
+                                <TextBlock x:Name="TxtBill1" Margin="0,5,0,0" FontSize="20" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="#FFF7ED" CornerRadius="14" Padding="14">
+                            <StackPanel>
+                                <TextBlock Text="Hóa đơn 2" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" />
+                                <TextBlock x:Name="TxtBill2" Margin="0,5,0,0" FontSize="20" FontWeight="Bold" Foreground="{StaticResource WarningBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <StackPanel Grid.Row="4">
+                        <TextBlock Text="Người đại diện hóa đơn 2 *" FontWeight="SemiBold" Foreground="{StaticResource TextMainBrush}" />
+                        <TextBox x:Name="TxtDaiDienBill2" Height="38" Margin="0,7,0,0" Padding="10,0" VerticalContentAlignment="Center" TextChanged="ThongTinBill2_Changed" />
+                        <TextBlock Text="Số điện thoại đại diện HĐ 2" Margin="0,12,0,0" FontWeight="SemiBold" Foreground="{StaticResource TextMainBrush}" />
+                        <TextBox x:Name="TxtSdtBill2" Height="38" Margin="0,7,0,0" Padding="10,0" VerticalContentAlignment="Center" />
+                        <TextBlock Text="Ghi chú HĐ 2" Margin="0,12,0,0" FontWeight="SemiBold" Foreground="{StaticResource TextMainBrush}" />
+                        <TextBox x:Name="TxtGhiChuBill2" Height="76" Margin="0,7,0,0" Padding="10" TextWrapping="Wrap" AcceptsReturn="True" />
+                    </StackPanel>
+
+                    <TextBlock x:Name="TxtTrangThaiTong" Grid.Row="6" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="4">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Style="{StaticResource ActionButtonStyle}" Background="{StaticResource SuccessBrush}" BorderBrush="{StaticResource SuccessBrush}" Click="BtnInBill1_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Printer" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="In hóa đơn 1" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="10,0,0,0" Style="{StaticResource ActionButtonStyle}" Background="{StaticResource WarningBrush}" BorderBrush="{StaticResource WarningBrush}" Click="BtnInBill2_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Printer" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="In hóa đơn 2" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="10,0,0,0" Style="{StaticResource ActionButtonStyle}" Click="BtnInTatCa_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="PrinterCheck" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="In cả 2" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <Button HorizontalAlignment="Right" Style="{StaticResource ActionButtonStyle}" Background="#475569" BorderBrush="#475569" Click="BtnDong_Click">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="Close" Width="16" Height="16" Margin="0,0,7,0" />
+                    <TextBlock Text="Đóng" />
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Grid>
+</Window>

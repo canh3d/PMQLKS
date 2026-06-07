@@ -86,20 +86,37 @@ namespace QLKS_AnPhu.DAL
 
             try
             {
+                DateTime ngayTraPhong = DateTime.Now;
                 int? maDatPhong = LayMaDatPhongTheoThue(conn, tran, maThue);
                 int maHoaDon = LayHoacTaoHoaDonTheoThue(conn, tran, maThue, maDatPhong);
-                decimal tienThuThem = LayTongTienDichVuHoaDon(conn, tran, maHoaDon, maThue, maDatPhong)
-                    + LayTienGiaHanHoaDon(conn, tran, maHoaDon, maThue)
-                    + LayPhuThuPhatSinhHoaDon(conn, tran, maHoaDon, maThue);
+                List<int> nhomMaDatPhong = LayNhomDatPhongTheoThue(conn, tran, maThue);
+
+                CapNhatNgayTraPhong(conn, tran, maThue, nhomMaDatPhong, ngayTraPhong);
+
+                decimal tienDichVuPhatSinh = LayTongTienDichVuHoaDon(conn, tran, maHoaDon, maThue, maDatPhong);
+                decimal tienGiaHanDoiPhong = LayTienGiaHanHoaDon(conn, tran, maHoaDon, maThue);
+                decimal phuThuTraMuon = LayPhuThuPhatSinhHoaDon(conn, tran, maHoaDon, maThue);
+                decimal tienThuThem = tienDichVuPhatSinh + tienGiaHanDoiPhong + phuThuTraMuon;
 
                 if (tienThuThem > 0)
                 {
-                    ChenChiTietThanhToan(conn, tran, maHoaDon, maDatPhong, maThue, "Thanh toan phat sinh khi check-out", tienThuThem, "Service");
+                    if (tienDichVuPhatSinh > 0)
+                    {
+                        ChenChiTietThanhToan(conn, tran, maHoaDon, maDatPhong, maThue, "Dich vu phat sinh khi check-out", tienDichVuPhatSinh, "Service");
+                    }
+                    if (tienGiaHanDoiPhong > 0)
+                    {
+                        ChenChiTietThanhToan(conn, tran, maHoaDon, maDatPhong, maThue, "Tien phong phat sinh do gia han/doi phong", tienGiaHanDoiPhong, "RoomExtra");
+                    }
+                    if (phuThuTraMuon > 0)
+                    {
+                        ChenChiTietThanhToan(conn, tran, maHoaDon, maDatPhong, maThue, "Phu phi tra muon khi check-out", phuThuTraMuon, "LateFee");
+                    }
                 }
 
-                List<int> nhomMaDatPhong = LayNhomDatPhongTheoThue(conn, tran, maThue);
+                CapNhatTongHoaDonSauCheckOut(conn, tran, maHoaDon, maThue, maDatPhong);
                 CapNhatTrangThaiHoaDon(conn, tran, maHoaDon, "Closed", "Da thanh toan", "Da dong");
-                CapNhatTrangThaiPhieuThue(conn, tran, maThue, nhomMaDatPhong, "Da tra phong", "Da tra", "Closed");
+                CapNhatTrangThaiPhieuThue(conn, tran, maThue, nhomMaDatPhong, ngayTraPhong, "Da tra phong", "Da tra", "Closed");
                 CapNhatTrangThaiPhongTheoThue(conn, tran, maThue, nhomMaDatPhong, "Dirty", "Chua don dep", "Can don dep");
 
                 tran.Commit();
@@ -393,7 +410,79 @@ namespace QLKS_AnPhu.DAL
             cmd.Parameters.AddWithValue("@MaThue", maThue);
             cmd.Parameters.AddWithValue("@MaDatPhong", maDatPhong.HasValue ? maDatPhong.Value : DBNull.Value);
             object? value = cmd.ExecuteScalar();
+            decimal tienLichSu = value == null || value == DBNull.Value ? 0 : Convert.ToDecimal(value);
+            return tienLichSu > 0 ? tienLichSu : TinhTongTienDichVuTheoMarker(conn, tran, maThue, maDatPhong, "[DICHVU_CHECKIN]");
+        }
+
+        private static decimal TinhTongTienDichVuTheoMarker(SqlConnection conn, SqlTransaction tran, int? maThue, int? maDatPhong, string marker)
+        {
+            string table = ResolveTable(conn, tran, "PHATSINHDICHVU", "CHITIETPHATSINH");
+            if (string.IsNullOrWhiteSpace(table) || !ColumnExists(conn, tran, table, "GhiChu"))
+            {
+                return 0;
+            }
+
+            string amountExpr = ColumnExists(conn, tran, table, "ThanhTien") ? "ThanhTien" :
+                ColumnExists(conn, tran, table, "DonGia") && ColumnExists(conn, tran, table, "SoLuong") ? "(DonGia * SoLuong)" : "0";
+            List<string> conditions = new() { "ISNULL(GhiChu, N'') LIKE @Marker" };
+            List<string> keys = new();
+            if (maThue.HasValue && ColumnExists(conn, tran, table, "MaThue")) keys.Add("MaThue = @MaThue");
+            if (maDatPhong.HasValue && ColumnExists(conn, tran, table, "MaDatPhong")) keys.Add("MaDatPhong = @MaDatPhong");
+            if (keys.Count == 0)
+            {
+                return 0;
+            }
+
+            conditions.Add("(" + string.Join(" OR ", keys) + ")");
+            using SqlCommand cmd = new("SELECT ISNULL(SUM(" + amountExpr + "), 0) FROM dbo." + table + " WHERE " + string.Join(" AND ", conditions), conn, tran);
+            cmd.Parameters.AddWithValue("@Marker", "%" + marker + "%");
+            cmd.Parameters.AddWithValue("@MaThue", maThue.HasValue ? maThue.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("@MaDatPhong", maDatPhong.HasValue ? maDatPhong.Value : DBNull.Value);
+            object? value = cmd.ExecuteScalar();
             return value == null || value == DBNull.Value ? 0 : Convert.ToDecimal(value);
+        }
+
+        private static void CapNhatTongHoaDonSauCheckOut(SqlConnection conn, SqlTransaction tran, int maHoaDon, int maThue, int? maDatPhong)
+        {
+            if (maHoaDon <= 0 || !TableExists(conn, tran, "HOADON"))
+            {
+                return;
+            }
+
+            string hoaDonKey = LayCotKhoaHoaDon(conn, tran);
+            if (string.IsNullOrWhiteSpace(hoaDonKey))
+            {
+                return;
+            }
+
+            ThongTinHoaDon thongTin = LayThongTinHoaDonTheoThue(conn, tran, maThue);
+            decimal tongDichVu = TinhTongTienDichVuPhatSinh(conn, tran, maThue, maDatPhong);
+            decimal tongPhuThu = TinhPhuThuTheoThue(conn, tran, maThue);
+            decimal tienPhongCheckIn = LayGiaTriHoaDon(conn, tran, maHoaDon, "TongTienPhong");
+            decimal tongThanhToan = Math.Max(0, Math.Max(tienPhongCheckIn, thongTin.TongTienPhong) + tongDichVu + tongPhuThu - thongTin.TienCoc);
+
+            List<string> sets = new();
+            if (ColumnExists(conn, tran, "HOADON", "TongTienDichVu")) sets.Add("TongTienDichVu = @TongTienDichVu");
+            if (ColumnExists(conn, tran, "HOADON", "TongTienDV")) sets.Add("TongTienDV = @TongTienDichVu");
+            if (ColumnExists(conn, tran, "HOADON", "TongPhuThu")) sets.Add("TongPhuThu = @TongPhuThu");
+            if (ColumnExists(conn, tran, "HOADON", "TongThanhToan")) sets.Add("TongThanhToan = @TongThanhToan");
+            if (ColumnExists(conn, tran, "HOADON", "TongTien")) sets.Add("TongTien = @TongThanhToan");
+            if (ColumnExists(conn, tran, "HOADON", "NgayLap")) sets.Add("NgayLap = @NgayLap");
+            if (ColumnExists(conn, tran, "HOADON", "NgayLapHoaDon")) sets.Add("NgayLapHoaDon = @NgayLap");
+            if (ColumnExists(conn, tran, "HOADON", "DaThanhToan")) sets.Add("DaThanhToan = 1");
+
+            if (sets.Count == 0)
+            {
+                return;
+            }
+
+            using SqlCommand cmd = new("UPDATE dbo.HOADON SET " + string.Join(",", sets) + " WHERE " + hoaDonKey + " = @MaHoaDon", conn, tran);
+            cmd.Parameters.AddWithValue("@TongTienDichVu", tongDichVu);
+            cmd.Parameters.AddWithValue("@TongPhuThu", tongPhuThu);
+            cmd.Parameters.AddWithValue("@TongThanhToan", tongThanhToan);
+            cmd.Parameters.AddWithValue("@NgayLap", DateTime.Now);
+            cmd.Parameters.AddWithValue("@MaHoaDon", maHoaDon);
+            cmd.ExecuteNonQuery();
         }
 
         private static decimal LayTongPhuThuHoaDon(SqlConnection conn, SqlTransaction tran, int maHoaDon, int maThue)
@@ -507,13 +596,15 @@ namespace QLKS_AnPhu.DAL
             string maPhongExpr = ColumnExists(conn, tran, bangDatPhong, "MaPhong") ? "DP.MaPhong" : TableExists(conn, tran, "CHITIETDATPHONG") ? "(SELECT TOP 1 MaPhong FROM dbo.CHITIETDATPHONG CT WHERE CT.MaDatPhong = DP.MaDatPhong ORDER BY MaPhong)" : "CAST(NULL AS int)";
             string tienCocExpr = string.IsNullOrWhiteSpace(tienCocColumn) ? "CAST(0 AS decimal(18,2))" : "ISNULL(DP." + tienCocColumn + ", 0)";
             string tongTienExpr = TienPhongDatPhongExpr(conn, tran, bangDatPhong, "DP", maPhongExpr);
+            string ghiChuExpr = ColumnExists(conn, tran, bangDatPhong, "GhiChu") ? "DP.GhiChu" : "CAST(NULL AS nvarchar(1000))";
 
             using SqlCommand cmd = new(@"
 SELECT TOP 1 DP.MaDatPhong,
        DP.MaKH,
        " + maPhongExpr + @" AS MaPhong,
        " + tienCocExpr + @" AS TienCoc,
-       " + tongTienExpr + @" AS TongTienPhong
+       " + tongTienExpr + @" AS TongTienPhong,
+       " + ghiChuExpr + @" AS GhiChu
 FROM dbo." + bangDatPhong + @" DP
 WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
             cmd.Parameters.AddWithValue("@MaDatPhong", maDatPhong);
@@ -528,6 +619,11 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
             int? maKhachHang = reader["MaKH"] == DBNull.Value ? null : Convert.ToInt32(reader["MaKH"]);
             decimal tienCoc = reader["TienCoc"] == DBNull.Value ? 0 : Convert.ToDecimal(reader["TienCoc"]);
             decimal tongTienPhong = reader["TongTienPhong"] == DBNull.Value ? 0 : Convert.ToDecimal(reader["TongTienPhong"]);
+            decimal tienPhongDaChot = DocTienPhongDaChot(reader["GhiChu"]?.ToString() ?? string.Empty);
+            if (tienPhongDaChot > 0)
+            {
+                tongTienPhong = Math.Max(tienPhongDaChot, tongTienPhong);
+            }
 
             reader.Close();
 
@@ -556,6 +652,7 @@ WHERE DP.MaDatPhong = @MaDatPhong", conn, tran);
             string tienCocExpr = ColumnExists(conn, tran, "PHIEUTHUE", "TienCoc") ? "ISNULL(PT.TienCoc, 0)" : "CAST(0 AS decimal(18,2))";
             string tongTienExpr = TienPhongPhieuThueExpr(conn, tran);
             string phuPhiExpr = PhuPhiPhieuThueExpr(conn, tran);
+            string ghiChuExpr = ColumnExists(conn, tran, "PHIEUTHUE", "GhiChu") ? "PT.GhiChu" : "CAST(NULL AS nvarchar(1000))";
 
             using SqlCommand cmd = new(@"
 SELECT TOP 1 " + maDatPhongExpr + @" AS MaDatPhong,
@@ -563,7 +660,8 @@ SELECT TOP 1 " + maDatPhongExpr + @" AS MaDatPhong,
        " + maPhongExpr + @" AS MaPhong,
        " + tienCocExpr + @" AS TienCoc,
        " + tongTienExpr + @" AS TongTienPhong,
-       " + phuPhiExpr + @" AS PhuPhi
+       " + phuPhiExpr + @" AS PhuPhi,
+       " + ghiChuExpr + @" AS GhiChu
 FROM dbo.PHIEUTHUE PT
 WHERE PT.MaThue = @MaThue", conn, tran);
             cmd.Parameters.AddWithValue("@MaThue", maThue);
@@ -580,6 +678,11 @@ WHERE PT.MaThue = @MaThue", conn, tran);
             decimal tienCoc = reader["TienCoc"] == DBNull.Value ? 0 : Convert.ToDecimal(reader["TienCoc"]);
             decimal tongTienPhong = reader["TongTienPhong"] == DBNull.Value ? 0 : Convert.ToDecimal(reader["TongTienPhong"]);
             decimal phuPhi = reader["PhuPhi"] == DBNull.Value ? 0 : Convert.ToDecimal(reader["PhuPhi"]);
+            decimal tienPhongDaChot = DocTienPhongDaChot(reader["GhiChu"]?.ToString() ?? string.Empty);
+            if (tienPhongDaChot > 0)
+            {
+                tongTienPhong = Math.Max(tienPhongDaChot, tongTienPhong);
+            }
 
             reader.Close();
 
@@ -602,6 +705,23 @@ WHERE PT.MaThue = @MaThue", conn, tran);
             string ngayTra = ColumnExists(conn, tran, table, "NgayTraDuKien") ? alias + ".NgayTraDuKien" : ColumnExists(conn, tran, table, "NgayTraPhong") ? alias + ".NgayTraPhong" : "DATEADD(day, 1, GETDATE())";
             string giaNgay = GiaNgayTheoPhongExpr(conn, tran, maPhongExpr);
             return TienPhongSql(ngayNhan, ngayTra, giaNgay);
+        }
+
+        private static decimal DocTienPhongDaChot(string ghiChu)
+        {
+            if (string.IsNullOrWhiteSpace(ghiChu))
+            {
+                return 0;
+            }
+
+            Match match = Regex.Match(ghiChu, @"(?:TongTienPhong|TienPhong)\s*=\s*([0-9][0-9.,]*)", RegexOptions.IgnoreCase);
+            if (!match.Success)
+            {
+                return 0;
+            }
+
+            string raw = match.Groups[1].Value.Replace(",", string.Empty).Replace(".", string.Empty);
+            return decimal.TryParse(raw, out decimal value) ? value : 0;
         }
 
         private static string TienPhongPhieuThueExpr(SqlConnection conn, SqlTransaction tran)
@@ -758,7 +878,29 @@ ELSE (
             cmd.ExecuteNonQuery();
         }
 
-        private static void CapNhatTrangThaiPhieuThue(SqlConnection conn, SqlTransaction tran, int maThue, List<int> nhomMaDatPhong, params string[] priorities)
+        private static void CapNhatNgayTraPhong(SqlConnection conn, SqlTransaction tran, int maThue, List<int> nhomMaDatPhong, DateTime ngayTraPhong)
+        {
+            if (!TableExists(conn, tran, "PHIEUTHUE") || !ColumnExists(conn, tran, "PHIEUTHUE", "NgayTraPhong"))
+            {
+                return;
+            }
+
+            using SqlCommand cmd = new("UPDATE dbo.PHIEUTHUE SET NgayTraPhong = ISNULL(NgayTraPhong, @NgayTra) WHERE MaThue = @MaThue", conn, tran);
+            cmd.Parameters.AddWithValue("@NgayTra", ngayTraPhong);
+            cmd.Parameters.AddWithValue("@MaThue", maThue);
+            cmd.ExecuteNonQuery();
+
+            if (nhomMaDatPhong.Count > 0 && ColumnExists(conn, tran, "PHIEUTHUE", "MaDatPhong"))
+            {
+                string danhSachThamSo = TaoDanhSachThamSo(nhomMaDatPhong, "MaDatPhong");
+                using SqlCommand updateGroup = new("UPDATE dbo.PHIEUTHUE SET NgayTraPhong = ISNULL(NgayTraPhong, @NgayTra) WHERE MaDatPhong IN (" + danhSachThamSo + ")", conn, tran);
+                updateGroup.Parameters.AddWithValue("@NgayTra", ngayTraPhong);
+                GanDanhSachThamSo(updateGroup, nhomMaDatPhong, "MaDatPhong");
+                updateGroup.ExecuteNonQuery();
+            }
+        }
+
+        private static void CapNhatTrangThaiPhieuThue(SqlConnection conn, SqlTransaction tran, int maThue, List<int> nhomMaDatPhong, DateTime ngayTraPhong, params string[] priorities)
         {
             if (!TableExists(conn, tran, "PHIEUTHUE") || !ColumnExists(conn, tran, "PHIEUTHUE", "TrangThai"))
             {
@@ -769,7 +911,7 @@ ELSE (
             string setNgayTra = ColumnExists(conn, tran, "PHIEUTHUE", "NgayTraPhong") ? ", NgayTraPhong = ISNULL(NgayTraPhong, @NgayTra)" : string.Empty;
             using SqlCommand cmd = new("UPDATE dbo.PHIEUTHUE SET TrangThai = @TrangThai" + setNgayTra + " WHERE MaThue = @MaThue", conn, tran);
             cmd.Parameters.AddWithValue("@TrangThai", trangThai);
-            cmd.Parameters.AddWithValue("@NgayTra", DateTime.Now);
+            cmd.Parameters.AddWithValue("@NgayTra", ngayTraPhong);
             cmd.Parameters.AddWithValue("@MaThue", maThue);
             cmd.ExecuteNonQuery();
 
@@ -778,7 +920,7 @@ ELSE (
                 string danhSachThamSo = TaoDanhSachThamSo(nhomMaDatPhong, "MaDatPhong");
                 using SqlCommand updateGroup = new("UPDATE dbo.PHIEUTHUE SET TrangThai = @TrangThai" + setNgayTra + " WHERE MaDatPhong IN (" + danhSachThamSo + ")", conn, tran);
                 updateGroup.Parameters.AddWithValue("@TrangThai", trangThai);
-                updateGroup.Parameters.AddWithValue("@NgayTra", DateTime.Now);
+                updateGroup.Parameters.AddWithValue("@NgayTra", ngayTraPhong);
                 GanDanhSachThamSo(updateGroup, nhomMaDatPhong, "MaDatPhong");
                 updateGroup.ExecuteNonQuery();
             }

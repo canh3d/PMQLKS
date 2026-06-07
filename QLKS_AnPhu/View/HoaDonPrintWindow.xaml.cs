@@ -200,6 +200,8 @@ ORDER BY P.MaPhong",
             string maPhongExpr = ColumnExists(table, "MaPhong") ? "PS.MaPhong" : "CAST(NULL AS int)";
             string ngayPhatSinhColumn = ColumnExists(table, "NgayPhatSinh") ? "NgayPhatSinh" : ColumnExists(table, "NgaySuDung") ? "NgaySuDung" : string.Empty;
             string orderBy = string.IsNullOrWhiteSpace(ngayPhatSinhColumn) ? string.Empty : " ORDER BY PS." + ngayPhatSinhColumn;
+            bool coGhiChu = ColumnExists(table, "GhiChu");
+            string filterLoaiDichVu = coGhiChu ? ViewSchemaHelper.DichVuTheoLoaiHoaDonFilter("PS", hoaDon.LoaiThanhToan) : string.Empty;
 
             DataTable data = ConnectDB.GetData(
                 @"SELECT DV." + tenDichVu + @" AS TenDichVu,
@@ -209,7 +211,7 @@ ORDER BY P.MaPhong",
                          " + thanhTien + @" AS ThanhTien
                   FROM dbo." + table + @" PS
                   JOIN dbo.DICHVUVATTU DV ON PS." + maDvPs + " = DV." + maDv + @"
-                  WHERE PS." + keyColumn + " = @Ma" + orderBy,
+                  WHERE PS." + keyColumn + " = @Ma" + filterLoaiDichVu + orderBy,
                 new SqlParameter("@Ma", hoaDon.MaGoc));
 
             int stt = 1;
@@ -432,40 +434,17 @@ END AS decimal(18, 2))";
 
         private static bool TableExists(string tableName)
         {
-            object? result = ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM sys.tables WHERE name = @Name", new SqlParameter("@Name", tableName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.TableExists(tableName);
         }
 
         private static bool ColumnExists(string tableName, string columnName)
         {
-            object? result = ConnectDB.ExecuteScalar(
-                @"SELECT COUNT(*)
-                  FROM sys.tables t
-                  JOIN sys.columns c ON t.object_id = c.object_id
-                  WHERE t.name = @TableName AND c.name = @ColumnName",
-                new SqlParameter("@TableName", tableName),
-                new SqlParameter("@ColumnName", columnName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.ColumnExists(tableName, columnName);
         }
 
         private static string TenPhongSql(string alias)
         {
-            if (ColumnExists("PHONG", "TenPhong"))
-            {
-                return alias + ".TenPhong";
-            }
-
-            if (ColumnExists("PHONG", "SoPhong"))
-            {
-                return alias + ".SoPhong";
-            }
-
-            if (ColumnExists("PHONG", "MaSoPhong"))
-            {
-                return alias + ".MaSoPhong";
-            }
-
-            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
+            return ViewSchemaHelper.TenPhongSql(alias);
         }
     }
 

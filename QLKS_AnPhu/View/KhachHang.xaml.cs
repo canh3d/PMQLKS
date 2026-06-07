@@ -17,6 +17,7 @@ namespace QLKS_AnPhu.View
         public KhachHang()
         {
             InitializeComponent();
+            SearchSuggestionService.Attach(TxtTimKiem, TaoGoiYTimKiem, _ => BtnTimKiem_Click(TxtTimKiem, new RoutedEventArgs()));
             Loaded += KhachHang_Loaded;
         }
 
@@ -184,6 +185,27 @@ namespace QLKS_AnPhu.View
             if (e.Key == Key.Enter)
             {
                 BtnTimKiem_Click(sender, e);
+            }
+        }
+
+        private IEnumerable<SearchSuggestionItem> TaoGoiYTimKiem()
+        {
+            foreach (KhachHangDTO item in danhSachGoc)
+            {
+                if (!string.IsNullOrWhiteSpace(item.HoTen))
+                {
+                    yield return new SearchSuggestionItem(item.HoTen, $"{item.HoTen} - {item.SDT}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.SDT))
+                {
+                    yield return new SearchSuggestionItem(item.SDT, $"{item.SDT} - {item.HoTen}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.CCCD))
+                {
+                    yield return new SearchSuggestionItem(item.CCCD, $"{item.CCCD} - {item.HoTen}");
+                }
             }
         }
 

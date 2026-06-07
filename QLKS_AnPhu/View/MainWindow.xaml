@@ -19,7 +19,14 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Margin="16" CornerRadius="25" Background="{StaticResource SidebarBrush}" Effect="{StaticResource StrongShadow}">
+        <Border x:Name="SidebarShell"
+                Grid.Column="0"
+                Margin="16"
+                CornerRadius="25"
+                Background="{StaticResource SidebarBrush}"
+                BorderBrush="#E2E8F0"
+                BorderThickness="1"
+                Effect="{StaticResource StrongShadow}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -27,13 +34,13 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Grid Margin="18,20,18,16">
+                <Grid x:Name="BrandHeader" Margin="18,20,18,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="48" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Border Width="48" Height="48" CornerRadius="16">
+                    <Border x:Name="BrandLogo" Width="48" Height="48" CornerRadius="16">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                 <GradientStop Color="#2563EB" Offset="0" />
@@ -43,7 +50,7 @@
                         <iconPacks:PackIconMaterial Kind="HomeCity" Width="26" Height="26" Foreground="White" />
                     </Border>
 
-                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <StackPanel x:Name="BrandTextPanel" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock x:Name="LblBrandTitle" Text="AN PHÚ HOTEL" Foreground="White" FontSize="18" FontWeight="Bold" />
                         <TextBlock x:Name="LblBrandSubtitle" Text="Management Suite" Foreground="#94A3B8" FontSize="12" />
                     </StackPanel>
@@ -87,7 +94,7 @@
 
                     <Button x:Name="BtnMenuHoaDon" Style="{StaticResource SidebarButtonStyle}" Click="BtnHoaDon_Click">
                         <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="Receipt" Width="20" Height="20" Margin="0,0,12,0" />
+                            <iconPacks:PackIconMaterial Kind="FileDocumentMultiple" Width="20" Height="20" Margin="0,0,12,0" />
                             <TextBlock x:Name="LblHoaDon" Text="Hóa đơn" Style="{StaticResource ButtonContentTextStyle}" />
                         </StackPanel>
                     </Button>
@@ -122,7 +129,7 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,18">
-                    <Border Margin="18,8,18,12" Height="1" Background="#334155" />
+                    <Border x:Name="SidebarDivider" Margin="18,8,18,12" Height="1" Background="#E2E8F0" />
                     <Button x:Name="BtnSidebarLogout" Style="{StaticResource SidebarButtonStyle}" Click="BtnDangXuat_Click">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="Logout" Width="20" Height="20" Margin="0,0,12,0" />

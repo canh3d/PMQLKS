@@ -22,6 +22,7 @@ namespace QLKS_AnPhu.View
         public NhanVien()
         {
             InitializeComponent();
+            SearchSuggestionService.Attach(TxtTimKiem, TaoGoiYTimKiem, _ => TimKiem());
             DgNhanVien.ItemsSource = nhanVienHienThi;
             DpNgayBatDau.SelectedDate = DateTime.Today;
             DpNgayKetThuc.SelectedDate = DateTime.Today;
@@ -252,6 +253,32 @@ END";
             if (e.Key == Key.Enter)
             {
                 TimKiem();
+            }
+        }
+
+        private IEnumerable<SearchSuggestionItem> TaoGoiYTimKiem()
+        {
+            foreach (NhanVienItem item in danhSachGoc)
+            {
+                if (!string.IsNullOrWhiteSpace(item.MaHienThi))
+                {
+                    yield return new SearchSuggestionItem(item.MaHienThi, $"{item.MaHienThi} - {item.HoTen}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.HoTen))
+                {
+                    yield return new SearchSuggestionItem(item.HoTen, $"{item.HoTen} - {item.ChucVu}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.SDT))
+                {
+                    yield return new SearchSuggestionItem(item.SDT, $"{item.SDT} - {item.HoTen}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.CaLamViec))
+                {
+                    yield return new SearchSuggestionItem(item.CaLamViec, $"{item.CaLamViec} - {item.HoTen}");
+                }
             }
         }
 

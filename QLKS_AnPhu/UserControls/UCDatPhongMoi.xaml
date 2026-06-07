@@ -334,7 +334,8 @@
                                           SelectionMode="Single"
                                           RowHeight="28"
                                           HeadersVisibility="Column"
-                                          GridLinesVisibility="Horizontal">
+                                          GridLinesVisibility="Horizontal"
+                                          MouseDoubleClick="DgDichVuDaThem_MouseDoubleClick">
                                     <DataGrid.ColumnHeaderStyle>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="Height" Value="28" />

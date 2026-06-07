@@ -123,6 +123,19 @@
             <Setter Property="BorderBrush" Value="#CBD5E1" />
         </Style>
 
+        <Style x:Key="ReportToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="MinWidth" Value="92" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <Style x:Key="ReportToolbarOutlineButtonStyle" TargetType="Button" BasedOn="{StaticResource ReportToolbarButtonStyle}">
+            <Setter Property="Foreground" Value="{StaticResource TextMainBrush}" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+        </Style>
+
         <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
             <Setter Property="Height" Value="42" />
             <Setter Property="Padding" Value="12,0" />
@@ -248,11 +261,11 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="0" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" CornerRadius="0,0,30,30" Padding="30,24">
+        <Border Grid.Row="0" CornerRadius="0" Padding="0" MinHeight="0" Visibility="Collapsed">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                     <GradientStop Color="#0F2F6F" Offset="0" />
@@ -277,7 +290,7 @@
                     <TextBlock Text="Theo dõi doanh thu, đặt phòng, khách hàng và tình trạng phòng trong một màn hình." Margin="0,8,0,0" FontSize="15" Foreground="#DDEBFF" />
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                     <Button Style="{StaticResource OutlineButtonStyle}" Margin="0,0,10,0" Click="BtnXuatExcel_Click">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="MicrosoftExcel" Width="18" Height="18" Foreground="#16A34A" Margin="0,0,8,0" />
@@ -319,7 +332,7 @@
                                 <TextBlock Text="Bộ lọc báo cáo" FontSize="19" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
                                 <TextBlock Text="Chọn khoảng thời gian và loại báo cáo, sau đó bấm Xem báo cáo." Margin="0,4,0,0" Foreground="{StaticResource TextMutedBrush}" />
                             </StackPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource ModernButtonStyle}" Click="BtnXemBaoCao_Click">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource ModernButtonStyle}" Click="BtnXemBaoCao_Click" Visibility="Collapsed">
                                 <StackPanel Orientation="Horizontal">
                                     <iconPacks:PackIconMaterial Kind="ChartAreaspline" Width="18" Height="18" Margin="0,0,8,0" />
                                     <TextBlock Text="Xem báo cáo" />
@@ -346,6 +359,33 @@
                                     <ComboBoxItem Content="Tình trạng phòng" />
                                     <ComboBoxItem Content="Dịch vụ - vật tư" />
                                 </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,20,10,0">
+                                <Button MinWidth="132" Style="{StaticResource ReportToolbarButtonStyle}" Click="BtnXemBaoCao_Click">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <iconPacks:PackIconMaterial Kind="ChartAreaspline" Width="16" Height="16" Margin="0,0,7,0" />
+                                        <TextBlock Text="Xem báo cáo" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,20,10,0">
+                                <Button MinWidth="116" Style="{StaticResource ReportToolbarOutlineButtonStyle}" Click="BtnXuatExcel_Click">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <iconPacks:PackIconMaterial Kind="MicrosoftExcel" Width="16" Height="16" Foreground="#16A34A" Margin="0,0,7,0" />
+                                        <TextBlock Text="Xuất Excel" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,20,0,0">
+                                <Button MinWidth="112" Style="{StaticResource ReportToolbarOutlineButtonStyle}" Click="BtnInBaoCao_Click">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <iconPacks:PackIconMaterial Kind="Printer" Width="16" Height="16" Foreground="#475569" Margin="0,0,7,0" />
+                                        <TextBlock Text="In báo cáo" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </WrapPanel>
                     </Grid>

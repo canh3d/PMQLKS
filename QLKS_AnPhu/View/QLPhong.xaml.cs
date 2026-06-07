@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -186,6 +188,12 @@ namespace QLKS_AnPhu.View
                 return;
             }
 
+            if (!LaPhongCoTheDat(phongDangChon))
+            {
+                MessageBox.Show("Chi duoc dat phong dang trong, da don san sang su dung.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             UCDatPhongMoi ucDatPhong = new(phongDangChon);
             ucDatPhong.CloseRequested += UcDatPhong_CloseRequested;
             ucDatPhong.DatPhongRequested += UcDatPhong_DatPhongRequested;
@@ -247,7 +255,9 @@ namespace QLKS_AnPhu.View
 
         private void BtnDatPhongTheoDoan_Click(object sender, RoutedEventArgs e)
         {
-            List<PhongDTO> phongTrong = danhSachHienThi.ToList();
+            List<PhongDTO> phongTrong = danhSachHienThi
+                .Where(LaPhongCoTheDat)
+                .ToList();
 
             if (phongTrong.Count == 0)
             {
@@ -400,6 +410,41 @@ namespace QLKS_AnPhu.View
         {
             return !string.IsNullOrWhiteSpace(giaTri)
                 && giaTri.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LaPhongCoTheDat(PhongDTO phong)
+        {
+            string trangThai = BoDau(phong.TrangThai).ToLowerInvariant();
+            string donDep = BoDau(phong.TinhTrangDonDep).ToLowerInvariant();
+
+            bool laPhongTrong = string.IsNullOrWhiteSpace(trangThai)
+                || trangThai.Contains("phong trong")
+                || trangThai == "trong"
+                || trangThai.Contains("san sang")
+                || trangThai.Contains("ready")
+                || trangThai.Contains("available");
+
+            bool biChan = trangThai.Contains("thue")
+                || trangThai.Contains("co khach")
+                || trangThai.Contains("da dat")
+                || trangThai.Contains("chua don")
+                || trangThai.Contains("sua")
+                || trangThai.Contains("bao tri")
+                || donDep.Contains("chua")
+                || donDep.Contains("sua")
+                || donDep.Contains("bao tri");
+
+            return laPhongTrong && !biChan;
+        }
+
+        private static string BoDau(string? value)
+        {
+            string formD = (value ?? string.Empty).Normalize(NormalizationForm.FormD);
+            char[] chars = formD
+                .Where(ch => CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                .ToArray();
+
+            return new string(chars).Normalize(NormalizationForm.FormC);
         }
 
         private static string GetComboText(ComboBox comboBox)

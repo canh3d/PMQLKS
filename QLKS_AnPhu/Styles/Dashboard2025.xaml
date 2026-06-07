@@ -3,7 +3,7 @@
                     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
 
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F8FAFC" />
-    <SolidColorBrush x:Key="SidebarBrush" Color="#0F172A" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="HeaderBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
     <SolidColorBrush x:Key="SuccessBrush" Color="#22C55E" />
@@ -242,7 +242,7 @@
         <Setter Property="FontFamily" Value="Segoe UI Semibold" />
         <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="#CBD5E1" />
+        <Setter Property="Foreground" Value="#334155" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Cursor" Value="Hand" />
@@ -252,13 +252,15 @@
                     <Border x:Name="Root" Background="{TemplateBinding Background}" CornerRadius="14">
                         <Grid>
                             <Border x:Name="Indicator" Width="4" HorizontalAlignment="Left" CornerRadius="0,4,4,0" Background="Transparent" />
-                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="#334155" />
-                            <Setter Property="Foreground" Value="White" />
+                            <Setter TargetName="Root" Property="Background" Value="#EFF6FF" />
+                            <Setter Property="Foreground" Value="#1D4ED8" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -274,8 +276,10 @@
                 <ControlTemplate TargetType="Button">
                     <Border Background="{TemplateBinding Background}" CornerRadius="14">
                         <Grid>
-                            <Border Width="4" HorizontalAlignment="Left" CornerRadius="0,4,4,0" Background="White" />
-                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                            <Border Width="4" HorizontalAlignment="Left" CornerRadius="0,4,4,0" Background="#DBEAFE" />
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" />
                         </Grid>
                     </Border>
                 </ControlTemplate>

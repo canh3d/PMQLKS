@@ -22,7 +22,10 @@ namespace QLKS_AnPhu.View
         private RoomStayData? stayData;
         private decimal tienPhong;
         private decimal tienDichVu;
+        private decimal tienDichVuCheckIn;
+        private decimal tienDichVuPhatSinh;
         private decimal phuPhi;
+        private decimal giamGia;
         private decimal datCoc;
 
         public PhongChiTietWindow(PhongDTO phong)
@@ -112,12 +115,25 @@ namespace QLKS_AnPhu.View
 
         private void CapNhatHoaDon()
         {
-            tienDichVu = dichVuHienTai.Sum(item => item.ThanhTien);
+            bool daNhanPhong = stayData?.MaThue.HasValue == true;
+            decimal tienDichVuDaThanhToanCheckIn = daNhanPhong && stayData != null ? TinhTongDichVuDatTruoc(stayData) : 0;
+            tienDichVuCheckIn = daNhanPhong ? 0 : dichVuHienTai.Where(item => item.LaDichVuCheckIn).Sum(item => item.ThanhTien);
+            tienDichVuPhatSinh = dichVuHienTai.Where(item => !item.LaDichVuCheckIn).Sum(item => item.ThanhTien);
+            tienDichVu = tienDichVuCheckIn + tienDichVuPhatSinh;
             phuPhi = stayData?.PhuPhi ?? 0;
-            decimal vat = Math.Round(Math.Max(0, tienPhong + phuPhi) * 0.1m, 0);
-            decimal tongThanhToan = tienPhong + tienDichVu + phuPhi + vat;
-            decimal daThanhToanLucNhanPhong = datCoc;
-            decimal canThanhToanThem = Math.Max(0, tongThanhToan - daThanhToanLucNhanPhong);
+            giamGia = LaKhachVip(stayData?.LoaiKhach) ? Math.Round((tienPhong + phuPhi) * 0.1m, 0) : 0;
+            decimal vat = Math.Round(Math.Max(0, tienPhong + phuPhi - giamGia) * 0.1m, 0);
+            decimal tienPhongHienThi = daNhanPhong ? 0 : tienPhong;
+            decimal phuPhiHienThi = daNhanPhong ? 0 : phuPhi;
+            decimal giamGiaHienThi = daNhanPhong ? 0 : giamGia;
+            decimal vatHienThi = daNhanPhong ? 0 : vat;
+            decimal tongThanhToan = tienPhongHienThi + tienDichVuCheckIn + tienDichVuPhatSinh + phuPhiHienThi + vatHienThi - giamGiaHienThi;
+            decimal daThanhToanLucNhanPhong = daNhanPhong
+                ? Math.Max(0, tienPhong + tienDichVuDaThanhToanCheckIn + phuPhi + vat - giamGia)
+                : datCoc;
+            decimal canThanhToanThem = daNhanPhong
+                ? Math.Max(0, tienDichVuPhatSinh)
+                : Math.Max(0, tongThanhToan - daThanhToanLucNhanPhong);
             string nhanSomText = TaoNhanPhuPhiNhanSom();
 
             TxtSoTienBanDau.Text = stayData == null
@@ -127,12 +143,28 @@ namespace QLKS_AnPhu.View
             DgBangThanhToan.ItemsSource = new List<ThanhToanHoaDonItem>
             {
                 new("Tiền phòng", tienPhong),
-                new("Dịch vụ phát sinh trong thời gian thuê", tienDichVu),
+                new("Dịch vụ đặt trước/check-in", tienDichVuCheckIn),
+                new("Dịch vụ phát sinh trong thời gian thuê", tienDichVuPhatSinh),
                 new(nhanSomText, phuPhi),
+                new("Gi\u1EA3m gi\u00E1", -giamGia),
                 new("Thuế VAT (10%)", vat),
                 new("Đã thanh toán lúc nhận phòng", -daThanhToanLucNhanPhong),
                 new("Tổng tiền hóa đơn", tongThanhToan)
             };
+
+            if (daNhanPhong)
+            {
+                DgBangThanhToan.ItemsSource = new List<ThanhToanHoaDonItem>
+                {
+                    new("Ti\u1EC1n ph\u00F2ng", tienPhongHienThi),
+                    new("D\u1ECBch v\u1EE5 \u0111\u1EB7t tr\u01B0\u1EDBc/check-in", tienDichVuCheckIn),
+                    new("D\u1ECBch v\u1EE5 ph\u00E1t sinh trong th\u1EDDi gian thu\u00EA", tienDichVuPhatSinh),
+                    new(nhanSomText, phuPhiHienThi),
+                    new("Gi\u1EA3m gi\u00E1", -giamGiaHienThi),
+                    new("Thu\u1EBF VAT (10%)", vatHienThi),
+                    new("T\u1ED5ng ti\u1EC1n h\u00F3a \u0111\u01A1n", tongThanhToan)
+                };
+            }
 
             TxtKhaDung.Text = stayData == null ? "--" : $"{canThanhToanThem:N0} VND";
         }
@@ -156,6 +188,17 @@ namespace QLKS_AnPhu.View
                     ? $"{soGio} giờ"
                     : $"{soPhut} phút";
             return $"Phụ phí nhận sớm ({thoiGian})";
+        }
+
+        private static bool LaKhachVip(string? loaiKhach)
+        {
+            return !string.IsNullOrWhiteSpace(loaiKhach) &&
+                   loaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private decimal TinhTongDichVuDatTruoc(RoomStayData data)
+        {
+            return LoadDichVuDatTruoc(data).Sum(item => item.ThanhTien);
         }
 
         private RoomStayData? LoadRoomStayData()
@@ -346,8 +389,12 @@ ORDER BY DP.MaDatPhong DESC",
             string soLuongExpr = ColumnExists(bangPhatSinh, "SoLuong") ? "PS.SoLuong" : "1";
             string donGiaExpr = ColumnExists(bangPhatSinh, "DonGia") ? "ISNULL(PS.DonGia, DV.DonGia)" : "DV.DonGia";
             string thanhTienExpr = ColumnExists(bangPhatSinh, "ThanhTien") ? "PS.ThanhTien" : "(" + soLuongExpr + " * " + donGiaExpr + ")";
+            string ghiChuExpr = ColumnExists(bangPhatSinh, "GhiChu") ? "ISNULL(PS.GhiChu, N'')" : "N''";
             string roomFilter = keyColumn != "MaPhong" && ColumnExists(bangPhatSinh, "MaPhong")
                 ? " AND PS.MaPhong = @MaPhong"
+                : string.Empty;
+            string checkInFilter = data.MaThue.HasValue && ColumnExists(bangPhatSinh, "GhiChu")
+                ? ViewSchemaHelper.DichVuTheoLoaiHoaDonFilter("PS", "PHATSINH")
                 : string.Empty;
             string keyFilter = "PS." + keyColumn + " = @KeyValue";
             if (keyColumn == "MaThue" && data.MaDatPhong.HasValue && ColumnExists(bangPhatSinh, "MaDatPhong"))
@@ -360,10 +407,11 @@ SELECT " + psKeyExpr + @" AS MaPhatSinh,
        DV." + tenDv + @" AS Ten,
        " + soLuongExpr + @" AS SoLuong,
        " + donGiaExpr + @" AS DonGia,
-       " + thanhTienExpr + @" AS ThanhTien
+       " + thanhTienExpr + @" AS ThanhTien,
+       " + ghiChuExpr + @" AS GhiChu
 FROM dbo." + bangPhatSinh + @" PS
 JOIN dbo.DICHVUVATTU DV ON PS." + maDvPs + " = DV." + maDv + @"
-WHERE " + keyFilter + roomFilter,
+WHERE " + keyFilter + roomFilter + checkInFilter,
                 new SqlParameter("@KeyValue", keyValue),
                 new SqlParameter("@MaDatPhong", data.MaDatPhong ?? 0),
                 new SqlParameter("@MaPhong", phong.Ma));
@@ -375,8 +423,88 @@ WHERE " + keyFilter + roomFilter,
                     MaPhatSinh = GetNullableInt(row, "MaPhatSinh"),
                     Ten = row["Ten"]?.ToString() ?? string.Empty,
                     SoLuong = Convert.ToInt32(GetDecimal(row, "SoLuong")),
-                    DonGia = GetDecimal(row, "DonGia")
+                    DonGia = GetDecimal(row, "DonGia"),
+                    LaDichVuCheckIn = (row["GhiChu"]?.ToString() ?? string.Empty).Contains("[DICHVU_CHECKIN]", StringComparison.OrdinalIgnoreCase)
                 });
+            }
+
+            if (!data.MaThue.HasValue)
+            {
+                foreach (DichVuChiTietItem item in LoadDichVuDatTruoc(data))
+                {
+                    result.Add(item);
+                }
+            }
+
+            return result;
+        }
+
+        private ObservableCollection<DichVuChiTietItem> LoadDichVuDatTruoc(RoomStayData data)
+        {
+            ObservableCollection<DichVuChiTietItem> result = new();
+            if (!data.MaDatPhong.HasValue ||
+                !TableExists("CHITIETDATPHONG") ||
+                !ColumnExists("CHITIETDATPHONG", "GhiChu") ||
+                !TableExists("DICHVUVATTU"))
+            {
+                return result;
+            }
+
+            string maDv = ColumnExists("DICHVUVATTU", "MaDVVT") ? "MaDVVT" : "MaDichVu";
+            string tenDv = ColumnExists("DICHVUVATTU", "TenDVVT") ? "TenDVVT" : "TenDichVu";
+            DataTable chiTiet = ConnectDB.GetData(
+                "SELECT GhiChu FROM dbo.CHITIETDATPHONG WHERE MaDatPhong = @MaDatPhong AND GhiChu LIKE @Marker",
+                new SqlParameter("@MaDatPhong", data.MaDatPhong.Value),
+                new SqlParameter("@Marker", "%[DICHVU_DAT]%"));
+
+            foreach (DataRow row in chiTiet.Rows)
+            {
+                foreach (DichVuDatPhongDTO dichVu in DocMarkerDichVuDatTruoc(row["GhiChu"]?.ToString() ?? string.Empty))
+                {
+                    DataTable ten = ConnectDB.GetData(
+                        "SELECT TOP 1 " + tenDv + " AS Ten FROM dbo.DICHVUVATTU WHERE " + maDv + " = @Ma",
+                        new SqlParameter("@Ma", dichVu.Ma));
+                    result.Add(new DichVuChiTietItem
+                    {
+                        Ten = ten.Rows.Count > 0 ? ten.Rows[0]["Ten"]?.ToString() ?? string.Empty : "Dich vu " + dichVu.Ma,
+                        SoLuong = dichVu.SoLuong,
+                        DonGia = dichVu.DonGia,
+                        LaDichVuCheckIn = true
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        private static List<DichVuDatPhongDTO> DocMarkerDichVuDatTruoc(string ghiChu)
+        {
+            const string marker = "[DICHVU_DAT]";
+            int markerIndex = ghiChu.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return new List<DichVuDatPhongDTO>();
+            }
+
+            string payload = ghiChu[(markerIndex + marker.Length)..].Trim();
+            int stopIndex = payload.IndexOf(" - ", StringComparison.Ordinal);
+            if (stopIndex >= 0)
+            {
+                payload = payload[..stopIndex];
+            }
+
+            List<DichVuDatPhongDTO> result = new();
+            foreach (string token in payload.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string[] parts = token.Split('|');
+                if (parts.Length >= 3 &&
+                    int.TryParse(parts[0], out int ma) &&
+                    int.TryParse(parts[1], out int soLuong) &&
+                    decimal.TryParse(parts[2], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out decimal donGia) &&
+                    soLuong > 0)
+                {
+                    result.Add(new DichVuDatPhongDTO { Ma = ma, SoLuong = soLuong, DonGia = donGia });
+                }
             }
 
             return result;
@@ -384,6 +512,10 @@ WHERE " + keyFilter + roomFilter,
 
         private static RoomStayData MapStay(DataRow row, bool laPhieuThue)
         {
+            string ghiChu = row["GhiChu"]?.ToString() ?? string.Empty;
+            decimal tienPhongTinhLai = GetDecimal(row, "TienPhong");
+            decimal tienPhongDaChot = DocTienPhongDaChot(ghiChu);
+
             return new RoomStayData
             {
                 MaThue = laPhieuThue ? GetNullableInt(row, "MaThue") : null,
@@ -396,13 +528,18 @@ WHERE " + keyFilter + roomFilter,
                 NgayNhanDat = GetNullableDate(row, "NgayNhanDat"),
                 NgayTraDat = GetNullableDate(row, "NgayTraDat"),
                 TienCoc = GetDecimal(row, "TienCoc"),
-                TienPhong = GetDecimal(row, "TienPhong"),
+                TienPhong = tienPhongDaChot > 0 ? Math.Max(tienPhongDaChot, tienPhongTinhLai) : tienPhongTinhLai,
                 PhuPhi = GetDecimal(row, "PhuPhi"),
-                GhiChu = row["GhiChu"]?.ToString() ?? string.Empty,
+                GhiChu = ghiChu,
                 TrangThai = row["TrangThai"]?.ToString() ?? string.Empty,
                 SoPhongDoan = Convert.ToInt32(GetDecimal(row, "SoPhongDoan")),
                 DanhSachPhongDoan = row["DanhSachPhongDoan"]?.ToString() ?? string.Empty
             };
+        }
+
+        private static decimal DocTienPhongDaChot(string ghiChu)
+        {
+            return ViewSchemaHelper.DocTienPhongDaChot(ghiChu);
         }
 
         private void CapNhatThoiGianLuuTru()
@@ -783,6 +920,12 @@ WHERE " + keyFilter + roomFilter,
                 return;
             }
 
+            if (item.LaDichVuCheckIn)
+            {
+                MessageBox.Show("Dịch vụ này thuộc hóa đơn check-in, không xóa ở phần phát sinh.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             try
             {
                 if (!item.MaPhatSinh.HasValue)
@@ -803,8 +946,12 @@ WHERE " + keyFilter + roomFilter,
 
         private HoaDonItem TaoHoaDonTam()
         {
-            decimal phuPhiHoaDonTam = phuPhi;
-            decimal vat = Math.Round(Math.Max(0, tienPhong + phuPhiHoaDonTam) * 0.1m, 0);
+            bool daNhanPhong = stayData?.MaThue.HasValue == true;
+            decimal tienPhongHoaDonTam = daNhanPhong ? 0 : tienPhong;
+            decimal tienDichVuHoaDonTam = daNhanPhong ? tienDichVuPhatSinh : tienDichVu;
+            decimal phuPhiHoaDonTam = daNhanPhong ? 0 : phuPhi;
+            decimal giamGiaHoaDonTam = !daNhanPhong && LaKhachVip(stayData?.LoaiKhach) ? Math.Round((tienPhong + phuPhiHoaDonTam) * 0.1m, 0) : 0;
+            decimal vat = Math.Round(Math.Max(0, tienPhongHoaDonTam + phuPhiHoaDonTam - giamGiaHoaDonTam) * 0.1m, 0);
             int maGoc = stayData?.MaThue ?? stayData?.MaDatPhong ?? phong.Ma;
             return new HoaDonItem
             {
@@ -819,11 +966,11 @@ WHERE " + keyFilter + roomFilter,
                 NgayNhanPhong = stayData?.NgayNhanThucTe ?? stayData?.NgayNhanDat ?? DateTime.Now,
                 NgayTraPhong = stayData?.NgayTraDat ?? DateTime.Now,
                 NgayLapHoaDon = DateTime.Now,
-                TienPhong = tienPhong,
-                TienDichVu = tienDichVu,
+                TienPhong = tienPhongHoaDonTam,
+                TienDichVu = tienDichVuHoaDonTam,
                 PhuPhi = phuPhiHoaDonTam,
                 ThueVat = vat,
-                GiamGia = datCoc,
+                GiamGia = daNhanPhong ? 0 : datCoc + giamGiaHoaDonTam,
                 TrangThai = stayData?.MaThue.HasValue == true ? "Chua thanh toan" : "Tam tinh"
             };
         }
@@ -959,6 +1106,11 @@ WHERE " + keyFilter + roomFilter,
                 values["NgaySuDung"] = DateTime.Now;
             }
 
+            if (ColumnExists(bangPhatSinh, "GhiChu"))
+            {
+                values["GhiChu"] = "[DICHVU_PHATSINH]";
+            }
+
             if (!values.ContainsKey("MaThue") && !values.ContainsKey("MaDatPhong") && !values.ContainsKey("MaPhong"))
             {
                 throw new InvalidOperationException("Không xác định được khóa liên kết để thêm dịch vụ cho phòng.");
@@ -1011,28 +1163,12 @@ END AS decimal(18, 2))";
 
         private static string TenPhongSql(string alias)
         {
-            if (ColumnExists("PHONG", "TenPhong"))
-            {
-                return alias + ".TenPhong";
-            }
-
-            if (ColumnExists("PHONG", "SoPhong"))
-            {
-                return alias + ".SoPhong";
-            }
-
-            if (ColumnExists("PHONG", "MaSoPhong"))
-            {
-                return alias + ".MaSoPhong";
-            }
-
-            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
+            return ViewSchemaHelper.TenPhongSql(alias);
         }
 
         private static bool TableExists(string tableName)
         {
-            object? result = ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM sys.tables WHERE name = @Name", new SqlParameter("@Name", tableName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.TableExists(tableName);
         }
 
         private static bool TableExists(SqlConnection conn, SqlTransaction tran, string tableName)
@@ -1044,14 +1180,7 @@ END AS decimal(18, 2))";
 
         private static bool ColumnExists(string tableName, string columnName)
         {
-            object? result = ConnectDB.ExecuteScalar(
-                @"SELECT COUNT(*)
-                  FROM sys.tables t
-                  JOIN sys.columns c ON t.object_id = c.object_id
-                  WHERE t.name = @TableName AND c.name = @ColumnName",
-                new SqlParameter("@TableName", tableName),
-                new SqlParameter("@ColumnName", columnName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.ColumnExists(tableName, columnName);
         }
 
         private static bool ColumnRequired(string tableName, string columnName)
@@ -1071,15 +1200,7 @@ END AS decimal(18, 2))";
 
         private static string GetFirstExistingColumn(string tableName, params string[] columnNames)
         {
-            foreach (string columnName in columnNames)
-            {
-                if (ColumnExists(tableName, columnName))
-                {
-                    return columnName;
-                }
-            }
-
-            return string.Empty;
+            return ViewSchemaHelper.GetFirstExistingColumn(tableName, columnNames);
         }
 
         private static bool ColumnExists(SqlConnection conn, SqlTransaction tran, string tableName, string columnName)
@@ -1212,6 +1333,7 @@ END AS decimal(18, 2))";
             public string Ten { get; set; } = string.Empty;
             public int SoLuong { get; set; }
             public decimal DonGia { get; set; }
+            public bool LaDichVuCheckIn { get; set; }
             public decimal ThanhTien => SoLuong * DonGia;
         }
     }

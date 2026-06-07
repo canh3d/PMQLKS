@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DTO;
 
@@ -173,6 +174,19 @@ namespace QLKS_AnPhu.UserControls
             if (DgDichVuDoan.SelectedItem is not DichVuDoanItem selected)
             {
                 MessageBox.Show("Vui lòng chọn dịch vụ cần xóa.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            phongDichVu.DichVuDaThem.Remove(selected);
+            CapNhatDichVuPhongDangChon();
+            CapNhatTongTien();
+        }
+
+        private void DgDichVuDoan_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            PhongDoanItem? phongDichVu = LayPhongDangChon();
+            if (phongDichVu == null || DgDichVuDoan.SelectedItem is not DichVuDoanItem selected)
+            {
                 return;
             }
 

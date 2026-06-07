@@ -57,12 +57,13 @@
                 </Style>
             </Style.Resources>
             <Setter Property="Height" Value="38" />
-            <Setter Property="MinWidth" Value="88" />
-            <Setter Property="Padding" Value="14,0" />
-            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinWidth" Value="72" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="FontSize" Value="13.5" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -70,6 +71,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter x:Name="ButtonContent"
                                               HorizontalAlignment="Center"
@@ -80,6 +82,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Root" Property="Opacity" Value="0.92" />
+                                <Setter TargetName="Root" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="12" Direction="270" ShadowDepth="2" Opacity="0.20" />
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Root" Property="Background" Value="#E5E7EB" />
@@ -124,11 +131,17 @@
             <Setter Property="BorderBrush" Value="#374151" />
             <Setter Property="Foreground" Value="White" />
         </Style>
+
+        <Style x:Key="WhiteActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#D0D5DD" />
+            <Setter Property="Foreground" Value="#111827" />
+        </Style>
     </Window.Resources>
 
     <Grid Margin="20,14,20,14">
         <Grid.RowDefinitions>
-            <RowDefinition Height="56" />
+            <RowDefinition Height="86" />
             <RowDefinition Height="96" />
             <RowDefinition Height="*" />
             <RowDefinition Height="56" />
@@ -382,6 +395,10 @@
                             <Button x:Name="BtnGiamSoLuongDichVu"
                                     Grid.Column="0"
                                     Content="-"
+                                    Style="{StaticResource WhiteActionButtonStyle}"
+                                    Height="30"
+                                    MinWidth="28"
+                                    Padding="0"
                                     FontSize="15"
                                     FontWeight="Bold"
                                     Foreground="#111827"
@@ -405,6 +422,10 @@
                             <Button x:Name="BtnTangSoLuongDichVu"
                                     Grid.Column="2"
                                     Content="+"
+                                    Style="{StaticResource WhiteActionButtonStyle}"
+                                    Height="30"
+                                    MinWidth="28"
+                                    Padding="0"
                                     FontSize="15"
                                     FontWeight="Bold"
                                     Foreground="#111827"
@@ -412,13 +433,13 @@
                                     BorderBrush="#CBD5E1"
                                     Click="BtnTangSoLuongDichVu_Click" />
                         </Grid>
-                        <Button Grid.Column="2" Margin="8,0,0,0" Background="#16A34A" BorderBrush="#15803D" Foreground="White" Click="BtnThemDichVu_Click">
+                        <Button Grid.Column="2" Margin="8,0,0,0" Style="{StaticResource GreenActionButtonStyle}" Background="#16A34A" BorderBrush="#15803D" Foreground="White" Click="BtnThemDichVu_Click">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="PlusCircle" Width="15" Height="15" Margin="0,0,5,0" />
                                 <TextBlock Text="Thêm" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="3" Margin="8,0,0,0" Background="#DC2626" BorderBrush="#B91C1C" Foreground="White" Click="BtnXoaDichVu_Click">
+                        <Button Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource PinkActionButtonStyle}" Background="#DC2626" BorderBrush="#B91C1C" Foreground="White" Click="BtnXoaDichVu_Click">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <iconPacks:PackIconMaterial Kind="TrashCan" Width="15" Height="15" Margin="0,0,5,0" />
                                 <TextBlock Text="Xóa" />
@@ -469,7 +490,7 @@
                         <TextBlock x:Name="TxtKhaDung" Margin="0,10,0,0" HorizontalAlignment="Right" FontSize="24" FontWeight="Bold" Foreground="#DC2626" />
                     </StackPanel>
 
-                    <Button Grid.Row="1" HorizontalAlignment="Right" Width="126" Background="White" BorderBrush="#D0D5DD" Foreground="#111827" Click="BtnInHoaDon_Click">
+                    <Button Grid.Row="1" HorizontalAlignment="Right" Width="126" Style="{StaticResource WhiteActionButtonStyle}" Background="White" BorderBrush="#D0D5DD" Foreground="#111827" Click="BtnInHoaDon_Click">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <iconPacks:PackIconMaterial Kind="Printer" Width="15" Height="15" Margin="0,0,6,0" Foreground="#111827" />
                             <TextBlock Text="In hóa đơn" Foreground="#111827" />
@@ -479,51 +500,56 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="3" Margin="0,16,0,0">
-            <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Center">
-                <Button x:Name="BtnNhanPhong" Width="118" Style="{StaticResource BlueActionButtonStyle}" Click="BtnNhanPhong_Click">
+        <Grid Grid.Row="3" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <WrapPanel Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center" ItemHeight="38" Margin="0,0,12,0">
+                <Button x:Name="BtnNhanPhong" MinWidth="126" Style="{StaticResource BlueActionButtonStyle}" Click="BtnNhanPhong_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="Login" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Nhận phòng" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnHuyDat" Width="104" Style="{StaticResource PinkActionButtonStyle}" Margin="10,0,0,0" Click="BtnHuyDat_Click">
+                <Button x:Name="BtnHuyDat" MinWidth="108" Style="{StaticResource PinkActionButtonStyle}" Margin="8,0,0,0" Click="BtnHuyDat_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="CloseCircle" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Hủy đặt" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnTraPhong" Width="112" Style="{StaticResource GreenActionButtonStyle}" Margin="10,0,0,0" Click="BtnTraPhong_Click">
+                <Button x:Name="BtnTraPhong" MinWidth="118" Style="{StaticResource GreenActionButtonStyle}" Margin="8,0,0,0" Click="BtnTraPhong_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="Logout" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Trả phòng" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnGiaHanPhong" Width="116" Style="{StaticResource BlueActionButtonStyle}" Margin="10,0,0,0" Click="BtnGiaHanPhong_Click">
+                <Button x:Name="BtnGiaHanPhong" MinWidth="132" Style="{StaticResource BlueActionButtonStyle}" Margin="8,0,0,0" Click="BtnGiaHanPhong_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="CalendarPlus" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Gia hạn phòng" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnDoiPhong" Width="108" Style="{StaticResource BlueActionButtonStyle}" Margin="10,0,0,0" Click="BtnDoiPhong_Click">
+                <Button x:Name="BtnDoiPhong" MinWidth="116" Style="{StaticResource BlueActionButtonStyle}" Margin="8,0,0,0" Click="BtnDoiPhong_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="SwapHorizontal" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Đổi phòng" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnDonDep" Width="138" Style="{StaticResource OrangeActionButtonStyle}" Margin="10,0,0,0" Click="BtnDonDep_Click">
+                <Button x:Name="BtnDonDep" MinWidth="142" Style="{StaticResource OrangeActionButtonStyle}" Margin="8,0,0,0" Click="BtnDonDep_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="Broom" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Dọn dẹp xong" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnThanhToan" Width="124" Style="{StaticResource BlueActionButtonStyle}" Margin="10,0,0,0" Click="BtnThanhToan_Click">
+                <Button x:Name="BtnThanhToan" MinWidth="126" Style="{StaticResource BlueActionButtonStyle}" Margin="8,0,0,0" Click="BtnThanhToan_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="CashRegister" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Thanh toán" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnLuu" Width="86" Style="{StaticResource GreenActionButtonStyle}" Margin="10,0,0,0" Click="BtnLuu_Click">
+                <Button x:Name="BtnLuu" MinWidth="86" Style="{StaticResource GreenActionButtonStyle}" Margin="8,0,0,0" Click="BtnLuu_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="ContentSave" Width="16" Height="16" Margin="0,0,6,0" />
                         <TextBlock Text="Lưu" />
@@ -531,8 +557,9 @@
                 </Button>
             </WrapPanel>
 
-            <Button Style="{StaticResource GrayActionButtonStyle}"
-                    Width="94"
+            <Button Grid.Column="1"
+                    Style="{StaticResource GrayActionButtonStyle}"
+                    MinWidth="98"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Click="BtnThoat_Click">

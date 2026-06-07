@@ -18,6 +18,7 @@ namespace QLKS_AnPhu.View
         public DichVuVatTu()
         {
             InitializeComponent();
+            SearchSuggestionService.Attach(TxtTimKiem, TaoGoiYTimKiem, _ => BtnTimKiem_Click(TxtTimKiem, new RoutedEventArgs()));
             Loaded += DichVuVatTu_Loaded;
         }
 
@@ -183,6 +184,27 @@ namespace QLKS_AnPhu.View
             if (e.Key == Key.Enter)
             {
                 BtnTimKiem_Click(sender, e);
+            }
+        }
+
+        private IEnumerable<SearchSuggestionItem> TaoGoiYTimKiem()
+        {
+            foreach (DichVuVatTuDTO item in danhSachGoc)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Ten))
+                {
+                    yield return new SearchSuggestionItem(item.Ten, $"{item.Ten} - {item.Loai}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.Loai))
+                {
+                    yield return new SearchSuggestionItem(item.Loai, item.Loai);
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.TrangThai))
+                {
+                    yield return new SearchSuggestionItem(item.TrangThai, $"{item.TrangThai} - {item.Ten}");
+                }
             }
         }
 

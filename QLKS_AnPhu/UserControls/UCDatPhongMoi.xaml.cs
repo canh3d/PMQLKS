@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DTO;
@@ -140,19 +142,21 @@ namespace QLKS_AnPhu.UserControls
 
             try
             {
-                danhSachPhong = phongBUS.LayDanhSach();
+                danhSachPhong = phongBUS.LayDanhSach()
+                    .Where(LaPhongCoTheDat)
+                    .ToList();
             }
             catch
             {
                 danhSachPhong = new List<PhongDTO>();
             }
 
-            if (danhSachPhong.Count == 0)
+            if (danhSachPhong.Count == 0 && LaPhongCoTheDat(phong))
             {
                 danhSachPhong.Add(phong);
             }
 
-            phong = danhSachPhong.FirstOrDefault(item => item.Ma == phong.Ma) ?? phong;
+            phong = danhSachPhong.FirstOrDefault(item => item.Ma == phong.Ma) ?? danhSachPhong.FirstOrDefault() ?? phong;
 
             List<string> loaiPhong = danhSachPhong
                 .Select(item => string.IsNullOrWhiteSpace(item.LoaiPhong) ? "Loại phòng" : item.LoaiPhong)
@@ -172,6 +176,7 @@ namespace QLKS_AnPhu.UserControls
             dangNapPhong = true;
 
             List<PhongDTO> danhSachTheoLoai = danhSachPhong
+                .Where(LaPhongCoTheDat)
                 .Where(item =>
                     string.IsNullOrWhiteSpace(loaiPhong) ||
                     string.Equals(item.LoaiPhong, loaiPhong, StringComparison.OrdinalIgnoreCase) ||
@@ -192,6 +197,41 @@ namespace QLKS_AnPhu.UserControls
 
             dangNapPhong = false;
             TinhTongTien();
+        }
+
+        private static bool LaPhongCoTheDat(PhongDTO phong)
+        {
+            string trangThai = BoDau(phong.TrangThai).ToLowerInvariant();
+            string donDep = BoDau(phong.TinhTrangDonDep).ToLowerInvariant();
+
+            bool laPhongTrong = string.IsNullOrWhiteSpace(trangThai)
+                || trangThai.Contains("phong trong")
+                || trangThai == "trong"
+                || trangThai.Contains("san sang")
+                || trangThai.Contains("ready")
+                || trangThai.Contains("available");
+
+            bool biChan = trangThai.Contains("thue")
+                || trangThai.Contains("co khach")
+                || trangThai.Contains("da dat")
+                || trangThai.Contains("chua don")
+                || trangThai.Contains("sua")
+                || trangThai.Contains("bao tri")
+                || donDep.Contains("chua")
+                || donDep.Contains("sua")
+                || donDep.Contains("bao tri");
+
+            return laPhongTrong && !biChan;
+        }
+
+        private static string BoDau(string? value)
+        {
+            string formD = (value ?? string.Empty).Normalize(NormalizationForm.FormD);
+            char[] chars = formD
+                .Where(ch => CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                .ToArray();
+
+            return new string(chars).Normalize(NormalizationForm.FormC);
         }
 
         private void CboLoaiPhong_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -342,6 +382,17 @@ namespace QLKS_AnPhu.UserControls
                 });
             }
 
+            TinhTongTien();
+        }
+
+        private void DgDichVuDaThem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DgDichVuDaThem.SelectedItem is not DichVuDatPhongItem selected)
+            {
+                return;
+            }
+
+            dichVuDaThem.Remove(selected);
             TinhTongTien();
         }
 

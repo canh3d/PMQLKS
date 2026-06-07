@@ -23,6 +23,7 @@ namespace QLKS_AnPhu.View
         public BaoCao()
         {
             InitializeComponent();
+            SearchSuggestionService.Attach(TxtTimKiem, TaoGoiYTimKiem, _ => LocBaoCao());
             DgBaoCao.ItemsSource = danhSachHienThi;
             Loaded += BaoCao_Loaded;
         }
@@ -43,6 +44,27 @@ namespace QLKS_AnPhu.View
         private void TxtTimKiem_TextChanged(object sender, TextChangedEventArgs e)
         {
             LocBaoCao();
+        }
+
+        private IEnumerable<SearchSuggestionItem> TaoGoiYTimKiem()
+        {
+            foreach (BaoCaoChiTietItem item in danhSachBaoCao)
+            {
+                if (!string.IsNullOrWhiteSpace(item.MaBaoCao))
+                {
+                    yield return new SearchSuggestionItem(item.MaBaoCao, $"{item.MaBaoCao} - {item.NoiDung}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.NoiDung))
+                {
+                    yield return new SearchSuggestionItem(item.NoiDung, $"{item.NoiDung} - {item.Loai}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.GhiChu))
+                {
+                    yield return new SearchSuggestionItem(item.GhiChu, $"{item.GhiChu} - {item.NoiDung}");
+                }
+            }
         }
 
         private void TaiBaoCao()
@@ -589,34 +611,12 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
 
         private static string TenPhongSql(string alias)
         {
-            if (ColumnExists("PHONG", "TenPhong"))
-            {
-                return alias + ".TenPhong";
-            }
-
-            if (ColumnExists("PHONG", "SoPhong"))
-            {
-                return alias + ".SoPhong";
-            }
-
-            if (ColumnExists("PHONG", "MaSoPhong"))
-            {
-                return alias + ".MaSoPhong";
-            }
-
-            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
+            return ViewSchemaHelper.TenPhongSql(alias);
         }
 
         private static bool ColumnExists(string tableName, string columnName)
         {
-            object? result = ConnectDB.ExecuteScalar(
-                @"SELECT COUNT(*)
-                  FROM sys.tables t
-                  JOIN sys.columns c ON t.object_id = c.object_id
-                  WHERE t.name = @TableName AND c.name = @ColumnName",
-                new SqlParameter("@TableName", tableName),
-                new SqlParameter("@ColumnName", columnName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.ColumnExists(tableName, columnName);
         }
 
         private static string Csv(string value)

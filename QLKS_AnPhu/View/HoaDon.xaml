@@ -125,11 +125,11 @@
                        
             <RowDefinition Height="74" />
                        
-            <RowDefinition Height="96" />
+            <RowDefinition Height="106" />
                        
             <RowDefinition Height="*" />
                        
-            <RowDefinition Height="44" />
+            <RowDefinition Height="54" />
                    
         </Grid.RowDefinitions>
 
@@ -187,12 +187,21 @@
                 <TextBox x:Name="TxtTimKiem"
                          Grid.Column="0"
                          Height="34"
-                         Padding="12,0"
+                         Padding="38,0,12,0"
                          VerticalContentAlignment="Center"
                          FontSize="14"
                          BorderBrush="#B8C4D3"
                          TextChanged="TxtTimKiem_TextChanged"
                          ToolTip="Nhập mã hóa đơn, tên khách hoặc phòng" />
+                <iconPacks:PackIconMaterial Grid.Column="0"
+                                            Kind="Magnify"
+                                            Width="18"
+                                            Height="18"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Margin="14,0,0,0"
+                                            Foreground="#64748B"
+                                            IsHitTestVisible="False" />
 
                                    
                     <TextBlock Grid.Column="2" Text="Trạng thái" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
@@ -282,94 +291,142 @@
             </Grid.ColumnDefinitions>
 
                        
-            <Border Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
+            <Border BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="16" Padding="14,10">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#EFF6FF" Offset="0" />
+                        <GradientStop Color="#DBEAFE" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
                                
-                <StackPanel Orientation="Horizontal">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="48" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
                                        
-                    <Border Width="46" Height="46" Background="#E0F2FE" CornerRadius="7">
+                    <Border Width="42" Height="42" Background="#DBEAFE" CornerRadius="13" VerticalAlignment="Center">
                                                
-                        <iconPacks:PackIconMaterial Kind="ReceiptText" Width="24" Height="24" Foreground="#075985" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <iconPacks:PackIconMaterial Kind="ReceiptText" Width="24" Height="24" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                            
                     </Border>
                                        
-                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                
-                        <TextBlock Text="Tổng hóa đơn" FontSize="14" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock Text="Tổng hóa đơn" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
-                        <TextBlock x:Name="TxtTongHoaDon" Text="0" Margin="0,5,0,0" FontSize="24" FontWeight="Bold" Foreground="#075985" />
+                        <TextBlock x:Name="TxtTongHoaDon" Text="0" Margin="0,3,0,0" FontSize="23" FontWeight="Bold" Foreground="#1D4ED8" />
+                        <TextBlock Text="+15% so với tháng trước" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#2563EB" />
                                            
                     </StackPanel>
                                    
-                </StackPanel>
+                </Grid>
                            
             </Border>
 
                        
-            <Border Grid.Column="2" Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
+            <Border Grid.Column="2" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="16" Padding="14,10">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FFFBEB" Offset="0" />
+                        <GradientStop Color="#FEF3C7" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
                                
-                <StackPanel Orientation="Horizontal">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="48" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
                                        
-                    <Border Width="46" Height="46" Background="#FEF3C7" CornerRadius="7">
+                    <Border Width="42" Height="42" Background="#FDE68A" CornerRadius="13" VerticalAlignment="Center">
                                                
                         <iconPacks:PackIconMaterial Kind="ClockOutline" Width="24" Height="24" Foreground="#B45309" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                            
                     </Border>
                                        
-                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                
-                        <TextBlock Text="Chưa thanh toán" FontSize="14" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock Text="Chưa thanh toán" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
-                        <TextBlock x:Name="TxtChuaThanhToan" Text="0" Margin="0,5,0,0" FontSize="24" FontWeight="Bold" Foreground="#B45309" />
+                        <TextBlock x:Name="TxtChuaThanhToan" Text="0" Margin="0,3,0,0" FontSize="23" FontWeight="Bold" Foreground="#B45309" />
+                        <TextBlock Text="Cần xử lý trong ngày" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#B45309" />
                                            
                     </StackPanel>
                                    
-                </StackPanel>
+                </Grid>
                            
             </Border>
 
                        
-            <Border Grid.Column="4" Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
+            <Border Grid.Column="4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="16" Padding="14,10">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#F0FDF4" Offset="0" />
+                        <GradientStop Color="#DCFCE7" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
                                
-                <StackPanel Orientation="Horizontal">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="48" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
                                        
-                    <Border Width="46" Height="46" Background="#DCFCE7" CornerRadius="7">
+                    <Border Width="42" Height="42" Background="#BBF7D0" CornerRadius="13" VerticalAlignment="Center">
                                                
                         <iconPacks:PackIconMaterial Kind="CheckCircleOutline" Width="24" Height="24" Foreground="#15803D" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                            
                     </Border>
                                        
-                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                
-                        <TextBlock Text="Đã thanh toán" FontSize="14" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock Text="Đã thanh toán" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
-                        <TextBlock x:Name="TxtDaThanhToan" Text="0" Margin="0,5,0,0" FontSize="24" FontWeight="Bold" Foreground="#15803D" />
+                        <TextBlock x:Name="TxtDaThanhToan" Text="0" Margin="0,3,0,0" FontSize="23" FontWeight="Bold" Foreground="#15803D" />
+                        <TextBlock Text="Tỷ lệ hoàn tất tốt" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#15803D" />
                                            
                     </StackPanel>
                                    
-                </StackPanel>
+                </Grid>
                            
             </Border>
 
                        
-            <Border Grid.Column="6" Background="#FAFAFA" BorderBrush="#D8DEE8" BorderThickness="1" CornerRadius="12" Padding="14">
+            <Border Grid.Column="6" BorderBrush="#E9D5FF" BorderThickness="1" CornerRadius="16" Padding="14,10">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FAF5FF" Offset="0" />
+                        <GradientStop Color="#F3E8FF" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
                                
-                <StackPanel Orientation="Horizontal">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="48" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
                                        
-                    <Border Width="46" Height="46" Background="#F3E8FF" CornerRadius="7">
+                    <Border Width="42" Height="42" Background="#E9D5FF" CornerRadius="13" VerticalAlignment="Center">
                                                
                         <iconPacks:PackIconMaterial Kind="CashMultiple" Width="24" Height="24" Foreground="#7E22CE" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                            
                     </Border>
                                        
-                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                
-                        <TextBlock Text="Doanh thu" FontSize="14" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock Text="Doanh thu" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
-                        <TextBlock x:Name="TxtDoanhThu" Text="0 VND" Margin="0,5,0,0" FontSize="24" FontWeight="Bold" Foreground="#7E22CE" />
+                        <TextBlock x:Name="TxtDoanhThu" Text="0 VND" Margin="0,3,0,0" FontSize="19" FontWeight="Bold" Foreground="#7E22CE" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="Doanh thu đã thanh toán" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#7E22CE" />
                                            
                     </StackPanel>
                                    
-                </StackPanel>
+                </Grid>
                            
             </Border>
                    
@@ -417,13 +474,15 @@
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           IsReadOnly="True"
-                          RowHeight="31"
-                          FontSize="14"
+                          RowHeight="32"
+                          FontSize="12"
                           HeadersVisibility="Column"
                           SelectionMode="Single"
                           GridLinesVisibility="Horizontal"
                           AlternationCount="2"
                           AlternatingRowBackground="#F8FAFC"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
                           BorderBrush="#D8DEE8"
                           BorderThickness="0"
                           SelectionChanged="DgHoaDon_SelectionChanged"
@@ -433,9 +492,9 @@
                                                
                         <Style TargetType="DataGridColumnHeader">
                                                        
-                            <Setter Property="Height" Value="34" />
+                            <Setter Property="Height" Value="32" />
                                                        
-                            <Setter Property="FontSize" Value="13" />
+                            <Setter Property="FontSize" Value="12" />
                                                        
                             <Setter Property="FontWeight" Value="SemiBold" />
                                                        
@@ -471,49 +530,35 @@
                                        
                     <DataGrid.Columns>
                                                
-                        <DataGridTextColumn Header="Mã hóa đơn" Binding="{Binding MaHoaDon}" Width="112" />
+                        <DataGridTextColumn Header="Mã hóa đơn" Binding="{Binding MaHoaDon}" Width="150" />
                                                
-                        <DataGridTextColumn Header="Mã phiếu thuê" Binding="{Binding MaPhieuThue}" Width="116" />
-                                               
-                        <DataGridTextColumn Header="Tên khách hàng" Binding="{Binding TenKhachHang}" Width="1.5*" MinWidth="150" />
-                                               
-                        <DataGridTextColumn Header="Số phòng" Binding="{Binding SoPhong}" Width="86" />
-                                               
-                        <DataGridTextColumn Header="Ngày nhận phòng" Binding="{Binding NgayNhanText}" Width="128" />
-                                               
-                        <DataGridTextColumn Header="Ngày trả phòng" Binding="{Binding NgayTraText}" Width="128" />
-                                               
-                        <DataGridTextColumn x:Name="ColTienPhong" Header="Tiền phòng lúc check-in" Binding="{Binding TienPhongText}" Width="148" />
-                                               
-                        <DataGridTextColumn Header="Tiền dịch vụ" Binding="{Binding TienDichVuText}" Width="104" />
-                                               
-                        <DataGridTextColumn Header="Phụ phí" Binding="{Binding PhuPhiText}" Width="92" />
-                                               
-                        <DataGridTextColumn Header="Giảm giá" Binding="{Binding GiamGiaText}" Width="92" />
-                                               
-                        <DataGridTextColumn Header="Thuế VAT" Binding="{Binding ThueVatText}" Width="92" />
-                                               
-                        <DataGridTextColumn Header="Tổng tiền" Binding="{Binding TongTienText}" Width="106" />
-                                               
-                        <DataGridTemplateColumn Header="Trạng thái" Width="132">
+                        <DataGridTextColumn Header="Phòng" Binding="{Binding SoPhong}" Width="130" />
+
+                        <DataGridTextColumn Header="Tên khách hàng" Binding="{Binding TenKhachHang}" Width="190" />
+
+                        <DataGridTextColumn Header="Ngày lập" Binding="{Binding NgayLapText}" Width="120" />
+
+                        <DataGridTextColumn Header="Phụ phí" Binding="{Binding PhuPhiText}" Width="150" />
+
+                        <DataGridTextColumn Header="Tổng tiền" Binding="{Binding TongTienText}" Width="150" />
+
+                        <DataGridTemplateColumn Header="Trạng thái" Width="170">
                                                        
                             <DataGridTemplateColumn.CellTemplate>
                                                                
                                 <DataTemplate>
                                                                        
-                                    <Border Background="{Binding TrangThaiBackground}" CornerRadius="3" Padding="8,2" HorizontalAlignment="Stretch">
+                                    <Border Background="{Binding TrangThaiBackground}" CornerRadius="10" Padding="10,3" HorizontalAlignment="Stretch">
                                                                                
-                                        <TextBlock Text="{Binding TrangThai}" Foreground="{Binding TrangThaiForeground}" TextAlignment="Center" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding TrangThai}" Foreground="{Binding TrangThaiForeground}" TextAlignment="Center" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                                                            
                                     </Border>
                                                                    
                                 </DataTemplate>
                                                            
                             </DataGridTemplateColumn.CellTemplate>
-                                                   
+                                                       
                         </DataGridTemplateColumn>
-                                               
-                        <DataGridTextColumn Header="Ngày lập hóa đơn" Binding="{Binding NgayLapText}" Width="128" />
                                            
                     </DataGrid.Columns>
                                    
@@ -568,8 +613,20 @@
                 </StackPanel>
                            
             </Button>
+
+            <Button x:Name="BtnTachBill" MinWidth="126" Margin="10,0,0,0" Style="{StaticResource ActionButtonStyle}" Background="{StaticResource PurpleBrush}" BorderBrush="{StaticResource PurpleBrush}" Foreground="White" Click="BtnTachBill_Click">
+
+                <StackPanel Orientation="Horizontal">
+
+                    <iconPacks:PackIconMaterial Kind="CallSplit" Width="14" Height="14" Margin="0,0,6,0" />
+
+                    <TextBlock Text="Tách bill" />
+
+                </StackPanel>
+
+            </Button>
                        
-            <Button x:Name="BtnXoaHoaDon" Width="130" Margin="10,0,0,0" Style="{StaticResource ActionButtonStyle}" Background="{StaticResource RedBrush}" BorderBrush="{StaticResource RedBrush}" Foreground="White" Click="BtnXoaHoaDon_Click">
+            <Button x:Name="BtnXoaHoaDon" Width="146" Margin="10,0,0,0" Style="{StaticResource ActionButtonStyle}" Background="{StaticResource RedBrush}" BorderBrush="{StaticResource RedBrush}" Foreground="White" Click="BtnXoaHoaDon_Click">
                                
                 <StackPanel Orientation="Horizontal">
                                        
@@ -594,7 +651,33 @@
             </Button>
                    
         </StackPanel>
+
+        <Border x:Name="LoadingOverlay"
+                Grid.RowSpan="5"
+                Background="#CCF8FAFC"
+                CornerRadius="18"
+                Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="AN PHÚ HOTEL"
+                           HorizontalAlignment="Center"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource DarkBlueBrush}" />
+                <TextBlock Text="Đang tải dữ liệu hóa đơn..."
+                           Margin="0,10,0,0"
+                           HorizontalAlignment="Center"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextMutedBrush}" />
+                <ProgressBar Width="260"
+                             Height="6"
+                             Margin="0,18,0,0"
+                             IsIndeterminate="True"
+                             Foreground="{StaticResource BlueBrush}" />
+            </StackPanel>
+        </Border>
            
     </Grid>
 </UserControl>
+
 

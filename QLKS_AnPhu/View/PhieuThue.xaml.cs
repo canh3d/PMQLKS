@@ -1,8 +1,13 @@
 using System.Data;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Data.SqlClient;
+using Microsoft.Win32;
 using QLKS_AnPhu.DAL;
 using QLKS_AnPhu.DTO;
 using QLKS_AnPhu.UserControls;
@@ -18,6 +23,11 @@ namespace QLKS_AnPhu.View
         public PhieuThue()
         {
             InitializeComponent();
+            BtnXuatExcel.Click -= BtnXuatExcel_Click;
+            BtnXuatExcel.Click += BtnXuatExcel_Click;
+            BtnInDanhSach.Click -= BtnInDanhSach_Click;
+            BtnInDanhSach.Click += BtnInDanhSach_Click;
+            SearchSuggestionService.Attach(TxtTimKiem, TaoGoiYTimKiem, _ => TaiDuLieu());
             Loaded += PhieuThue_Loaded;
         }
 
@@ -32,7 +42,7 @@ namespace QLKS_AnPhu.View
         {
             dangNapBoLoc = true;
             CboLoaiPhong.Items.Clear();
-            CboLoaiPhong.Items.Add("Tất cả loại phòng");
+            CboLoaiPhong.Items.Add("T\u1ea5t c\u1ea3 lo\u1ea1i ph\u00f2ng");
             CboLoaiPhong.SelectedIndex = 0;
 
             try
@@ -67,13 +77,13 @@ namespace QLKS_AnPhu.View
                 danhSachPhieu = LoadDanhSachPhieu();
                 ThemCotStt(danhSachPhieu);
                 DgPhieuThue.ItemsSource = danhSachPhieu.DefaultView;
-                TxtTongBanGhi.Text = $"Tổng số: {danhSachPhieu.Rows.Count} bản ghi";
+                TxtTongBanGhi.Text = $"T\u1ed5ng s\u1ed1: {danhSachPhieu.Rows.Count} b\u1ea3n ghi";
             }
             catch (Exception ex)
             {
                 DgPhieuThue.ItemsSource = null;
-                TxtTongBanGhi.Text = "Không tải được dữ liệu.";
-                MessageBox.Show("Không thể tải danh sách phiếu thuê.\nChi tiết: " + ex.Message, "Lỗi dữ liệu", MessageBoxButton.OK, MessageBoxImage.Error);
+                TxtTongBanGhi.Text = "Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c d\u1eef li\u1ec7u.";
+                MessageBox.Show("Kh\u00f4ng th\u1ec3 t\u1ea3i danh s\u00e1ch phi\u1ebfu thu\u00ea.\nChi ti\u1ebft: " + ex.Message, "L\u1ed7i d\u1eef li\u1ec7u", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -205,11 +215,11 @@ SELECT 'THUE' AS LoaiPhieu,
        " + tienPhongThueExpr + @" AS TongTamTinh,
        " + ghiChuThueExpr + @" AS GhiChu,
        CASE
-           WHEN PT.TrangThai IN (N'Đã hủy', N'Da huy') THEN N'Đã hủy'
-           WHEN PT.TrangThai IN (N'Đã trả', N'Da tra', N'Đã trả phòng', N'Da tra phong') THEN N'Đã trả phòng'
-           WHEN PT.TrangThai IN (N'Đang thuê', N'Dang thue') OR P.TrangThai IN (N'Có khách', N'Co khach', N'Đang thuê', N'Dang thue') THEN N'Đang thuê'
-           WHEN PT.TrangThai IN (N'Đã đặt', N'Da dat', N'Đã xác nhận', N'Da xac nhan') THEN N'Đã đặt'
-           ELSE ISNULL(PT.TrangThai, N'Đang thuê')
+           WHEN PT.TrangThai IN (N'" + "\u0110\u00e3 h\u1ee7y" + @"', N'Da huy') THEN N'" + "\u0110\u00e3 h\u1ee7y" + @"'
+           WHEN PT.TrangThai IN (N'" + "\u0110\u00e3 tr\u1ea3" + @"', N'Da tra', N'" + "\u0110\u00e3 tr\u1ea3 ph\u00f2ng" + @"', N'Da tra phong') THEN N'" + "\u0110\u00e3 tr\u1ea3 ph\u00f2ng" + @"'
+           WHEN PT.TrangThai IN (N'" + "\u0110ang thu\u00ea" + @"', N'Dang thue') OR P.TrangThai IN (N'" + "C\u00f3 kh\u00e1ch" + @"', N'Co khach', N'" + "\u0110ang thu\u00ea" + @"', N'Dang thue') THEN N'" + "\u0110ang thu\u00ea" + @"'
+           WHEN PT.TrangThai IN (N'" + "\u0110\u00e3 \u0111\u1eb7t" + @"', N'Da dat', N'" + "\u0110\u00e3 x\u00e1c nh\u1eadn" + @"', N'Da xac nhan') THEN N'" + "\u0110\u00e3 \u0111\u1eb7t" + @"'
+           ELSE ISNULL(PT.TrangThai, N'" + "\u0110ang thu\u00ea" + @"')
        END AS TrangThai
 FROM dbo.PHIEUTHUE PT
 JOIN dbo.KHACHHANG KH ON PT.MaKH = KH.MaKH
@@ -266,8 +276,8 @@ LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong");
                                 FROM dbo.CHITIETDATPHONG CT2
                                 JOIN dbo.PHONG P2 ON CT2.MaPhong = P2.MaPhong
                                 WHERE CT2.MaDatPhong = DP.MaDatPhong
-                                  AND P2.TrangThai IN (N'Có khách', N'Co khach', N'Đang thuê', N'Dang thue'))"
-                    : "P.TrangThai IN (N'Có khách', N'Co khach', N'Đang thuê', N'Dang thue')";
+                                  AND P2.TrangThai IN (N'" + "C\u00f3 kh\u00e1ch" + @"', N'Co khach', N'" + "\u0110ang thu\u00ea" + @"', N'Dang thue'))"
+                    : "P.TrangThai IN (N'C\u00f3 kh\u00e1ch', N'Co khach', N'\u0110ang thu\u00ea', N'Dang thue')";
                 string joinPhong = coMaPhongDat
                     ? "LEFT JOIN dbo.PHONG P ON DP.MaPhong = P.MaPhong"
                     : string.Empty;
@@ -296,10 +306,10 @@ SELECT 'DAT' AS LoaiPhieu,
        " + tienPhongDat + @" AS TongTamTinh,
        " + ghiChuDatExpr + @" AS GhiChu,
        CASE
-           WHEN DP.TrangThai IN (N'Đã hủy', N'Da huy') THEN N'Đã hủy'
-           WHEN DP.TrangThai IN (N'Đã trả', N'Da tra', N'Đã trả phòng', N'Da tra phong') THEN N'Đã trả phòng'
-           WHEN " + phongDangThueExpr + @" THEN N'Đang thuê'
-           ELSE N'Đã đặt'
+           WHEN DP.TrangThai IN (N'" + "\u0110\u00e3 h\u1ee7y" + @"', N'Da huy') THEN N'" + "\u0110\u00e3 h\u1ee7y" + @"'
+           WHEN DP.TrangThai IN (N'" + "\u0110\u00e3 tr\u1ea3" + @"', N'Da tra', N'" + "\u0110\u00e3 tr\u1ea3 ph\u00f2ng" + @"', N'Da tra phong') THEN N'" + "\u0110\u00e3 tr\u1ea3 ph\u00f2ng" + @"'
+           WHEN " + phongDangThueExpr + @" THEN N'" + "\u0110ang thu\u00ea" + @"'
+           ELSE N'" + "\u0110\u00e3 \u0111\u1eb7t" + @"'
        END AS TrangThai
 FROM dbo." + bangDatPhong + @" DP
 JOIN dbo.KHACHHANG KH ON DP.MaKH = KH.MaKH
@@ -461,7 +471,7 @@ ORDER BY X.NgayNhanPhong DESC";
 
         private string LayTrangThaiLoc()
         {
-            return CboTrangThai.SelectedItem is ComboBoxItem item && item.Content?.ToString() != "Tất cả"
+            return CboTrangThai.SelectedItem is ComboBoxItem item && item.Content?.ToString() != "T\u1ea5t c\u1ea3"
                 ? item.Content?.ToString() ?? string.Empty
                 : string.Empty;
         }
@@ -481,8 +491,211 @@ ORDER BY X.NgayNhanPhong DESC";
             TaiDuLieu();
         }
 
+        private void BtnXuatExcel_Click(object sender, RoutedEventArgs e)
+        {
+            List<DataRowView> rows = LayDongDangHienThi();
+            if (rows.Count == 0)
+            {
+                MessageBox.Show("Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u \u0111\u1ec3 xu\u1ea5t Excel.", "Xu\u1ea5t Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            SaveFileDialog dialog = new()
+            {
+                Title = "Xu\u1ea5t danh s\u00e1ch phi\u1ebfu thu\u00ea",
+                Filter = "Excel CSV (*.csv)|*.csv",
+                FileName = "DanhSachPhieuThue_" + DateTime.Now.ToString("yyyyMMdd_HHmm") + ".csv"
+            };
+
+            if (dialog.ShowDialog(Window.GetWindow(this)) != true)
+            {
+                return;
+            }
+
+            try
+            {
+                StringBuilder builder = new();
+                string[] headers = { "STT", "M\u00e3 phi\u1ebfu", "Kh\u00e1ch/\u0111o\u00e0n \u0111\u1eb7t", "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i", "Danh s\u00e1ch ph\u00f2ng", "Lo\u1ea1i ph\u00f2ng", "Tr\u1ea1ng th\u00e1i" };
+                builder.AppendLine(string.Join(",", headers.Select(EscapeCsv)));
+
+                foreach (DataRowView row in rows)
+                {
+                    builder.AppendLine(string.Join(",", TaoGiaTriXuat(row).Select(EscapeCsv)));
+                }
+
+                File.WriteAllText(dialog.FileName, "\uFEFF" + builder, Encoding.UTF8);
+                MessageBox.Show("Xu\u1ea5t Excel th\u00e0nh c\u00f4ng.", "Xu\u1ea5t Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Kh\u00f4ng xu\u1ea5t \u0111\u01b0\u1ee3c Excel: " + ex.Message, "L\u1ed7i", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnInDanhSach_Click(object sender, RoutedEventArgs e)
+        {
+            List<DataRowView> rows = LayDongDangHienThi();
+            if (rows.Count == 0)
+            {
+                MessageBox.Show("Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u \u0111\u1ec3 in.", "In danh s\u00e1ch", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                PrintDialog printDialog = new();
+                if (printDialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                FlowDocument document = TaoTaiLieuIn(rows);
+                document.PageWidth = printDialog.PrintableAreaWidth;
+                document.PageHeight = printDialog.PrintableAreaHeight;
+                document.PagePadding = new Thickness(36);
+                document.ColumnWidth = printDialog.PrintableAreaWidth;
+                printDialog.PrintDocument(((IDocumentPaginatorSource)document).DocumentPaginator, "Danh s\u00e1ch phi\u1ebfu thu\u00ea");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Kh\u00f4ng in \u0111\u01b0\u1ee3c danh s\u00e1ch: " + ex.Message, "L\u1ed7i", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private List<DataRowView> LayDongDangHienThi()
+        {
+            return DgPhieuThue.Items
+                .OfType<DataRowView>()
+                .ToList();
+        }
+
+        private static IEnumerable<string> TaoGiaTriXuat(DataRowView row)
+        {
+            yield return LayString(row.Row, "STT");
+            yield return LayString(row.Row, "MaPhieuThue");
+            yield return LayString(row.Row, "TenKhachHang");
+            yield return LayString(row.Row, "SoDienThoai");
+            yield return LayString(row.Row, "TenPhong");
+            yield return LayString(row.Row, "LoaiPhong");
+            yield return LayString(row.Row, "TrangThai");
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            string text = value ?? string.Empty;
+            return "\"" + text.Replace("\"", "\"\"") + "\"";
+        }
+
+        private FlowDocument TaoTaiLieuIn(IEnumerable<DataRowView> rows)
+        {
+            FlowDocument document = new()
+            {
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 11,
+                Foreground = Brushes.Black
+            };
+
+            document.Blocks.Add(new Paragraph(new Run("DANH S\u00c1CH PHI\u1ebeU THU\u00ca"))
+            {
+                FontSize = 18,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+            document.Blocks.Add(new Paragraph(new Run("Ng\u00e0y in: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm")))
+            {
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                Margin = new Thickness(0, 0, 0, 14)
+            });
+
+            Table table = new()
+            {
+                CellSpacing = 0,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderThickness = new Thickness(0.5)
+            };
+
+            double[] widths = { 35, 80, 155, 105, 130, 110, 105 };
+            foreach (double width in widths)
+            {
+                table.Columns.Add(new TableColumn { Width = new GridLength(width) });
+            }
+
+            TableRowGroup group = new();
+            table.RowGroups.Add(group);
+            group.Rows.Add(TaoDongIn(true, "STT", "M\u00e3 phi\u1ebfu", "Kh\u00e1ch/\u0111o\u00e0n \u0111\u1eb7t", "S\u0110T", "Danh s\u00e1ch ph\u00f2ng", "Lo\u1ea1i ph\u00f2ng", "Tr\u1ea1ng th\u00e1i"));
+
+            foreach (DataRowView row in rows)
+            {
+                string[] values = TaoGiaTriXuat(row).ToArray();
+                group.Rows.Add(TaoDongIn(false, values));
+            }
+
+            document.Blocks.Add(table);
+            return document;
+        }
+
+        private static TableRow TaoDongIn(bool header, params string[] values)
+        {
+            TableRow row = new();
+            foreach (string value in values)
+            {
+                row.Cells.Add(TaoOIn(value, header));
+            }
+
+            return row;
+        }
+
+        private static TableCell TaoOIn(string text, bool header)
+        {
+            return new TableCell(new Paragraph(new Run(text ?? string.Empty))
+            {
+                Margin = new Thickness(0),
+                TextAlignment = TextAlignment.Left
+            })
+            {
+                Padding = new Thickness(6, 5, 6, 5),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                BorderThickness = new Thickness(0.5),
+                Background = header ? new SolidColorBrush(Color.FromRgb(230, 238, 246)) : Brushes.White,
+                FontWeight = header ? FontWeights.SemiBold : FontWeights.Normal
+            };
+        }
+
         private void TxtTimKiem_TextChanged(object sender, TextChangedEventArgs e)
         {
+        }
+
+        private IEnumerable<SearchSuggestionItem> TaoGoiYTimKiem()
+        {
+            if (danhSachPhieu.Rows.Count == 0)
+            {
+                yield break;
+            }
+
+            foreach (DataRow row in danhSachPhieu.Rows)
+            {
+                string maPhieu = LayString(row, "MaPhieuThue");
+                string tenKhach = LayString(row, "TenKhachHang");
+                string soDienThoai = LayString(row, "SoDienThoai");
+                string tenPhong = LayString(row, "TenPhong");
+
+                if (!string.IsNullOrWhiteSpace(maPhieu))
+                {
+                    yield return new SearchSuggestionItem(maPhieu, $"{maPhieu} - {tenKhach} - {tenPhong}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(tenKhach))
+                {
+                    yield return new SearchSuggestionItem(tenKhach, $"{tenKhach} - {soDienThoai}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(tenPhong))
+                {
+                    yield return new SearchSuggestionItem(tenPhong, $"Ph\u00f2ng {tenPhong} - {tenKhach}");
+                }
+            }
         }
 
         private void BoLoc_Changed(object sender, EventArgs e)
@@ -499,20 +712,20 @@ ORDER BY X.NgayNhanPhong DESC";
             try
             {
                 phongTrong = phongBUS.LayDanhSach().FirstOrDefault(item =>
-                    !item.TrangThai.Contains("thuê", StringComparison.OrdinalIgnoreCase) &&
+                    !item.TrangThai.Contains("thu\u00ea", StringComparison.OrdinalIgnoreCase) &&
                     !item.TrangThai.Contains("thue", StringComparison.OrdinalIgnoreCase) &&
-                    !item.TrangThai.Contains("đặt", StringComparison.OrdinalIgnoreCase) &&
+                    !item.TrangThai.Contains("\u0111\u1eb7t", StringComparison.OrdinalIgnoreCase) &&
                     !item.TrangThai.Contains("dat", StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Không tải được danh sách phòng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c danh s\u00e1ch ph\u00f2ng: " + ex.Message, "L\u1ed7i", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             if (phongTrong == null)
             {
-                MessageBox.Show("Không có phòng trống để đặt.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Kh\u00f4ng c\u00f3 ph\u00f2ng tr\u1ed1ng \u0111\u1ec3 \u0111\u1eb7t.", "Th\u00f4ng b\u00e1o", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -520,7 +733,7 @@ ORDER BY X.NgayNhanPhong DESC";
             ucDatPhong.CloseRequested += UcDatPhong_CloseRequested;
             ucDatPhong.DatPhongRequested += UcDatPhong_DatPhongRequested;
 
-            Window dialog = DialogService.CreateContentDialog(ucDatPhong, "Đặt phòng mới", 1100, 650);
+            Window dialog = DialogService.CreateContentDialog(ucDatPhong, "\u0110\u1eb7t ph\u00f2ng m\u1edbi", 1100, 650);
             DialogService.ShowDimmedDialogResult(dialog, Window.GetWindow(this));
 
             ucDatPhong.CloseRequested -= UcDatPhong_CloseRequested;
@@ -546,7 +759,7 @@ ORDER BY X.NgayNhanPhong DESC";
                     if (ucDatPhong.NhanNgay)
                     {
                         decimal giamGia = request.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round(request.TienPhong * 0.1m, 0) : 0;
-                        if (!DialogService.XacNhanThanhToanCheckIn(Window.GetWindow(this), "Phòng " + request.Phong.MaHienThi, request.TienPhong, request.TienDichVu, giamGia: giamGia))
+                        if (!DialogService.XacNhanThanhToanCheckIn(Window.GetWindow(this), "Ph\u00f2ng " + request.Phong.MaHienThi, request.TienPhong, request.TienDichVu, giamGia: giamGia))
                         {
                             return;
                         }
@@ -570,7 +783,7 @@ ORDER BY X.NgayNhanPhong DESC";
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Không đặt được phòng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Kh\u00f4ng \u0111\u1eb7t \u0111\u01b0\u1ee3c ph\u00f2ng: " + ex.Message, "L\u1ed7i", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -590,6 +803,57 @@ ORDER BY X.NgayNhanPhong DESC";
             {
                 MoChiTietPhieu(row);
             }
+        }
+
+        private void BtnThaoTac_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.ContextMenu != null)
+            {
+                button.ContextMenu.PlacementTarget = button;
+                button.ContextMenu.DataContext = button.DataContext;
+                button.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void MenuChiTiet_Click(object sender, RoutedEventArgs e)
+        {
+            if (LayDongTuMenu(sender) is DataRowView row)
+            {
+                MoChiTietPhieu(row);
+            }
+        }
+
+        private void MenuSua_Click(object sender, RoutedEventArgs e)
+        {
+            if (LayDongTuMenu(sender) is DataRowView row)
+            {
+                MoChiTietPhieu(row);
+            }
+        }
+
+        private void MenuXoa_Click(object sender, RoutedEventArgs e)
+        {
+            if (LayDongTuMenu(sender) is not DataRowView row)
+            {
+                return;
+            }
+
+            string maPhieu = row["MaPhieuThue"]?.ToString() ?? string.Empty;
+            MessageBox.Show(
+                "Ch\u1ee9c n\u0103ng x\u00f3a phi\u1ebfu thu\u00ea c\u1ea7n x\u1eed l\u00fd \u0111\u1ed3ng b\u1ed9 tr\u1ea1ng th\u00e1i ph\u00f2ng, h\u00f3a \u0111\u01a1n v\u00e0 \u0111\u1eb7t c\u1ecdc. Vui l\u00f2ng d\u00f9ng m\u00e0n chi ti\u1ebft \u0111\u1ec3 h\u1ee7y/tr\u1ea3 ph\u00f2ng theo \u0111\u00fang quy tr\u00ecnh.",
+                string.IsNullOrWhiteSpace(maPhieu) ? "X\u00f3a phi\u1ebfu thu\u00ea" : "X\u00f3a phi\u1ebfu thu\u00ea " + maPhieu,
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        private static DataRowView? LayDongTuMenu(object sender)
+        {
+            if (sender is MenuItem { Parent: ContextMenu menu } && menu.DataContext is DataRowView row)
+            {
+                return row;
+            }
+
+            return null;
         }
 
         private void MoChiTietPhieu(DataRowView row)
@@ -625,40 +889,17 @@ END AS decimal(18, 2))";
 
         private static bool TableExists(string tableName)
         {
-            object? result = ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM sys.tables WHERE name = @Name", new SqlParameter("@Name", tableName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.TableExists(tableName);
         }
 
         private static bool ColumnExists(string tableName, string columnName)
         {
-            object? result = ConnectDB.ExecuteScalar(
-                @"SELECT COUNT(*)
-                  FROM sys.tables t
-                  JOIN sys.columns c ON t.object_id = c.object_id
-                  WHERE t.name = @TableName AND c.name = @ColumnName",
-                new SqlParameter("@TableName", tableName),
-                new SqlParameter("@ColumnName", columnName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.ColumnExists(tableName, columnName);
         }
 
         private static string TenPhongSql(string alias)
         {
-            if (ColumnExists("PHONG", "TenPhong"))
-            {
-                return alias + ".TenPhong";
-            }
-
-            if (ColumnExists("PHONG", "SoPhong"))
-            {
-                return alias + ".SoPhong";
-            }
-
-            if (ColumnExists("PHONG", "MaSoPhong"))
-            {
-                return alias + ".MaSoPhong";
-            }
-
-            return "N'P' + CAST(" + alias + ".MaPhong AS nvarchar(20))";
+            return ViewSchemaHelper.TenPhongSql(alias);
         }
     }
 }

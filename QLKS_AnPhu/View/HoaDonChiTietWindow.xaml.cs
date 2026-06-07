@@ -49,6 +49,12 @@ namespace QLKS_AnPhu.View
                 ? "Có phụ phí trả muộn (" + hoaDon.PhuPhi.ToString("N0") + " VND)"
                 : "Phụ phí trả muộn chỉ được chốt khi thực hiện trả phòng.";
             TxtPhuPhi.Text = hoaDon.PhuPhi.ToString("N0") + " VND";
+            if (hoaDon.LoaiThanhToan == "PHATSINH" && hoaDon.PhuPhi > 0)
+            {
+                string traMuonText = TaoNoiDungTraMuon(hoaDon);
+                TxtTraMuon.Text = traMuonText + " (" + hoaDon.PhuPhi.ToString("N0") + " VND)";
+                TxtPhuPhi.Text = hoaDon.PhuPhi.ToString("N0") + " VND - " + traMuonText;
+            }
             TxtTrangThai.Text = hoaDon.TrangThai;
             TxtThueVat.Text = hoaDon.ThueVat.ToString("N0") + " VND";
             TxtGiamGia.Text = hoaDon.GiamGia.ToString("N0") + " VND";
@@ -78,6 +84,8 @@ namespace QLKS_AnPhu.View
             string soLuong = ColumnExists(table, "SoLuong") ? "PS.SoLuong" : "1";
             string donGia = ColumnExists(table, "DonGia") ? "ISNULL(PS.DonGia, DV.DonGia)" : "DV.DonGia";
             string thanhTien = ColumnExists(table, "ThanhTien") ? "PS.ThanhTien" : "(" + soLuong + " * " + donGia + ")";
+            bool coGhiChu = ColumnExists(table, "GhiChu");
+            string filterLoaiDichVu = coGhiChu ? ViewSchemaHelper.DichVuTheoLoaiHoaDonFilter("PS", hoaDon.LoaiThanhToan) : string.Empty;
 
             DataTable data = ConnectDB.GetData(
                 @"SELECT DV." + tenDichVu + @" AS TenDichVu,
@@ -86,7 +94,7 @@ namespace QLKS_AnPhu.View
                          " + thanhTien + @" AS ThanhTien
                   FROM dbo." + table + @" PS
                   JOIN dbo.DICHVUVATTU DV ON PS." + maDvPs + " = DV." + maDv + @"
-                  WHERE PS." + keyColumn + " = @Ma",
+                  WHERE PS." + keyColumn + " = @Ma" + filterLoaiDichVu,
                 new SqlParameter("@Ma", hoaDon.MaGoc));
 
             int stt = 1;
@@ -262,6 +270,24 @@ namespace QLKS_AnPhu.View
             return "Nhận sớm " + duration + " (" + fee.ToString("N0") + " VND)";
         }
 
+        private static string TaoNoiDungTraMuon(HoaDonItem hoaDon)
+        {
+            if (!hoaDon.NgayTraThucTe.HasValue || hoaDon.NgayTraThucTe.Value <= hoaDon.NgayTraPhong)
+            {
+                return "Kh\u00F4ng tr\u1EA3 mu\u1ED9n";
+            }
+
+            int lateMinutes = Math.Max(1, (int)Math.Ceiling((hoaDon.NgayTraThucTe.Value - hoaDon.NgayTraPhong).TotalMinutes));
+            int hours = lateMinutes / 60;
+            int minutes = lateMinutes % 60;
+            string duration = hours > 0 && minutes > 0
+                ? hours + " gi\u1EDD " + minutes + " ph\u00FAt"
+                : hours > 0
+                    ? hours + " gi\u1EDD"
+                    : minutes + " ph\u00FAt";
+            return "Tr\u1EA3 mu\u1ED9n " + duration;
+        }
+
         private static decimal GetDecimal(DataRow row, string column)
         {
             return row.Table.Columns.Contains(column) && decimal.TryParse(row[column]?.ToString(), out decimal value) ? value : 0;
@@ -269,20 +295,12 @@ namespace QLKS_AnPhu.View
 
         private static bool TableExists(string tableName)
         {
-            object? result = ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM sys.tables WHERE name = @Name", new SqlParameter("@Name", tableName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.TableExists(tableName);
         }
 
         private static bool ColumnExists(string tableName, string columnName)
         {
-            object? result = ConnectDB.ExecuteScalar(
-                @"SELECT COUNT(*)
-                  FROM sys.tables t
-                  JOIN sys.columns c ON t.object_id = c.object_id
-                  WHERE t.name = @TableName AND c.name = @ColumnName",
-                new SqlParameter("@TableName", tableName),
-                new SqlParameter("@ColumnName", columnName));
-            return Convert.ToInt32(result) > 0;
+            return ViewSchemaHelper.ColumnExists(tableName, columnName);
         }
     }
 

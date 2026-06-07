@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using QLKS_AnPhu.Security;
 using QLKS_AnPhu.View;
 
@@ -26,6 +27,8 @@ namespace QLKS_AnPhu
         {
             InitializeComponent();
             currentUser = user;
+            LblBrandTitle.Foreground = (Brush)FindResource("TextMainBrush");
+            LblBrandSubtitle.Foreground = (Brush)FindResource("TextMutedBrush");
             LblDichVu.Text = "Dịch vụ - vật tư";
             BtnMenuVatTu.Visibility = Visibility.Collapsed;
             BtnMenuCaiDat.Visibility = Visibility.Collapsed;
@@ -102,7 +105,10 @@ namespace QLKS_AnPhu
         private void BtnToggleMenu_Click(object sender, RoutedEventArgs e)
         {
             isSidebarExpanded = !isSidebarExpanded;
-            SidebarColumn.Width = new GridLength(isSidebarExpanded ? 292 : 82);
+            SidebarColumn.Width = new GridLength(isSidebarExpanded ? 292 : 96);
+            SidebarShell.Margin = isSidebarExpanded ? new Thickness(16) : new Thickness(12, 16, 12, 16);
+            BrandHeader.Margin = isSidebarExpanded ? new Thickness(18, 20, 18, 16) : new Thickness(8, 18, 8, 14);
+            BrandTextPanel.Visibility = isSidebarExpanded ? Visibility.Visible : Visibility.Collapsed;
 
             Visibility labelVisibility = isSidebarExpanded ? Visibility.Visible : Visibility.Collapsed;
             LblTrangChu.Visibility = labelVisibility;
@@ -116,11 +122,67 @@ namespace QLKS_AnPhu
             LblDangXuat.Visibility = labelVisibility;
             LblBrandTitle.Visibility = labelVisibility;
             LblBrandSubtitle.Visibility = labelVisibility;
+
+            CapNhatBoCucNutMenu(BtnTrangChu);
+            CapNhatBoCucNutMenu(BtnMenuQLPhong);
+            CapNhatBoCucNutMenu(BtnMenuPhieuThue);
+            CapNhatBoCucNutMenu(BtnMenuKhachHang);
+            CapNhatBoCucNutMenu(BtnMenuHoaDon);
+            CapNhatBoCucNutMenu(BtnMenuDichVuVatTu);
+            CapNhatBoCucNutMenu(BtnMenuNhanVien);
+            CapNhatBoCucNutMenu(BtnMenuBaoCao);
+            CapNhatBoCucNutMenu(BtnSidebarLogout);
+        }
+
+        private void CapNhatBoCucNutMenu(Button button)
+        {
+            button.HorizontalContentAlignment = isSidebarExpanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
+            button.Padding = isSidebarExpanded ? new Thickness(16, 0, 16, 0) : new Thickness(0);
+            button.Margin = isSidebarExpanded ? new Thickness(14, 4, 14, 4) : new Thickness(10, 5, 10, 5);
+
+            if (button.Content is StackPanel panel)
+            {
+                panel.HorizontalAlignment = isSidebarExpanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
+                if (panel.Children.Count > 0 && panel.Children[0] is FrameworkElement icon)
+                {
+                    icon.Margin = isSidebarExpanded ? new Thickness(0, 0, 12, 0) : new Thickness(0);
+                }
+            }
         }
 
         private void BtnTrangChu_Click(object sender, RoutedEventArgs e)
         {
             Navigate(PermissionService.TrangChu, () => new TrangChu(), BtnTrangChu, "Dashboard khách sạn");
+        }
+
+        public void NavigateToTrangChu()
+        {
+            Navigate(PermissionService.TrangChu, () => new TrangChu(), BtnTrangChu, "Dashboard khách sạn");
+        }
+
+        public void NavigateToQLPhong()
+        {
+            Navigate(PermissionService.QLPhong, () => new QLPhong(), BtnMenuQLPhong, "Quản lý phòng");
+        }
+
+        public void NavigateToKhachHang()
+        {
+            Navigate(PermissionService.KhachHang, () => new KhachHang(), BtnMenuKhachHang, "Khách hàng");
+        }
+
+        public void NavigateToHoaDon()
+        {
+            Navigate(PermissionService.HoaDon, () => new HoaDon(), BtnMenuHoaDon, "Hóa đơn");
+        }
+
+        public void NavigateToPhieuThue()
+        {
+            Navigate(PermissionService.PhieuThue, () => new PhieuThue(), BtnMenuPhieuThue, "Phiếu thuê");
+        }
+
+        public void NavigateToBaoCao()
+        {
+            Navigate(PermissionService.BaoCao, () => new BaoCao(), BtnMenuBaoCao, "Báo cáo - thống kê");
         }
 
         private void BtnQLPhong_Click(object sender, RoutedEventArgs e)

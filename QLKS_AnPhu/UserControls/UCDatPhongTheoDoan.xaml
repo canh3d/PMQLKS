@@ -332,7 +332,8 @@
                         <DataGrid x:Name="DgDichVuDoan" Grid.Row="3" Margin="0,10,0,0"
                                   AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                                   IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                                  RowHeight="30" FontSize="13" BorderBrush="#CBD5E1">
+                                  RowHeight="30" FontSize="13" BorderBrush="#CBD5E1"
+                                  MouseDoubleClick="DgDichVuDoan_MouseDoubleClick">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Tên dịch vụ" Binding="{Binding Ten}" Width="*" />
                                 <DataGridTextColumn Header="SL" Binding="{Binding SoLuong}" Width="42" />
