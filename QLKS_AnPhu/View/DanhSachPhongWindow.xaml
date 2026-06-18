@@ -79,6 +79,38 @@
                     <TextBlock Text="Làm mới" />
                 </StackPanel>
             </Button>
+
+            <TextBlock Text="Tìm"
+                       Margin="28,0,6,0"
+                       VerticalAlignment="Center"
+                       FontWeight="SemiBold"
+                       Foreground="#334155" />
+            <TextBox x:Name="TxtTimKiem"
+                     Width="160"
+                     Height="34"
+                     Padding="8,0"
+                     VerticalContentAlignment="Center"
+                     TextChanged="BoLoc_Changed" />
+
+            <TextBlock Text="Loại"
+                       Margin="12,0,6,0"
+                       VerticalAlignment="Center"
+                       FontWeight="SemiBold"
+                       Foreground="#334155" />
+            <ComboBox x:Name="CboLocLoaiPhong"
+                      Width="132"
+                      Height="34"
+                      SelectionChanged="BoLoc_Changed" />
+
+            <TextBlock Text="Trạng thái"
+                       Margin="12,0,6,0"
+                       VerticalAlignment="Center"
+                       FontWeight="SemiBold"
+                       Foreground="#334155" />
+            <ComboBox x:Name="CboLocTrangThai"
+                      Width="132"
+                      Height="34"
+                      SelectionChanged="BoLoc_Changed" />
         </StackPanel>
 
         <DataGrid x:Name="DgPhong"
@@ -110,7 +142,7 @@
                 <DataGridTextColumn Header="GiaNgay" Binding="{Binding GiaNgay, StringFormat={}{0:N0}}" Width="106" />
                 <DataGridTextColumn Header="GiaDem" Binding="{Binding GiaDem, StringFormat={}{0:N0}}" Width="106" />
                 <DataGridTextColumn Header="Trạng thái" Binding="{Binding TrangThai}" Width="108" />
-                <DataGridTextColumn Header="Ghi chú" Binding="{Binding GhiChu}" Width="*" />
+                <DataGridTextColumn Header="Ghi chú" Binding="{Binding GhiChuHienThi}" Width="*" />
             </DataGrid.Columns>
         </DataGrid>
 

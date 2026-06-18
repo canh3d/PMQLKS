@@ -84,7 +84,328 @@ namespace QLKS_AnPhu.DAL
             string keyColumn = GetKeyColumn(map, item);
             string sql = $"DELETE FROM [{map.Schema}].[{map.Name}] WHERE {Quote(keyColumn)} = @KeyValue";
 
-            return ConnectDB.ExecuteNonQuery(sql, new SqlParameter("@KeyValue", item.Ma));
+            try
+            {
+                return ConnectDB.ExecuteNonQuery(sql, new SqlParameter("@KeyValue", item.Ma));
+            }
+            catch (SqlException ex) when (ex.Number == 547)
+            {
+                throw new InvalidOperationException(
+                    "Không thể xóa khách hàng vì đã có dữ liệu đặt phòng, phiếu thuê hoặc hóa đơn liên quan. " +
+                    "Hãy giữ khách hàng này để bảo toàn lịch sử giao dịch.",
+                    ex);
+            }
+        }
+
+        public int XoaBatBuoc(KhachHangDTO item)
+        {
+            TableMap map = GetMapForItem(item);
+            string keyColumn = GetKeyColumn(map, item);
+
+            using SqlConnection conn = ConnectDB.GetConnection();
+            using SqlTransaction tran = conn.BeginTransaction();
+
+            try
+            {
+                int affected = 0;
+
+                affected += XoaChiTietHoaDon(conn, tran, item.Ma);
+                affected += XoaChiTietThanhToan(conn, tran, item.Ma);
+                affected += XoaDichVuPhatSinh(conn, tran, item.Ma);
+                affected += XoaTheoMaThue(conn, tran, "CHITIETPHUTHU", item.Ma);
+                affected += XoaTheoMaThue(conn, tran, "DOIPHONG", item.Ma);
+                affected += XoaHoaDon(conn, tran, item.Ma);
+                affected += XoaPhieuThue(conn, tran, item.Ma);
+                affected += XoaChiTietDatPhong(conn, tran, item.Ma);
+                affected += XoaDatPhong(conn, tran, item.Ma);
+
+                string sql = $"DELETE FROM [{map.Schema}].[{map.Name}] WHERE {Quote(keyColumn)} = @MaKH";
+                affected += ExecuteNonQuery(conn, tran, sql, new SqlParameter("@MaKH", item.Ma));
+
+                tran.Commit();
+                return affected;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    tran.Rollback();
+                }
+                catch
+                {
+                }
+
+                throw new InvalidOperationException("Không xóa bắt buộc được khách hàng và dữ liệu liên quan: " + ex.Message, ex);
+            }
+        }
+
+        private static int XoaChiTietHoaDon(SqlConnection conn, SqlTransaction tran, int maKhachHang)
+        {
+            if (!TableExists(conn, tran, "HOADON") || !TableExists(conn, tran, "CHITIETHOADON"))
+            {
+                return 0;
+            }
+
+            string hoaDonKey = GetFirstExistingColumn(conn, tran, "HOADON", "MaHoaDon", "MaHD", "IDHoaDon", "HoaDonID", "IdHoaDon", "ID", "Ma");
+            string chiTietHoaDonKey = GetFirstExistingColumn(conn, tran, "CHITIETHOADON", "MaHoaDon", "MaHD", "IDHoaDon", "HoaDonID");
+
+            if (string.IsNullOrWhiteSpace(hoaDonKey) || string.IsNullOrWhiteSpace(chiTietHoaDonKey))
+            {
+                return 0;
+            }
+
+            string where = TaoDieuKienHoaDonKhachHang(conn, tran, "HD");
+            if (string.IsNullOrWhiteSpace(where))
+            {
+                return 0;
+            }
+
+            string sql = $@"DELETE CT
+FROM dbo.CHITIETHOADON CT
+WHERE CT.{Quote(chiTietHoaDonKey)} IN (
+    SELECT HD.{Quote(hoaDonKey)}
+    FROM dbo.HOADON HD
+    WHERE {where}
+)";
+
+            return ExecuteNonQuery(conn, tran, sql, new SqlParameter("@MaKH", maKhachHang));
+        }
+
+        private static int XoaChiTietThanhToan(SqlConnection conn, SqlTransaction tran, int maKhachHang)
+        {
+            if (!TableExists(conn, tran, "CHITIETTHANHTOAN"))
+            {
+                return 0;
+            }
+
+            List<string> conditions = new();
+
+            if (TableExists(conn, tran, "HOADON"))
+            {
+                string thanhToanHoaDonKey = GetFirstExistingColumn(conn, tran, "CHITIETTHANHTOAN", "MaHoaDon", "MaHD", "IDHoaDon", "HoaDonID");
+                string hoaDonKey = GetFirstExistingColumn(conn, tran, "HOADON", "MaHoaDon", "MaHD", "IDHoaDon", "HoaDonID", "IdHoaDon", "ID", "Ma");
+                string hoaDonWhere = TaoDieuKienHoaDonKhachHang(conn, tran, "HD");
+
+                if (!string.IsNullOrWhiteSpace(thanhToanHoaDonKey) &&
+                    !string.IsNullOrWhiteSpace(hoaDonKey) &&
+                    !string.IsNullOrWhiteSpace(hoaDonWhere))
+                {
+                    conditions.Add($@"CT.{Quote(thanhToanHoaDonKey)} IN (
+    SELECT HD.{Quote(hoaDonKey)} FROM dbo.HOADON HD WHERE {hoaDonWhere}
+)");
+                }
+            }
+
+            if (ColumnExists(conn, tran, "CHITIETTHANHTOAN", "MaThue") && TableExists(conn, tran, "PHIEUTHUE"))
+            {
+                conditions.Add("CT.MaThue IN (" + TaoTruyVanMaThueKhachHang(conn, tran) + ")");
+            }
+
+            if (ColumnExists(conn, tran, "CHITIETTHANHTOAN", "MaDatPhong") && TableExists(conn, tran, "DATPHONG"))
+            {
+                conditions.Add("CT.MaDatPhong IN (SELECT DP.MaDatPhong FROM dbo.DATPHONG DP WHERE DP.MaKH = @MaKH)");
+            }
+
+            if (conditions.Count == 0)
+            {
+                return 0;
+            }
+
+            string sql = "DELETE CT FROM dbo.CHITIETTHANHTOAN CT WHERE " + string.Join(" OR ", conditions);
+            return ExecuteNonQuery(conn, tran, sql, new SqlParameter("@MaKH", maKhachHang));
+        }
+
+        private static int XoaDichVuPhatSinh(SqlConnection conn, SqlTransaction tran, int maKhachHang)
+        {
+            int affected = 0;
+
+            foreach (string table in new[] { "PHATSINHDICHVU", "CHITIETPHATSINH" })
+            {
+                if (!TableExists(conn, tran, table))
+                {
+                    continue;
+                }
+
+                List<string> conditions = new();
+                if (ColumnExists(conn, tran, table, "MaThue") && TableExists(conn, tran, "PHIEUTHUE"))
+                {
+                    conditions.Add("MaThue IN (" + TaoTruyVanMaThueKhachHang(conn, tran) + ")");
+                }
+
+                if (ColumnExists(conn, tran, table, "MaDatPhong") && TableExists(conn, tran, "DATPHONG"))
+                {
+                    conditions.Add("MaDatPhong IN (SELECT DP.MaDatPhong FROM dbo.DATPHONG DP WHERE DP.MaKH = @MaKH)");
+                }
+
+                if (conditions.Count > 0)
+                {
+                    affected += ExecuteNonQuery(
+                        conn,
+                        tran,
+                        "DELETE FROM dbo." + Quote(table) + " WHERE " + string.Join(" OR ", conditions),
+                        new SqlParameter("@MaKH", maKhachHang));
+                }
+            }
+
+            return affected;
+        }
+
+        private static int XoaTheoMaThue(SqlConnection conn, SqlTransaction tran, string table, int maKhachHang)
+        {
+            if (!TableExists(conn, tran, table) || !ColumnExists(conn, tran, table, "MaThue") || !TableExists(conn, tran, "PHIEUTHUE"))
+            {
+                return 0;
+            }
+
+            string sql = "DELETE FROM dbo." + Quote(table) + " WHERE MaThue IN (" + TaoTruyVanMaThueKhachHang(conn, tran) + ")";
+            return ExecuteNonQuery(conn, tran, sql, new SqlParameter("@MaKH", maKhachHang));
+        }
+
+        private static int XoaHoaDon(SqlConnection conn, SqlTransaction tran, int maKhachHang)
+        {
+            if (!TableExists(conn, tran, "HOADON"))
+            {
+                return 0;
+            }
+
+            string where = TaoDieuKienHoaDonKhachHang(conn, tran, string.Empty);
+            if (string.IsNullOrWhiteSpace(where))
+            {
+                return 0;
+            }
+
+            return ExecuteNonQuery(conn, tran, "DELETE FROM dbo.HOADON WHERE " + where, new SqlParameter("@MaKH", maKhachHang));
+        }
+
+        private static int XoaPhieuThue(SqlConnection conn, SqlTransaction tran, int maKhachHang)
+        {
+            if (!TableExists(conn, tran, "PHIEUTHUE"))
+            {
+                return 0;
+            }
+
+            List<string> conditions = new();
+            if (ColumnExists(conn, tran, "PHIEUTHUE", "MaKH"))
+            {
+                conditions.Add("MaKH = @MaKH");
+            }
+
+            if (ColumnExists(conn, tran, "PHIEUTHUE", "MaDatPhong") && TableExists(conn, tran, "DATPHONG"))
+            {
+                conditions.Add("MaDatPhong IN (SELECT DP.MaDatPhong FROM dbo.DATPHONG DP WHERE DP.MaKH = @MaKH)");
+            }
+
+            if (conditions.Count == 0)
+            {
+                return 0;
+            }
+
+            return ExecuteNonQuery(conn, tran, "DELETE FROM dbo.PHIEUTHUE WHERE " + string.Join(" OR ", conditions), new SqlParameter("@MaKH", maKhachHang));
+        }
+
+        private static int XoaChiTietDatPhong(SqlConnection conn, SqlTransaction tran, int maKhachHang)
+        {
+            if (!TableExists(conn, tran, "CHITIETDATPHONG") || !ColumnExists(conn, tran, "CHITIETDATPHONG", "MaDatPhong") || !TableExists(conn, tran, "DATPHONG"))
+            {
+                return 0;
+            }
+
+            return ExecuteNonQuery(
+                conn,
+                tran,
+                "DELETE FROM dbo.CHITIETDATPHONG WHERE MaDatPhong IN (SELECT DP.MaDatPhong FROM dbo.DATPHONG DP WHERE DP.MaKH = @MaKH)",
+                new SqlParameter("@MaKH", maKhachHang));
+        }
+
+        private static int XoaDatPhong(SqlConnection conn, SqlTransaction tran, int maKhachHang)
+        {
+            if (!TableExists(conn, tran, "DATPHONG") || !ColumnExists(conn, tran, "DATPHONG", "MaKH"))
+            {
+                return 0;
+            }
+
+            return ExecuteNonQuery(conn, tran, "DELETE FROM dbo.DATPHONG WHERE MaKH = @MaKH", new SqlParameter("@MaKH", maKhachHang));
+        }
+
+        private static string TaoTruyVanMaThueKhachHang(SqlConnection conn, SqlTransaction tran)
+        {
+            List<string> conditions = new();
+
+            if (ColumnExists(conn, tran, "PHIEUTHUE", "MaKH"))
+            {
+                conditions.Add("PT.MaKH = @MaKH");
+            }
+
+            if (ColumnExists(conn, tran, "PHIEUTHUE", "MaDatPhong") && TableExists(conn, tran, "DATPHONG"))
+            {
+                conditions.Add("PT.MaDatPhong IN (SELECT DP.MaDatPhong FROM dbo.DATPHONG DP WHERE DP.MaKH = @MaKH)");
+            }
+
+            if (conditions.Count == 0)
+            {
+                return "SELECT PT.MaThue FROM dbo.PHIEUTHUE PT WHERE 1 = 0";
+            }
+
+            return "SELECT PT.MaThue FROM dbo.PHIEUTHUE PT WHERE " + string.Join(" OR ", conditions);
+        }
+
+        private static string TaoDieuKienHoaDonKhachHang(SqlConnection conn, SqlTransaction tran, string alias)
+        {
+            List<string> conditions = new();
+            string prefix = string.IsNullOrWhiteSpace(alias) ? string.Empty : alias + ".";
+
+            if (ColumnExists(conn, tran, "HOADON", "MaKH"))
+            {
+                conditions.Add(prefix + "MaKH = @MaKH");
+            }
+
+            if (ColumnExists(conn, tran, "HOADON", "MaThue") && TableExists(conn, tran, "PHIEUTHUE"))
+            {
+                conditions.Add(prefix + "MaThue IN (" + TaoTruyVanMaThueKhachHang(conn, tran) + ")");
+            }
+
+            return string.Join(" OR ", conditions);
+        }
+
+        private static bool TableExists(SqlConnection conn, SqlTransaction tran, string table)
+        {
+            using SqlCommand cmd = new("SELECT CASE WHEN OBJECT_ID(N'dbo." + table.Replace("'", "''") + "', N'U') IS NULL THEN 0 ELSE 1 END", conn, tran);
+            return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+        }
+
+        private static bool ColumnExists(SqlConnection conn, SqlTransaction tran, string table, string column)
+        {
+            using SqlCommand cmd = new(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = N'dbo' AND TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName",
+                conn,
+                tran);
+            cmd.Parameters.AddWithValue("@TableName", table);
+            cmd.Parameters.AddWithValue("@ColumnName", column);
+            return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+        }
+
+        private static string GetFirstExistingColumn(SqlConnection conn, SqlTransaction tran, string table, params string[] candidates)
+        {
+            foreach (string candidate in candidates)
+            {
+                if (ColumnExists(conn, tran, table, candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static int ExecuteNonQuery(SqlConnection conn, SqlTransaction tran, string sql, params SqlParameter[] parameters)
+        {
+            using SqlCommand cmd = new(sql, conn, tran);
+            if (parameters.Length > 0)
+            {
+                cmd.Parameters.AddRange(parameters);
+            }
+
+            return cmd.ExecuteNonQuery();
         }
 
         private static KhachHangDTO MapRow(DataRow row, TableMap map)

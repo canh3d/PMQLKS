@@ -28,23 +28,46 @@ END AS decimal(18, 2))";
         {
             string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
             string giaGioExpr = "ISNULL(NULLIF(LP.DonGiaGio, 0), " + giaNgayExpr + " / 24.0)";
-            return PhuThuSql(startExpr, plannedEndExpr, actualEndExpr, giaNgayExpr, giaGioExpr);
+            string giaDemExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), " + giaNgayExpr + ")";
+            return PhuThuSql(startExpr, plannedEndExpr, actualEndExpr, giaNgayExpr, giaGioExpr, giaDemExpr);
         }
 
         public static string PhuThuNhanSomSql(string actualStartExpr, string plannedStartExpr)
         {
             string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
-            return PhuThuNhanSomSql(actualStartExpr, plannedStartExpr, giaNgayExpr);
+            string giaGioExpr = "ISNULL(NULLIF(LP.DonGiaGio, 0), " + giaNgayExpr + " / 24.0)";
+            return PhuThuNhanSomSql(actualStartExpr, plannedStartExpr, giaNgayExpr, giaGioExpr);
         }
 
         public static string PhuThuNhanSomSql(string actualStartExpr, string plannedStartExpr, string giaNgayExpr)
         {
+            string giaGioExpr = "(" + giaNgayExpr + " / 24.0)";
+            return PhuThuNhanSomSql(actualStartExpr, plannedStartExpr, giaNgayExpr, giaGioExpr);
+        }
+
+        public static string PhuThuNhanSomSql(string actualStartExpr, string plannedStartExpr, string giaNgayExpr, string giaGioExpr)
+        {
             return @"CAST(CASE
     WHEN " + actualStartExpr + @" IS NULL OR " + plannedStartExpr + @" IS NULL THEN 0
     WHEN " + actualStartExpr + @" >= DATEADD(minute, -30, " + plannedStartExpr + @") THEN 0
-    WHEN CAST(" + actualStartExpr + @" AS time) >= CAST('09:00' AS time) THEN " + giaNgayExpr + @" * 0.30
-    WHEN CAST(" + actualStartExpr + @" AS time) >= CAST('06:00' AS time) THEN " + giaNgayExpr + @" * 0.50
-    ELSE " + giaNgayExpr + @"
+    ELSE CEILING((DATEDIFF(minute, " + actualStartExpr + @", " + plannedStartExpr + @") - 30) / 60.0) * " + giaGioExpr + @"
+END AS decimal(18, 2))";
+        }
+
+        public static string PhuThuNhanSomSql(string actualStartExpr, string plannedStartExpr, string plannedEndExpr, string giaNgayExpr, string giaGioExpr, string giaDemExpr)
+        {
+            string laThueTheoGioExpr = LaThueTheoGioSql(plannedStartExpr, plannedEndExpr);
+            string laThueQuaDemExpr = LaThueQuaDemSql(plannedStartExpr, plannedEndExpr);
+            string giaTheoLoaiExpr = @"CASE
+        WHEN " + laThueTheoGioExpr + @" THEN " + giaGioExpr + @"
+        WHEN " + laThueQuaDemExpr + @" THEN (" + giaDemExpr + @") / 12.0
+        ELSE (" + giaNgayExpr + @") / 24.0
+    END";
+
+            return @"CAST(CASE
+    WHEN " + actualStartExpr + @" IS NULL OR " + plannedStartExpr + @" IS NULL THEN 0
+    WHEN " + actualStartExpr + @" >= DATEADD(minute, -30, " + plannedStartExpr + @") THEN 0
+    ELSE CEILING((DATEDIFF(minute, " + actualStartExpr + @", " + plannedStartExpr + @") - 30) / 60.0) * " + giaTheoLoaiExpr + @"
 END AS decimal(18, 2))";
         }
 
@@ -52,80 +75,65 @@ END AS decimal(18, 2))";
         {
             string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
             string giaGioExpr = "ISNULL(NULLIF(LP.DonGiaGio, 0), " + giaNgayExpr + " / 24.0)";
-            return PhuThuTraMuonSql(startExpr, plannedEndExpr, actualEndExpr, giaNgayExpr, giaGioExpr);
+            string giaDemExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), " + giaNgayExpr + ")";
+            return PhuThuTraMuonSql(startExpr, plannedEndExpr, actualEndExpr, giaNgayExpr, giaGioExpr, giaDemExpr);
         }
 
         public static string PhuThuTraMuonSql(string startExpr, string plannedEndExpr, string actualEndExpr, string giaNgayExpr, string giaGioExpr)
         {
-            string mocTraPhongExpr = "DATEADD(hour, 12, CAST(CAST(" + plannedEndExpr + " AS date) AS datetime))";
-            string mocTraDemExpr = "DATEADD(hour, 8, CAST(CAST(" + plannedEndExpr + " AS date) AS datetime))";
-            string laThueTheoGioExpr = "(" + plannedEndExpr + @" IS NOT NULL
-        AND CAST(" + startExpr + @" AS date) = CAST(" + plannedEndExpr + @" AS date)
-        AND DATEDIFF(minute, " + startExpr + @", " + plannedEndExpr + @") > 0)";
-            string laThueQuaDemExpr = "(" + plannedEndExpr + @" IS NOT NULL
-        AND CAST(" + plannedEndExpr + @" AS date) = DATEADD(day, 1, CAST(" + startExpr + @" AS date))
-        AND CAST(" + startExpr + @" AS time) >= CAST('21:00' AS time)
-        AND CAST(" + plannedEndExpr + @" AS time) <= CAST('08:30' AS time))";
+            return PhuThuTraMuonSql(startExpr, plannedEndExpr, actualEndExpr, giaNgayExpr, giaGioExpr, giaNgayExpr);
+        }
 
+        public static string PhuThuTraMuonSql(string startExpr, string plannedEndExpr, string actualEndExpr, string giaNgayExpr, string giaGioExpr, string giaDemExpr)
+        {
             return @"CAST(CASE
-WHEN " + actualEndExpr + @" IS NULL THEN 0
-WHEN " + laThueTheoGioExpr + @" THEN
-    CASE WHEN " + actualEndExpr + @" <= DATEADD(minute, 30, " + plannedEndExpr + @") THEN 0
-         ELSE CEILING((DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") - 30) / 60.0) * " + giaGioExpr + @" END
-WHEN " + laThueQuaDemExpr + @" THEN
-    CASE WHEN " + actualEndExpr + @" <= DATEADD(minute, 30, " + mocTraDemExpr + @") THEN 0
-         ELSE ((DATEDIFF(minute, DATEADD(minute, 30, " + mocTraDemExpr + @"), " + actualEndExpr + @") / 60.0) * " + giaGioExpr + @" END
-ELSE
-    CASE
-        WHEN " + actualEndExpr + @" > DATEADD(hour, 18, CAST(CAST(" + plannedEndExpr + @" AS date) AS datetime)) THEN " + giaNgayExpr + @"
-        WHEN " + actualEndExpr + @" >= DATEADD(hour, 15, CAST(CAST(" + plannedEndExpr + @" AS date) AS datetime)) THEN " + giaNgayExpr + @" * 0.50
-        WHEN " + actualEndExpr + @" > DATEADD(minute, 30, " + mocTraPhongExpr + @") THEN " + giaNgayExpr + @" * 0.30
-        ELSE 0
-    END
+WHEN " + actualEndExpr + @" IS NULL OR " + plannedEndExpr + @" IS NULL OR " + actualEndExpr + @" <= " + plannedEndExpr + @" THEN 0
+WHEN DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") <= 30 THEN 0
+ELSE CEILING((DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") - 30) / 60.0) *
+     CASE
+        WHEN " + LaThueTheoGioSql(startExpr, plannedEndExpr) + @" THEN " + giaGioExpr + @"
+        WHEN " + LaThueQuaDemSql(startExpr, plannedEndExpr) + @" THEN (" + giaDemExpr + @") / 12.0
+        ELSE (" + giaNgayExpr + @") / 24.0
+     END
 END AS decimal(18, 2))";
         }
 
         public static string PhuThuSql(string startExpr, string plannedEndExpr, string actualEndExpr, string giaNgayExpr, string giaGioExpr)
         {
-            string mocNhanPhongExpr = "DATEADD(hour, 14, CAST(CAST(" + startExpr + " AS date) AS datetime))";
-            string mocTraPhongExpr = "DATEADD(hour, 12, CAST(CAST(" + plannedEndExpr + " AS date) AS datetime))";
-            string mocTraDemExpr = "DATEADD(hour, 8, CAST(CAST(" + plannedEndExpr + " AS date) AS datetime))";
-            string laThueTheoGioExpr = "(" + plannedEndExpr + @" IS NOT NULL
-        AND CAST(" + startExpr + @" AS date) = CAST(" + plannedEndExpr + @" AS date)
-        AND DATEDIFF(minute, " + startExpr + @", " + plannedEndExpr + @") > 0)";
-            string laThueQuaDemExpr = "(" + plannedEndExpr + @" IS NOT NULL
-        AND CAST(" + plannedEndExpr + @" AS date) = DATEADD(day, 1, CAST(" + startExpr + @" AS date))
-        AND CAST(" + startExpr + @" AS time) >= CAST('21:00' AS time)
-        AND CAST(" + plannedEndExpr + @" AS time) <= CAST('08:30' AS time))";
+            return PhuThuSql(startExpr, plannedEndExpr, actualEndExpr, giaNgayExpr, giaGioExpr, giaNgayExpr);
+        }
+
+        public static string PhuThuSql(string startExpr, string plannedEndExpr, string actualEndExpr, string giaNgayExpr, string giaGioExpr, string giaDemExpr)
+        {
+            string laThueTheoGioExpr = LaThueTheoGioSql(startExpr, plannedEndExpr);
+            string laThueQuaDemExpr = LaThueQuaDemSql(startExpr, plannedEndExpr);
+            string giaTheoLoaiExpr = @"CASE
+        WHEN " + laThueTheoGioExpr + @" THEN " + giaGioExpr + @"
+        WHEN " + laThueQuaDemExpr + @" THEN (" + giaDemExpr + @") / 12.0
+        ELSE (" + giaNgayExpr + @") / 24.0
+    END";
 
             return @"CAST(CASE
 WHEN " + laThueTheoGioExpr + @" THEN
     CASE
         WHEN " + actualEndExpr + @" IS NULL THEN 0
-        WHEN " + actualEndExpr + @" <= DATEADD(minute, 30, " + plannedEndExpr + @") THEN 0
-        ELSE CEILING((DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") - 30) / 60.0) * " + giaGioExpr + @"
+        WHEN " + actualEndExpr + @" <= " + plannedEndExpr + @" THEN 0
+        WHEN DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") <= 30 THEN 0
+        ELSE CEILING((DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") - 30) / 60.0) * " + giaTheoLoaiExpr + @"
     END
 WHEN " + laThueQuaDemExpr + @" THEN
     CASE
         WHEN " + actualEndExpr + @" IS NULL THEN 0
-        WHEN " + actualEndExpr + @" <= DATEADD(minute, 30, " + mocTraDemExpr + @") THEN 0
-        ELSE ((DATEDIFF(minute, DATEADD(minute, 30, " + mocTraDemExpr + @"), " + actualEndExpr + @") / 60.0) * " + giaGioExpr + @")
+        WHEN " + actualEndExpr + @" <= " + plannedEndExpr + @" THEN 0
+        WHEN DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") <= 30 THEN 0
+        ELSE CEILING((DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") - 30) / 60.0) * " + giaTheoLoaiExpr + @"
     END
 ELSE (
     CASE
-        WHEN " + startExpr + @" >= DATEADD(minute, -30, " + mocNhanPhongExpr + @") THEN 0
-        WHEN CAST(" + startExpr + @" AS time) >= CAST('09:00' AS time) THEN " + giaNgayExpr + @" * 0.30
-        WHEN CAST(" + startExpr + @" AS time) >= CAST('06:00' AS time) THEN " + giaNgayExpr + @" * 0.50
-        WHEN " + startExpr + @" < " + mocNhanPhongExpr + @" THEN " + giaNgayExpr + @"
-        ELSE 0
-    END
-    +
-    CASE
         WHEN " + actualEndExpr + @" IS NULL THEN 0
-        WHEN " + actualEndExpr + @" > DATEADD(hour, 18, CAST(CAST(" + plannedEndExpr + @" AS date) AS datetime)) THEN " + giaNgayExpr + @"
-        WHEN " + actualEndExpr + @" >= DATEADD(hour, 15, CAST(CAST(" + plannedEndExpr + @" AS date) AS datetime)) THEN " + giaNgayExpr + @" * 0.50
-        WHEN " + actualEndExpr + @" > DATEADD(minute, 30, " + mocTraPhongExpr + @") THEN " + giaNgayExpr + @" * 0.30
-        ELSE 0
+        WHEN " + actualEndExpr + @" <= " + plannedEndExpr + @" THEN 0
+        WHEN DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") <= 30 THEN 0
+        ELSE CEILING((DATEDIFF(minute, " + plannedEndExpr + @", " + actualEndExpr + @") - 30) / 60.0) * " + giaTheoLoaiExpr + @"
     END
 ) END AS decimal(18, 2))";
         }
@@ -155,24 +163,8 @@ ELSE (
 
         public static decimal TinhPhuThu(DateTime start, DateTime plannedEnd, DateTime actualEnd, decimal giaGio, decimal giaNgay)
         {
-            if (plannedEnd > start && start.Date == plannedEnd.Date)
-            {
-                if (actualEnd <= plannedEnd.AddMinutes(30)) return 0;
-
-                int soGio = Math.Max(1, (int)Math.Ceiling((actualEnd - plannedEnd).TotalMinutes / 60.0 - 0.5));
-                return soGio * LayGiaGioPhuThu(giaGio, giaNgay);
-            }
-
-            if (LaThueQuaDem(start, plannedEnd))
-            {
-                DateTime mocTraDem = plannedEnd.Date.AddHours(8);
-                if (actualEnd <= mocTraDem.AddMinutes(30)) return 0;
-
-                decimal soGioTinhPhi = (decimal)(actualEnd - mocTraDem.AddMinutes(30)).TotalMinutes / 60m;
-                return Math.Round(soGioTinhPhi * LayGiaGioPhuThu(giaGio, giaNgay), 0);
-            }
-
-            return TinhPhuThuNhanSom(start, giaGio, giaNgay) + TinhPhuThuTraMuon(plannedEnd, actualEnd, giaGio, giaNgay);
+            return TinhPhuThuNhanSom(start, giaGio, giaNgay) +
+                   TinhPhuThuTraMuon(start, plannedEnd, actualEnd, giaGio, giaNgay);
         }
 
         public static decimal TinhPhuThuNhanSom(DateTime actualStart, DateTime plannedStart, decimal giaGio, decimal giaNgay)
@@ -181,37 +173,42 @@ ELSE (
             return TinhPhuThuNhanSom(actualStart, giaGio, giaNgay);
         }
 
+        public static decimal TinhPhuThuNhanSom(DateTime actualStart, DateTime plannedStart, DateTime plannedEnd, decimal giaGio, decimal giaNgay, decimal giaDem)
+        {
+            if (actualStart >= plannedStart) return 0;
+            int soPhutSom = Math.Max(0, (int)Math.Ceiling((plannedStart - actualStart).TotalMinutes));
+            if (soPhutSom <= 30) return 0;
+
+            int soGioTinhPhi = Math.Max(1, (int)Math.Ceiling((soPhutSom - 30) / 60.0));
+            return Math.Round(soGioTinhPhi * LayGiaGioPhuThuTheoLoai(plannedStart, plannedEnd, giaGio, giaNgay, giaDem), 0);
+        }
+
         private static decimal TinhPhuThuNhanSom(DateTime start, decimal giaGio, decimal giaNgay)
         {
             TimeSpan gioNhan = start.TimeOfDay;
             if (gioNhan >= TimeSpan.FromHours(13.5)) return 0;
 
-            decimal giaNgayTinhPhi = LayGiaNgayPhuThu(giaGio, giaNgay);
-            if (gioNhan < TimeSpan.FromHours(6)) return Math.Round(giaNgayTinhPhi, 0);
-            if (gioNhan < TimeSpan.FromHours(9)) return Math.Round(giaNgayTinhPhi * 0.50m, 0);
-            return Math.Round(giaNgayTinhPhi * 0.30m, 0);
+            DateTime mocNhanPhong = start.Date.AddHours(14);
+            int soPhutTinhPhi = Math.Max(0, (int)Math.Ceiling((mocNhanPhong - start).TotalMinutes) - 30);
+            if (soPhutTinhPhi <= 0) return 0;
+
+            int soGioTinhPhi = Math.Max(1, (int)Math.Ceiling(soPhutTinhPhi / 60.0));
+            return Math.Round(soGioTinhPhi * LayGiaGioPhuThu(giaGio, giaNgay), 0);
         }
 
         public static decimal TinhPhuThuTraMuon(DateTime start, DateTime plannedEnd, DateTime actualEnd, decimal giaGio, decimal giaNgay)
         {
-            if (plannedEnd > start && start.Date == plannedEnd.Date)
-            {
-                if (actualEnd <= plannedEnd.AddMinutes(30)) return 0;
+            return TinhPhuThuTraMuon(start, plannedEnd, actualEnd, giaGio, giaNgay, 0);
+        }
 
-                int soGio = Math.Max(1, (int)Math.Ceiling((actualEnd - plannedEnd).TotalMinutes / 60.0 - 0.5));
-                return soGio * LayGiaGioPhuThu(giaGio, giaNgay);
-            }
+        public static decimal TinhPhuThuTraMuon(DateTime start, DateTime plannedEnd, DateTime actualEnd, decimal giaGio, decimal giaNgay, decimal giaDem)
+        {
+            if (actualEnd <= plannedEnd) return 0;
+            int soPhutTre = Math.Max(0, (int)Math.Ceiling((actualEnd - plannedEnd).TotalMinutes));
+            if (soPhutTre <= 30) return 0;
 
-            if (LaThueQuaDem(start, plannedEnd))
-            {
-                DateTime mocTraDem = plannedEnd.Date.AddHours(8);
-                if (actualEnd <= mocTraDem.AddMinutes(30)) return 0;
-
-                decimal soGioTinhPhi = (decimal)(actualEnd - mocTraDem.AddMinutes(30)).TotalMinutes / 60m;
-                return Math.Round(soGioTinhPhi * LayGiaGioPhuThu(giaGio, giaNgay), 0);
-            }
-
-            return TinhPhuThuTraMuon(plannedEnd, actualEnd, giaGio, giaNgay);
+            int soGioTinhPhi = Math.Max(1, (int)Math.Ceiling((soPhutTre - 30) / 60.0));
+            return Math.Round(soGioTinhPhi * LayGiaGioPhuThuTheoLoai(start, plannedEnd, giaGio, giaNgay, giaDem), 0);
         }
 
         private static decimal TinhPhuThuTraMuon(DateTime plannedEnd, DateTime actualEnd, decimal giaGio, decimal giaNgay)
@@ -244,6 +241,38 @@ ELSE (
             if (giaNgay > 0) return giaNgay;
             if (giaGio > 0) return giaGio * 24m;
             return 0;
+        }
+
+        private static decimal LayGiaGioPhuThuTheoLoai(DateTime start, DateTime plannedEnd, decimal giaGio, decimal giaNgay, decimal giaDem)
+        {
+            if (LaThueTheoGio(start, plannedEnd)) return LayGiaGioPhuThu(giaGio, giaNgay);
+            if (LaThueQuaDem(start, plannedEnd))
+            {
+                decimal giaDemTinhPhi = giaDem > 0 ? giaDem : LayGiaNgayPhuThu(giaGio, giaNgay);
+                return Math.Round(giaDemTinhPhi / 12m, 0);
+            }
+
+            return Math.Round(LayGiaNgayPhuThu(giaGio, giaNgay) / 24m, 0);
+        }
+
+        private static bool LaThueTheoGio(DateTime start, DateTime plannedEnd)
+        {
+            return start.Date == plannedEnd.Date && plannedEnd > start;
+        }
+
+        private static string LaThueTheoGioSql(string startExpr, string plannedEndExpr)
+        {
+            return "(" + plannedEndExpr + @" IS NOT NULL
+        AND CAST(" + startExpr + @" AS date) = CAST(" + plannedEndExpr + @" AS date)
+        AND DATEDIFF(minute, " + startExpr + @", " + plannedEndExpr + @") > 0)";
+        }
+
+        private static string LaThueQuaDemSql(string startExpr, string plannedEndExpr)
+        {
+            return "(" + plannedEndExpr + @" IS NOT NULL
+        AND CAST(" + plannedEndExpr + @" AS date) = DATEADD(day, 1, CAST(" + startExpr + @" AS date))
+        AND CAST(" + startExpr + @" AS time) >= CAST('21:00' AS time)
+        AND CAST(" + plannedEndExpr + @" AS time) <= CAST('08:30' AS time))";
         }
     }
 }

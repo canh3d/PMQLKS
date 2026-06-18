@@ -33,6 +33,9 @@ namespace QLKS_AnPhu.UserControls
             IconStar.Visibility = Phong.TinhTrangDonDep.Contains("Chưa", StringComparison.OrdinalIgnoreCase)
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+            IconStar.Visibility = BoDau(Phong.TinhTrangDonDep).Contains("chua", StringComparison.OrdinalIgnoreCase)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
             ApplyStatusStyle();
         }
@@ -55,7 +58,9 @@ namespace QLKS_AnPhu.UserControls
                 return;
             }
 
-            if (trangThai.Contains("sua", StringComparison.OrdinalIgnoreCase))
+            if (trangThai.Contains("bao tri", StringComparison.OrdinalIgnoreCase) ||
+                trangThai.Contains("sua", StringComparison.OrdinalIgnoreCase) ||
+                trangThai.Contains("maintenance", StringComparison.OrdinalIgnoreCase))
             {
                 SetStyle("#F8FAFC", "#A7B6C8", "#475467");
                 return;
@@ -91,7 +96,10 @@ namespace QLKS_AnPhu.UserControls
                 .Where(ch => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark)
                 .Select(ch => ch == 'đ' ? 'd' : ch == 'Đ' ? 'D' : ch)
                 .ToArray();
-            return new string(chars).Normalize(System.Text.NormalizationForm.FormC);
+            return new string(chars)
+                .Replace('đ', 'd')
+                .Replace('Đ', 'D')
+                .Normalize(System.Text.NormalizationForm.FormC);
         }
 
         private void RootBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

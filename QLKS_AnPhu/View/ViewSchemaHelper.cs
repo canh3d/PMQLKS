@@ -54,8 +54,8 @@ namespace QLKS_AnPhu.View
         {
             string prefix = string.IsNullOrWhiteSpace(tableAlias) ? string.Empty : tableAlias + ".";
             return loaiThanhToan == "PHATSINH"
-                ? " AND ISNULL(" + prefix + "GhiChu, N'') NOT LIKE N'%[DICHVU_CHECKIN]%'"
-                : " AND ISNULL(" + prefix + "GhiChu, N'') LIKE N'%[DICHVU_CHECKIN]%'";
+                ? " AND CHARINDEX(N'[DICHVU_PHATSINH]', ISNULL(" + prefix + "GhiChu, N'')) > 0"
+                : " AND CHARINDEX(N'[DICHVU_CHECKIN]', ISNULL(" + prefix + "GhiChu, N'')) > 0";
         }
 
         public static decimal DocTienPhongDaChot(string ghiChu)

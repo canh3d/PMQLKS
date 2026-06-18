@@ -23,22 +23,40 @@ namespace QLKS_AnPhu.View
 
         private void KhachHangDataWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            TxtTieuDe.Text = mode == DataMode.LichSuThue
-                ? $"Lịch sử thuê phòng - {khachHang.HoTen}"
-                : $"Danh sách hóa đơn - {khachHang.HoTen}";
+            bool isRentalHistory = mode == DataMode.LichSuThue;
+            TxtTieuDe.Text = isRentalHistory ? "Lịch sử thuê phòng" : "Hóa đơn khách hàng";
+            TxtKhachHang.Text = string.IsNullOrWhiteSpace(khachHang.HoTen)
+                ? $"Mã khách hàng: {khachHang.Ma}"
+                : khachHang.HoTen;
+            TxtLienHe.Text = string.IsNullOrWhiteSpace(khachHang.SDT)
+                ? "Chưa có số điện thoại"
+                : khachHang.SDT;
+            TxtCheDo.Text = isRentalHistory ? "LỊCH SỬ LƯU TRÚ" : "DANH SÁCH HÓA ĐƠN";
+            HistoryIcon.Visibility = isRentalHistory ? Visibility.Visible : Visibility.Collapsed;
+            InvoiceIcon.Visibility = isRentalHistory ? Visibility.Collapsed : Visibility.Visible;
+            TxtThongBao.Text = "Đang tải dữ liệu...";
+            TxtTongBanGhi.Text = "0 bản ghi";
+            EmptyState.Visibility = Visibility.Collapsed;
 
             try
             {
                 ConfigureColumns();
                 DataTable data = LoadData();
                 DgData.ItemsSource = data.DefaultView;
-                TxtThongBao.Text = data.Rows.Count == 0
-                    ? "Không có dữ liệu phù hợp trong database."
-                    : $"Tổng: {data.Rows.Count} dòng";
+                int totalRows = data.Rows.Count;
+                TxtTongBanGhi.Text = $"{totalRows:N0} bản ghi";
+                TxtThongBao.Text = totalRows == 0
+                    ? "Không tìm thấy dữ liệu phát sinh của khách hàng."
+                    : isRentalHistory
+                        ? "Theo dõi các lần đặt và thuê phòng của khách hàng."
+                        : "Theo dõi chi tiết các hóa đơn đã phát sinh của khách hàng.";
+                EmptyState.Visibility = totalRows == 0 ? Visibility.Visible : Visibility.Collapsed;
             }
             catch (Exception ex)
             {
                 TxtThongBao.Text = "Không tải được dữ liệu: " + ex.Message;
+                TxtTongBanGhi.Text = "Lỗi dữ liệu";
+                EmptyState.Visibility = Visibility.Visible;
             }
         }
 

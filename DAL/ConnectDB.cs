@@ -7,9 +7,6 @@ namespace QLKS_AnPhu.DAL
 {
     public class ConnectDB
     {
-        private const string DefaultConnectionString =
-            @"Data Source=ASUSCANH;Initial Catalog=QLDatPhongKS_AnPhu;Integrated Security=True;Encrypt=False;TrustServerCertificate=True";
-
         public static string ConnectionString
         {
             get
@@ -18,7 +15,7 @@ namespace QLKS_AnPhu.DAL
 
                 if (settings == null || string.IsNullOrWhiteSpace(settings.ConnectionString))
                 {
-                    return DefaultConnectionString;
+                    throw new InvalidOperationException("Chưa cấu hình connection string 'HotelDb' trong App.config.");
                 }
 
                 return settings.ConnectionString;

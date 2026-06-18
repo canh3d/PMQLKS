@@ -16,6 +16,7 @@ namespace QLKS_AnPhu.View
     {
         private readonly HoaDonItem hoaDon;
         private readonly ObservableCollection<RoomSplitItem> danhSachPhong = new();
+        private decimal TongHoaDonGoc => hoaDon.TongGiaTriHoaDon;
 
         public TachBillWindow(HoaDonItem hoaDon)
         {
@@ -27,7 +28,7 @@ namespace QLKS_AnPhu.View
         private void TachBillWindow_Loaded(object sender, RoutedEventArgs e)
         {
             TxtThongTinHoaDon.Text = $"{hoaDon.MaHoaDon} - {hoaDon.TenKhachHang} - Phòng {hoaDon.SoPhong}";
-            TxtTongTien.Text = hoaDon.TongTien.ToString("N0") + " VND";
+            TxtTongTien.Text = TongHoaDonGoc.ToString("N0") + " VND";
             TxtDaiDienBill2.Text = string.Empty;
             DgPhong.ItemsSource = danhSachPhong;
             NapDanhSachPhong();
@@ -64,6 +65,15 @@ namespace QLKS_AnPhu.View
                 }
             }
 
+            if (hoaDon.LoaiThanhToan == "PHATSINH" && hoaDon.TienPhong < 0)
+            {
+                rooms[0].Items.Add(new PrintLineItem(
+                    "Hoàn chênh lệch đổi xuống phòng giá thấp hơn",
+                    Math.Abs(hoaDon.TienPhong),
+                    1,
+                    hoaDon.TienPhong));
+            }
+
             foreach (DichVuHoaDonItem item in LoadDichVu())
             {
                 RoomPrintGroup target = item.MaPhong.HasValue
@@ -74,20 +84,21 @@ namespace QLKS_AnPhu.View
 
             if (rooms.Count > 0)
             {
-                if (hoaDon.PhuPhi > 0)
+                if (hoaDon.PhuPhiHienThi > 0)
                 {
-                    rooms[0].Items.Add(new PrintLineItem(hoaDon.LoaiThanhToan == "PHATSINH" ? "Phụ phí trả muộn" : "Phụ phí nhận sớm", 0, 0, hoaDon.PhuPhi));
+                    rooms[0].Items.Add(new PrintLineItem(hoaDon.LoaiThanhToan == "PHATSINH" ? "Phụ phí trả muộn" : "Phụ phí nhận sớm", 0, 0, hoaDon.PhuPhiHienThi));
                 }
 
-                if (hoaDon.ThueVat > 0)
+                if (hoaDon.ThueVatHienThi > 0)
                 {
-                    rooms[0].Items.Add(new PrintLineItem("Thuế VAT (10%)", 0, 0, hoaDon.ThueVat));
+                    rooms[0].Items.Add(new PrintLineItem("Thuế VAT (10%)", 0, 0, hoaDon.ThueVatHienThi));
                 }
 
-                if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.GiamGia > 0)
+                if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.GiamGiaHienThi > 0)
                 {
-                    rooms[0].Items.Add(new PrintLineItem("Giảm giá / cọc", 0, 0, -hoaDon.GiamGia));
+                    rooms[0].Items.Add(new PrintLineItem("Giảm giá", 0, 0, -hoaDon.GiamGiaHienThi));
                 }
+
             }
 
             foreach (RoomPrintGroup room in rooms.Where(room => room.Items.Count > 0))
@@ -178,9 +189,9 @@ namespace QLKS_AnPhu.View
             }
 
             decimal tong = TaoBill(false).SoTien + TaoBill(true).SoTien;
-            if (Math.Abs(tong - hoaDon.TongTien) >= 1)
+            if (Math.Abs(tong - TongHoaDonGoc) >= 1)
             {
-                MessageBox.Show($"Tổng sau tách chưa khớp hóa đơn gốc.\nHóa đơn gốc: {hoaDon.TongTien:N0} VND\nSau tách: {tong:N0} VND", "Tách bill", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Tổng sau tách chưa khớp hóa đơn gốc.\nHóa đơn gốc: {TongHoaDonGoc:N0} VND\nSau tách: {tong:N0} VND", "Tách bill", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
@@ -356,6 +367,9 @@ namespace QLKS_AnPhu.View
 
                 if (ColumnExists("PHIEUTHUE", "MaDatPhong") && TableExists("CHITIETDATPHONG"))
                 {
+                    string whereThue = hoaDon.MaDoan > 0 && ColumnExists("PHIEUTHUE", "MaDoan")
+                        ? "PT.MaDoan = @Ma"
+                        : "PT.MaThue = @Ma";
                     DataTable data = ConnectDB.GetData(@"
 SELECT P.MaPhong,
        " + TenPhongSql("P") + @" AS SoPhong,
@@ -364,9 +378,9 @@ FROM dbo.PHIEUTHUE PT
 JOIN dbo.CHITIETDATPHONG CT ON PT.MaDatPhong = CT.MaDatPhong
 JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong
 LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
-WHERE PT.MaThue = @Ma
+WHERE " + whereThue + @"
 ORDER BY P.MaPhong",
-                        new SqlParameter("@Ma", hoaDon.MaGoc));
+                        new SqlParameter("@Ma", hoaDon.MaDoan > 0 && ColumnExists("PHIEUTHUE", "MaDoan") ? hoaDon.MaDoan : hoaDon.MaGoc));
                     if (data.Rows.Count > 0)
                     {
                         List<RoomPrintGroup> mapped = MapPhongHoaDon(data);
@@ -383,8 +397,8 @@ SELECT P.MaPhong,
 FROM dbo.PHIEUTHUE PT
 JOIN dbo.PHONG P ON PT.MaPhong = P.MaPhong
 LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
-WHERE PT.MaThue = @Ma",
-                    new SqlParameter("@Ma", hoaDon.MaGoc));
+WHERE " + (hoaDon.MaDoan > 0 && ColumnExists("PHIEUTHUE", "MaDoan") ? "PT.MaDoan = @Ma" : "PT.MaThue = @Ma"),
+                    new SqlParameter("@Ma", hoaDon.MaDoan > 0 && ColumnExists("PHIEUTHUE", "MaDoan") ? hoaDon.MaDoan : hoaDon.MaGoc));
                 List<RoomPrintGroup> singleMapped = MapPhongHoaDon(single);
                 return singleMapped.Count > 1 || !CoNhieuPhongTrongChuoi(hoaDon.SoPhong)
                     ? singleMapped
@@ -489,9 +503,25 @@ WHERE PT.MaThue = @Ma",
             string soLuong = ColumnExists(table, "SoLuong") ? "PS.SoLuong" : "1";
             string donGia = ColumnExists(table, "DonGia") ? "ISNULL(PS.DonGia, DV.DonGia)" : "DV.DonGia";
             string thanhTien = ColumnExists(table, "ThanhTien") ? "PS.ThanhTien" : "(" + soLuong + " * " + donGia + ")";
-            string maPhongExpr = ColumnExists(table, "MaPhong") ? "PS.MaPhong" : "CAST(NULL AS int)";
+            string maPhongExpr = ColumnExists(table, "MaPhong")
+                ? "PS.MaPhong"
+                : keyColumn == "MaThue" && TableExists("PHIEUTHUE") && ColumnExists("PHIEUTHUE", "MaPhong")
+                    ? "(SELECT TOP 1 PT0.MaPhong FROM dbo.PHIEUTHUE PT0 WHERE PT0.MaThue = PS.MaThue)"
+                    : "CAST(NULL AS int)";
             bool coGhiChu = ColumnExists(table, "GhiChu");
             string filterLoaiDichVu = coGhiChu ? ViewSchemaHelper.DichVuTheoLoaiHoaDonFilter("PS", hoaDon.LoaiThanhToan) : string.Empty;
+
+            string whereDichVu = "PS." + keyColumn + " = @Ma";
+            int parameterValue = hoaDon.MaGoc;
+            if (hoaDon.LoaiPhieu == "THUE" &&
+                hoaDon.MaDoan > 0 &&
+                keyColumn == "MaThue" &&
+                TableExists("PHIEUTHUE") &&
+                ColumnExists("PHIEUTHUE", "MaDoan"))
+            {
+                whereDichVu = "EXISTS (SELECT 1 FROM dbo.PHIEUTHUE PT WHERE PT.MaThue = PS.MaThue AND PT.MaDoan = @Ma)";
+                parameterValue = hoaDon.MaDoan;
+            }
 
             DataTable data = ConnectDB.GetData(
                 @"SELECT DV." + tenDichVu + @" AS TenDichVu,
@@ -501,8 +531,8 @@ WHERE PT.MaThue = @Ma",
                          " + thanhTien + @" AS ThanhTien
                   FROM dbo." + table + @" PS
                   JOIN dbo.DICHVUVATTU DV ON PS." + maDvPs + " = DV." + maDv + @"
-                  WHERE PS." + keyColumn + " = @Ma" + filterLoaiDichVu,
-                new SqlParameter("@Ma", hoaDon.MaGoc));
+                  WHERE " + whereDichVu + filterLoaiDichVu,
+                new SqlParameter("@Ma", parameterValue));
 
             int stt = 1;
             foreach (DataRow row in data.Rows)
@@ -531,6 +561,13 @@ WHERE PT.MaThue = @Ma",
                     TienPhong = GetDecimal(row, "TienPhong")
                 })
                 .Where(room => !string.IsNullOrWhiteSpace(room.SoPhong))
+                .GroupBy(room => new { room.MaPhong, room.SoPhong })
+                .Select(group => new RoomPrintGroup
+                {
+                    MaPhong = group.Key.MaPhong,
+                    SoPhong = group.Key.SoPhong,
+                    TienPhong = group.Max(room => room.TienPhong)
+                })
                 .ToList();
         }
 

@@ -59,7 +59,7 @@
                 BorderThickness="1.4"
                 CornerRadius="9"
                 Cursor="Hand"
-                MouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
+                PreviewMouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
             <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

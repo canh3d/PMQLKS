@@ -101,6 +101,8 @@ WHERE tk.TenDangNhap = @TenDangNhap AND tk.MatKhau = @MatKhau;",
                     Permissions = permissions
                 };
 
+                CurrentUser.Set(user);
+
                 MainWindow mainWindow = new(user)
                 {
                     WindowState = WindowState.Maximized

@@ -7,6 +7,10 @@ namespace QLKS_AnPhu.DTO
         public int MaPhong { get; set; }
         public DateTime NgayTraCu { get; set; }
         public DateTime NgayTraMoi { get; set; }
+        public decimal GiaGio { get; set; }
+        public decimal GiaNgay { get; set; }
+        public decimal GiaDem { get; set; }
+        public int SoPhongGiaHan { get; set; } = 1;
     }
 
     public class DoiPhongRequestDTO

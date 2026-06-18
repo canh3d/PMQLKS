@@ -76,9 +76,10 @@
             <StackPanel Grid.Row="3" Grid.Column="2" Margin="0,14,0,0">
                 <TextBlock Text="Trạng thái" FontWeight="SemiBold" Margin="0,0,0,6" />
                 <ComboBox x:Name="CboTrangThai" Height="34" SelectedIndex="0">
-                    <ComboBoxItem Content="Phòng trống" />
+                    <ComboBoxItem Content="Chưa dọn dẹp" />
+                    <ComboBoxItem Content="Trống" />
                     <ComboBoxItem Content="Đang thuê" />
-                    <ComboBoxItem Content="Đang sửa chữa" />
+                    <ComboBoxItem Content="Bảo trì" />
                     <ComboBoxItem Content="Đã đặt" />
                 </ComboBox>
             </StackPanel>

@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
 
 namespace QLKS_AnPhu.View
 {
@@ -21,14 +20,13 @@ namespace QLKS_AnPhu.View
             }
 
             double oldOpacity = owner.Opacity;
-            Effect? oldEffect = owner.Effect;
+            var oldEffect = owner.Effect;
 
             dialog.Owner = owner;
             dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             dialog.ShowInTaskbar = false;
 
             owner.Opacity = 0.58;
-            owner.Effect = new BlurEffect { Radius = 3 };
 
             try
             {
@@ -59,9 +57,9 @@ namespace QLKS_AnPhu.View
             };
         }
 
-        public static bool XacNhanThanhToanCheckIn(Window? owner, string moTa, decimal tienPhong, decimal tienDichVu, decimal phuPhi = 0, decimal datCoc = 0, decimal giamGia = 0)
+        public static bool XacNhanThanhToanCheckIn(Window? owner, string moTa, decimal tienPhong, decimal tienDichVu, decimal phuPhi = 0, decimal datCoc = 0, decimal giamGia = 0, string? moTaPhuPhi = null)
         {
-            ThanhToanCheckInWindow dialog = new(moTa, tienPhong, tienDichVu, phuPhi, datCoc, giamGia);
+            ThanhToanCheckInWindow dialog = new(moTa, tienPhong, tienDichVu, phuPhi, datCoc, giamGia, moTaPhuPhi);
             return ShowDimmedDialog(dialog, owner);
         }
     }

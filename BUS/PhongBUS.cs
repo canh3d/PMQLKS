@@ -14,6 +14,11 @@ namespace QLKS_AnPhu.BUS
             return phongDAL.LayDanhSach();
         }
 
+        public bool KiemTraPhongRanh(int maPhong, DateTime ngayNhanMoi, DateTime ngayTraMoi, out string lyDo)
+        {
+            return datPhongDAL.KiemTraPhongRanh(maPhong, ngayNhanMoi, ngayTraMoi, out lyDo);
+        }
+
         public List<PhongDTO> Loc(List<PhongDTO> danhSach, string trangThai, string tang, string tuKhoa)
         {
             IEnumerable<PhongDTO> query = danhSach;
@@ -42,12 +47,7 @@ namespace QLKS_AnPhu.BUS
 
         public void DatPhong(PhongDTO phong)
         {
-            if (DangDuocSuDung(phong))
-            {
-                throw new InvalidOperationException("Phòng này đang được thuê.");
-            }
-
-            phongDAL.CapNhatTrangThai(phong, "Đã đặt");
+            throw new InvalidOperationException("Không được đặt phòng bằng cách đổi trạng thái phòng. Vui lòng dùng form Đặt phòng để tạo phiếu đặt có ngày giờ và khách hàng.");
         }
 
         public void DatPhong(DatPhongRequestDTO request)
@@ -61,14 +61,6 @@ namespace QLKS_AnPhu.BUS
             if (requests.Count == 0)
             {
                 throw new InvalidOperationException("Vui lòng chọn ít nhất một phòng cho đoàn.");
-            }
-
-            foreach (DatPhongRequestDTO request in requests)
-            {
-                if (DangDuocSuDung(request.Phong))
-                {
-                    throw new InvalidOperationException($"Phòng {request.Phong.MaHienThi} đang được sử dụng, không thể đặt trùng.");
-                }
             }
 
             int maDatPhong = datPhongDAL.LuuDatPhongDoan(requests);
@@ -90,25 +82,20 @@ namespace QLKS_AnPhu.BUS
 
         public void NhanPhong(PhongDTO phong)
         {
-            if (DangDuocSuDung(phong))
-            {
-                throw new InvalidOperationException("Phòng này đang được thuê.");
-            }
-
-            phongDAL.CapNhatTrangThai(phong, "Đang thuê");
+            throw new InvalidOperationException("Không được nhận phòng bằng cách đổi trạng thái phòng. Vui lòng dùng form Đặt phòng/Nhận ngay để tạo phiếu thuê có khách hàng.");
         }
 
-        public void NhanPhong(DatPhongRequestDTO request)
+        public KetQuaCheckInThanhToanDTO NhanPhong(DatPhongRequestDTO request)
         {
             request.NhanNgay = true;
             request.TienCoc = 0;
             int maDatPhong = datPhongDAL.LuuDatPhong(request);
-            decimal giamGia = LaKhachVip(request.KhachHang.LoaiKhach) ? Math.Round(request.TienPhong * 0.1m, 0) : 0;
-            thanhToanBUS.CheckInTuDatPhong(
+            decimal giamGia = LaKhachVip(request.KhachHang.LoaiKhach) ? Math.Round((request.TienPhong + request.PhuPhiNhanSom) * 0.1m, 0) : 0;
+            return thanhToanBUS.CheckInTuDatPhong(
                 maDatPhong,
-                Math.Max(0, request.TienPhong + request.TienDichVu - giamGia),
+                Math.Max(0, request.TienPhong + request.TienDichVu + request.PhuPhiNhanSom - giamGia),
                 0,
-                Math.Max(0, request.TienPhong - giamGia));
+                Math.Max(0, request.TienPhong + request.PhuPhiNhanSom - giamGia));
         }
 
         public void NhanPhongTuDatPhong(int maDatPhong)
@@ -127,12 +114,14 @@ namespace QLKS_AnPhu.BUS
             thanhToanBUS.NoShow(maDatPhong);
         }
 
+        public DuToanHuyDatPhongDTO DuToanHuyDatPhong(int maDatPhong)
+        {
+            return thanhToanBUS.DuToanHuyDatPhong(maDatPhong);
+        }
+
         public void DatPhongTheoDoan(IEnumerable<PhongDTO> danhSachPhong)
         {
-            foreach (PhongDTO phong in danhSachPhong.Where(item => !DangDuocSuDung(item)))
-            {
-                phongDAL.CapNhatTrangThai(phong, "Đã đặt");
-            }
+            throw new InvalidOperationException("Không được đặt đoàn bằng cách đổi trạng thái phòng. Vui lòng dùng form Đặt phòng theo đoàn.");
         }
 
         public void Them(PhongDTO phong)
@@ -159,19 +148,6 @@ namespace QLKS_AnPhu.BUS
             }
 
             phongDAL.Xoa(phong);
-        }
-
-        private static bool DangDuocSuDung(PhongDTO phong)
-        {
-            return phong.TrangThai.Contains("thuê", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("thue", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("đặt", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("dat", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("đặt", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("đang", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("dang", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("bận", StringComparison.OrdinalIgnoreCase) ||
-                   phong.TrangThai.Contains("ban", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool LaKhachVip(string value)
@@ -211,7 +187,10 @@ namespace QLKS_AnPhu.BUS
 
         private static string ChuanHoaSoPhong(string value)
         {
-            return (value ?? string.Empty).Trim().ToUpperInvariant();
+            return new string((value ?? string.Empty)
+                .Where(char.IsLetterOrDigit)
+                .Select(char.ToUpperInvariant)
+                .ToArray());
         }
 
         private static void KiemTraHopLe(PhongDTO phong)

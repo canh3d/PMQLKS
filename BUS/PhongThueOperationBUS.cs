@@ -13,10 +13,17 @@ namespace QLKS_AnPhu.BUS
             {
                 throw new InvalidOperationException("Phiếu thuê hoặc phòng không hợp lệ.");
             }
+
             if (request.NgayTraMoi <= request.NgayTraCu)
             {
                 throw new InvalidOperationException("Giờ trả mới phải sau giờ trả hiện tại.");
             }
+
+            if (request.NgayTraCu < DateTime.Now && request.NgayTraMoi <= DateTime.Now)
+            {
+                throw new InvalidOperationException("Phòng đã quá giờ trả, giờ trả mới phải sau thời điểm hiện tại.");
+            }
+
             dal.GiaHan(request);
         }
 
@@ -26,14 +33,17 @@ namespace QLKS_AnPhu.BUS
             {
                 throw new InvalidOperationException("Thông tin đổi phòng không hợp lệ.");
             }
+
             if (request.MaPhongCu == request.MaPhongMoi)
             {
                 throw new InvalidOperationException("Vui lòng chọn phòng khác phòng hiện tại.");
             }
+
             if (request.NgayTraDuKien <= request.NgayBatDau)
             {
                 throw new InvalidOperationException("Thời gian đổi phòng không hợp lệ.");
             }
+
             dal.DoiPhong(request);
         }
     }

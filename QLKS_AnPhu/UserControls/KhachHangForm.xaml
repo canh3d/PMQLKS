@@ -5,106 +5,223 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Khách hàng"
-        Width="560"
-        Height="560"
-        ResizeMode="NoResize"
+        Width="820"
+        Height="680"
+        MinWidth="780"
+        MinHeight="640"
+        ResizeMode="CanResize"
         WindowStartupLocation="CenterOwner"
-        Background="White">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="42" />
-            <RowDefinition Height="44" />
-        </Grid.RowDefinitions>
+        Background="#EEF3F8">
+    <Window.Resources>
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#334155" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,7" />
+        </Style>
 
-        <TextBlock x:Name="TxtTieuDe"
-                   Text="Thêm khách hàng"
-                   FontSize="22"
-                   FontWeight="Bold"
-                   Foreground="#0F1F33" />
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Padding" Value="13,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="White" />
+        </Style>
 
-        <Grid Grid.Row="1" Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="126" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style TargetType="DatePicker">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="26"
+            Background="White"
+            CornerRadius="14"
+            BorderBrush="#D8E2EE"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="8" Opacity="0.14" />
+        </Border.Effect>
+
+        <Grid Margin="30">
             <Grid.RowDefinitions>
-                <RowDefinition Height="42" />
-                <RowDefinition Height="42" />
-                <RowDefinition Height="42" />
-                <RowDefinition Height="42" />
-                <RowDefinition Height="42" />
-                <RowDefinition Height="42" />
-                <RowDefinition Height="42" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock Text="Họ tên" VerticalAlignment="Center" />
-            <TextBox x:Name="TxtHoTen" Grid.Column="1" Height="30" Padding="8,0" VerticalContentAlignment="Center" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Row="1" Text="Số điện thoại" VerticalAlignment="Center" />
-            <TextBox x:Name="TxtSDT" Grid.Row="1" Grid.Column="1" Height="30" Padding="8,0" VerticalContentAlignment="Center" />
+                <StackPanel>
+                    <TextBlock x:Name="TxtTieuDe"
+                               Text="Thêm khách hàng"
+                               FontSize="28"
+                               FontWeight="Bold"
+                               Foreground="#0B2545" />
+                    <TextBlock Text="Nhập đầy đủ thông tin khách hàng để phục vụ đặt phòng, phiếu thuê và hóa đơn."
+                               Margin="0,8,0,0"
+                               FontSize="14"
+                               Foreground="#64748B" />
+                </StackPanel>
 
-            <TextBlock Grid.Row="2" Text="CCCD/CMND" VerticalAlignment="Center" />
-            <TextBox x:Name="TxtCCCD" Grid.Row="2" Grid.Column="1" Height="30" Padding="8,0" VerticalContentAlignment="Center" />
+                <Border Grid.Column="1"
+                        Background="#EAF3FF"
+                        CornerRadius="12"
+                        Padding="14,8"
+                        VerticalAlignment="Top">
+                    <TextBlock Text="Hồ sơ khách hàng"
+                               Foreground="#075985"
+                               FontWeight="SemiBold" />
+                </Border>
+            </Grid>
 
-            <TextBlock Grid.Row="3" Text="Giới tính" VerticalAlignment="Center" />
-            <ComboBox x:Name="CboGioiTinh" Grid.Row="3" Grid.Column="1" Height="30" SelectedIndex="0">
-                <ComboBoxItem Content="Nam" />
-                <ComboBoxItem Content="Nữ" />
-                <ComboBoxItem Content="Khác" />
-            </ComboBox>
+            <Grid Grid.Row="1" Margin="0,28,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="4" Text="Ngày sinh" VerticalAlignment="Center" />
-            <DatePicker x:Name="DpNgaySinh" Grid.Row="4" Grid.Column="1" Height="30" />
+                <StackPanel Grid.Row="0" Grid.Column="0">
+                    <TextBlock Text="Họ tên" Style="{StaticResource LabelStyle}" />
+                    <TextBox x:Name="TxtHoTen" />
+                </StackPanel>
 
-            <TextBlock Grid.Row="5" Text="Loại khách" VerticalAlignment="Center" />
-            <ComboBox x:Name="CboLoaiKhach" Grid.Row="5" Grid.Column="1" Height="30" SelectedIndex="0">
-                <ComboBoxItem Content="Thường" />
-                <ComboBoxItem Content="VIP" />
-                <ComboBoxItem Content="Khách đoàn" />
-            </ComboBox>
+                <StackPanel Grid.Row="0" Grid.Column="2">
+                    <TextBlock Text="Số điện thoại" Style="{StaticResource LabelStyle}" />
+                    <TextBox x:Name="TxtSDT" />
+                </StackPanel>
 
-            <TextBlock Grid.Row="6" Text="Trạng thái" VerticalAlignment="Center" />
-            <ComboBox x:Name="CboTrangThai" Grid.Row="6" Grid.Column="1" Height="30" SelectedIndex="0">
-                <ComboBoxItem Content="Đang hoạt động" />
-                <ComboBoxItem Content="Tạm khóa" />
-                <ComboBoxItem Content="Ngừng sử dụng" />
-            </ComboBox>
+                <StackPanel Grid.Row="2" Grid.Column="0">
+                    <TextBlock Text="CCCD/CMND" Style="{StaticResource LabelStyle}" />
+                    <TextBox x:Name="TxtCCCD" />
+                </StackPanel>
 
-            <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Margin="0,10,0,0">
-                <TextBlock Text="Địa chỉ" />
-                <TextBox x:Name="TxtDiaChi" Height="48" Margin="0,6,0,0" Padding="8" TextWrapping="Wrap" AcceptsReturn="True" />
-                <TextBlock Text="Ghi chú" Margin="0,12,0,0" />
-                <TextBox x:Name="TxtGhiChu" Height="62" Margin="0,6,0,0" Padding="8" TextWrapping="Wrap" AcceptsReturn="True" />
-            </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="2">
+                    <TextBlock Text="Ngày sinh" Style="{StaticResource LabelStyle}" />
+                    <DatePicker x:Name="DpNgaySinh" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="4" Grid.Column="0">
+                    <TextBlock Text="Giới tính" Style="{StaticResource LabelStyle}" />
+                    <ComboBox x:Name="CboGioiTinh" SelectedIndex="0">
+                        <ComboBoxItem Content="Nam" />
+                        <ComboBoxItem Content="Nữ" />
+                        <ComboBoxItem Content="Khác" />
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Row="4" Grid.Column="2">
+                    <TextBlock Text="Loại khách" Style="{StaticResource LabelStyle}" />
+                    <ComboBox x:Name="CboLoaiKhach" SelectedIndex="0">
+                        <ComboBoxItem Content="Thường" />
+                        <ComboBoxItem Content="VIP" />
+                    </ComboBox>
+                </StackPanel>
+
+                <Grid Grid.Row="6" Grid.ColumnSpan="3">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="18" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="24" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0">
+                        <TextBlock Text="Trạng thái" Style="{StaticResource LabelStyle}" />
+                        <ComboBox x:Name="CboTrangThai" SelectedIndex="0">
+                            <ComboBoxItem Content="Đang hoạt động" />
+                            <ComboBoxItem Content="Tạm khóa" />
+                            <ComboBoxItem Content="Ngừng sử dụng" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="0" Grid.Column="2">
+                        <TextBlock Text="Địa chỉ" Style="{StaticResource LabelStyle}" />
+                        <TextBox x:Name="TxtDiaChi" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="3">
+                        <TextBlock Text="Ghi chú" Style="{StaticResource LabelStyle}" />
+                        <TextBox x:Name="TxtGhiChu"
+                                 MinHeight="112"
+                                 Padding="13,10"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 VerticalContentAlignment="Top" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <Border Grid.Row="2"
+                    Margin="0,18,0,0"
+                    Background="#FEF2F2"
+                    CornerRadius="8"
+                    Padding="12,9">
+                <TextBlock x:Name="TxtThongBao"
+                           Foreground="#DC2626"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap" />
+            </Border>
+
+            <Grid Grid.Row="3" Margin="0,22,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Width="142"
+                            Height="44"
+                            Background="#16A34A"
+                            BorderBrush="#15803D"
+                            Foreground="White"
+                            FontSize="15"
+                            FontWeight="Bold"
+                            Click="BtnLuu_Click"
+                            Content="Lưu" />
+                    <Button Width="132"
+                            Height="44"
+                            Margin="14,0,0,0"
+                            Background="#64748B"
+                            BorderBrush="#475569"
+                            Foreground="White"
+                            FontSize="15"
+                            FontWeight="Bold"
+                            Click="BtnHuy_Click"
+                            Content="Hủy" />
+                </StackPanel>
+            </Grid>
         </Grid>
-
-        <TextBlock x:Name="TxtThongBao"
-                   Grid.Row="2"
-                   VerticalAlignment="Center"
-                   Foreground="#EF4444"
-                   TextWrapping="Wrap" />
-
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Width="104"
-                    Height="34"
-                    Background="#0B55C7"
-                    BorderBrush="#0B55C7"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    Click="BtnLuu_Click"
-                    Content="Lưu" />
-            <Button Width="104"
-                    Height="34"
-                    Margin="12,0,0,0"
-                    Background="#667085"
-                    BorderBrush="#667085"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    Click="BtnHuy_Click"
-                    Content="Hủy" />
-        </StackPanel>
-    </Grid>
+    </Border>
 </Window>

@@ -8,6 +8,7 @@
              d:DesignHeight="720"
              d:DesignWidth="1120"
              Background="#F7F8FA"
+             Language="vi-VN"
              TextOptions.TextFormattingMode="Display"
              TextOptions.TextRenderingMode="ClearType"
              UseLayoutRounding="True"
@@ -123,9 +124,9 @@
                        
             <RowDefinition Height="Auto" />
                        
-            <RowDefinition Height="74" />
-                       
             <RowDefinition Height="106" />
+
+            <RowDefinition Height="116" />
                        
             <RowDefinition Height="*" />
                        
@@ -143,13 +144,19 @@
         </StackPanel>
 
                
-        <Border Grid.Row="1"
+        <Border Grid.Row="2"
+                Margin="0,12,0,0"
                 Background="#FAFAFA"
                 BorderBrush="#D8DEE8"
                 BorderThickness="1"
                 CornerRadius="12">
                        
             <Grid Margin="18,13">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="34" />
+                    <RowDefinition Height="10" />
+                    <RowDefinition Height="34" />
+                </Grid.RowDefinitions>
                                
                 <Grid.ColumnDefinitions>
                                        
@@ -157,21 +164,27 @@
                                        
                     <ColumnDefinition Width="18" />
                                        
+                    <ColumnDefinition Width="76" />
+                                       
+                    <ColumnDefinition Width="144" />
+                                       
+                    <ColumnDefinition Width="18" />
+
+                    <ColumnDefinition Width="68" />
+
+                    <ColumnDefinition Width="138" />
+
+                    <ColumnDefinition Width="18" />
+                                       
                     <ColumnDefinition Width="62" />
                                        
-                    <ColumnDefinition Width="116" />
+                    <ColumnDefinition Width="150" />
                                        
                     <ColumnDefinition Width="18" />
                                        
-                    <ColumnDefinition Width="52" />
+                    <ColumnDefinition Width="68" />
                                        
-                    <ColumnDefinition Width="128" />
-                                       
-                    <ColumnDefinition Width="18" />
-                                       
-                    <ColumnDefinition Width="58" />
-                                       
-                    <ColumnDefinition Width="128" />
+                    <ColumnDefinition Width="150" />
                                        
                     <ColumnDefinition Width="14" />
                                        
@@ -186,6 +199,7 @@
                                
                 <TextBox x:Name="TxtTimKiem"
                          Grid.Column="0"
+                         Grid.ColumnSpan="17"
                          Height="34"
                          Padding="38,0,12,0"
                          VerticalContentAlignment="Center"
@@ -194,6 +208,7 @@
                          TextChanged="TxtTimKiem_TextChanged"
                          ToolTip="Nhập mã hóa đơn, tên khách hoặc phòng" />
                 <iconPacks:PackIconMaterial Grid.Column="0"
+                                            Grid.ColumnSpan="17"
                                             Kind="Magnify"
                                             Width="18"
                                             Height="18"
@@ -204,9 +219,10 @@
                                             IsHitTestVisible="False" />
 
                                    
-                    <TextBlock Grid.Column="2" Text="Trạng thái" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Trạng thái" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
                                    
                     <ComboBox x:Name="CboTrangThai"
+                          Grid.Row="2"
                           Grid.Column="3"
                           Style="{StaticResource InputBoxStyle}"
                           SelectionChanged="BoLoc_Changed">
@@ -220,17 +236,34 @@
                     </ComboBox>
 
                                    
-                    <TextBlock Grid.Column="5" Text="Từ ngày" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="2" Grid.Column="5" Text="Sắp xếp" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
+
+                    <ComboBox x:Name="CboSapXep"
+                              Grid.Row="2"
+                              Grid.Column="6"
+                              Style="{StaticResource InputBoxStyle}"
+                              SelectionChanged="BoLoc_Changed">
+
+                        <ComboBoxItem Content="Mặc định" />
+
+                        <ComboBoxItem Content="Gần nhất" IsSelected="True" />
+
+                        <ComboBoxItem Content="Cũ nhất" />
+
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="2" Grid.Column="8" Text="Từ ngày" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
                                    
-                    <DatePicker x:Name="DpTuNgay" Grid.Column="6" Style="{StaticResource InputBoxStyle}" SelectedDateChanged="BoLoc_Changed" />
+                    <DatePicker x:Name="DpTuNgay" Grid.Row="2" Grid.Column="9" Style="{StaticResource InputBoxStyle}" SelectedDateChanged="BoLoc_Changed" />
 
                                    
-                    <TextBlock Grid.Column="8" Text="Đến ngày" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="2" Grid.Column="11" Text="Đến ngày" VerticalAlignment="Center" FontSize="14" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
                                    
-                    <DatePicker x:Name="DpDenNgay" Grid.Column="9" Style="{StaticResource InputBoxStyle}" SelectedDateChanged="BoLoc_Changed" />
+                    <DatePicker x:Name="DpDenNgay" Grid.Row="2" Grid.Column="12" Style="{StaticResource InputBoxStyle}" SelectedDateChanged="BoLoc_Changed" />
 
                                    
-                    <Button Grid.Column="11"
+                    <Button Grid.Row="2"
+                        Grid.Column="14"
                         Style="{StaticResource ActionButtonStyle}"
                         Background="{StaticResource DarkBlueBrush}"
                         BorderBrush="{StaticResource DarkBlueBrush}"
@@ -248,7 +281,8 @@
                     </Button>
 
                                    
-                    <Button Grid.Column="13"
+                    <Button Grid.Row="2"
+                        Grid.Column="16"
                         Style="{StaticResource ActionButtonStyle}"
                         Background="White"
                         BorderBrush="#AAB4C2"
@@ -270,7 +304,7 @@
         </Border>
 
                
-        <Grid Grid.Row="2" Margin="0,12,0,0">
+        <Grid Grid.Row="1">
                        
             <Grid.ColumnDefinitions>
                                
@@ -317,7 +351,6 @@
                         <TextBlock Text="Tổng hóa đơn" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
                         <TextBlock x:Name="TxtTongHoaDon" Text="0" Margin="0,3,0,0" FontSize="23" FontWeight="Bold" Foreground="#1D4ED8" />
-                        <TextBlock Text="+15% so với tháng trước" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#2563EB" />
                                            
                     </StackPanel>
                                    
@@ -352,7 +385,6 @@
                         <TextBlock Text="Chưa thanh toán" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
                         <TextBlock x:Name="TxtChuaThanhToan" Text="0" Margin="0,3,0,0" FontSize="23" FontWeight="Bold" Foreground="#B45309" />
-                        <TextBlock Text="Cần xử lý trong ngày" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#B45309" />
                                            
                     </StackPanel>
                                    
@@ -387,7 +419,6 @@
                         <TextBlock Text="Đã thanh toán" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
                         <TextBlock x:Name="TxtDaThanhToan" Text="0" Margin="0,3,0,0" FontSize="23" FontWeight="Bold" Foreground="#15803D" />
-                        <TextBlock Text="Tỷ lệ hoàn tất tốt" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#15803D" />
                                            
                     </StackPanel>
                                    
@@ -422,7 +453,6 @@
                         <TextBlock Text="Doanh thu" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
                                                
                         <TextBlock x:Name="TxtDoanhThu" Text="0 VND" Margin="0,3,0,0" FontSize="19" FontWeight="Bold" Foreground="#7E22CE" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="Doanh thu đã thanh toán" Margin="0,2,0,0" FontSize="9.5" FontWeight="SemiBold" Foreground="#7E22CE" />
                                            
                     </StackPanel>
                                    
@@ -538,7 +568,7 @@
 
                         <DataGridTextColumn Header="Ngày lập" Binding="{Binding NgayLapText}" Width="120" />
 
-                        <DataGridTextColumn Header="Phụ phí" Binding="{Binding PhuPhiText}" Width="150" />
+                        <DataGridTextColumn Header="Đã thanh toán" Binding="{Binding DaThanhToanText}" Width="150" />
 
                         <DataGridTextColumn Header="Tổng tiền" Binding="{Binding TongTienText}" Width="150" />
 

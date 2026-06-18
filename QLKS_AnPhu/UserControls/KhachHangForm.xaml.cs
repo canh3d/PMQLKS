@@ -32,6 +32,7 @@ namespace QLKS_AnPhu.View
 
         private void BtnLuu_Click(object sender, RoutedEventArgs e)
         {
+            TxtThongBao.Text = string.Empty;
             if (string.IsNullOrWhiteSpace(TxtHoTen.Text))
             {
                 TxtThongBao.Text = "Vui lòng nhập họ tên khách hàng.";

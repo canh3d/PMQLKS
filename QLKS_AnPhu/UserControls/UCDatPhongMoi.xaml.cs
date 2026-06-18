@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DTO;
+using QLKS_AnPhu.Security;
 
 namespace QLKS_AnPhu.UserControls
 {
@@ -23,6 +24,7 @@ namespace QLKS_AnPhu.UserControls
 
         public event EventHandler? CloseRequested;
         public event EventHandler<PhongDTO>? DatPhongRequested;
+        public event EventHandler? DatPhongTheoDoanRequested;
 
         public bool NhanNgay => RbNhanNgay?.IsChecked == true;
         public decimal TienPhong => tienPhong;
@@ -37,6 +39,7 @@ namespace QLKS_AnPhu.UserControls
             return new DatPhongRequestDTO
             {
                 Phong = phong,
+                MaNhanVien = CurrentUser.MaNV,
                 KhachHang = new KhachHangDTO
                 {
                     HoTen = TxtHoTen.Text.Trim(),
@@ -75,6 +78,7 @@ namespace QLKS_AnPhu.UserControls
         private readonly ObservableCollection<DichVuDatPhongItem> dichVuDaThem = new();
         private CheDoDatPhong cheDoHienTai = CheDoDatPhong.TheoNgay;
         private bool dangNapPhong;
+        private bool dangLocPhongTheoLich;
         private bool dangCapNhatDatCoc;
         private decimal datCocGoiYTruoc = -1;
         private decimal tienPhong;
@@ -99,7 +103,7 @@ namespace QLKS_AnPhu.UserControls
             DpNgaySinh.SelectedDate = DateTime.Today;
             DpNgayNhan.SelectedDate = DateTime.Now;
             DpNgayTra.SelectedDate = DateTime.Now.AddDays(1);
-            TxtGioNhanNgay.Text = "14:00";
+            TxtGioNhanNgay.Text = "09:00";
             TxtGioTraNgay.Text = "12:00";
             TxtGioNhan.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
             NapThongTinPhongTuDatabase();
@@ -177,6 +181,7 @@ namespace QLKS_AnPhu.UserControls
 
             List<PhongDTO> danhSachTheoLoai = danhSachPhong
                 .Where(LaPhongCoTheDat)
+                .Where(LaPhongRanhTheoLich)
                 .Where(item =>
                     string.IsNullOrWhiteSpace(loaiPhong) ||
                     string.Equals(item.LoaiPhong, loaiPhong, StringComparison.OrdinalIgnoreCase) ||
@@ -199,6 +204,18 @@ namespace QLKS_AnPhu.UserControls
             TinhTongTien();
         }
 
+        private bool LaPhongRanhTheoLich(PhongDTO item)
+        {
+            try
+            {
+                return phongBUS.KiemTraPhongRanh(item.Ma, LayNgayNhanLuu(), LayNgayTraLuu(), out _);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static bool LaPhongCoTheDat(PhongDTO phong)
         {
             string trangThai = BoDau(phong.TrangThai).ToLowerInvariant();
@@ -211,10 +228,7 @@ namespace QLKS_AnPhu.UserControls
                 || trangThai.Contains("ready")
                 || trangThai.Contains("available");
 
-            bool biChan = trangThai.Contains("thue")
-                || trangThai.Contains("co khach")
-                || trangThai.Contains("da dat")
-                || trangThai.Contains("chua don")
+            bool biChan = trangThai.Contains("chua don")
                 || trangThai.Contains("sua")
                 || trangThai.Contains("bao tri")
                 || donDep.Contains("chua")
@@ -319,12 +333,15 @@ namespace QLKS_AnPhu.UserControls
             }
             else
             {
+                TxtGioNhanNgay.Text = "09:00";
+                TxtGioTraNgay.Text = "12:00";
                 GrpThongTinDatPhong.Header = "THÔNG TIN ĐẶT PHÒNG THEO NGÀY";
                 LblNgayNhan.Text = "Ngày nhận";
                 LblNgayTra.Text = "Ngày trả";
             }
 
             TinhTongTien();
+            LocLaiPhongTheoThoiGian();
         }
 
         private void CapNhatNutCheDo()
@@ -404,6 +421,25 @@ namespace QLKS_AnPhu.UserControls
             }
 
             TinhTongTien();
+            LocLaiPhongTheoThoiGian();
+        }
+
+        private void LocLaiPhongTheoThoiGian()
+        {
+            if (dangNapPhong || dangLocPhongTheoLich || CboLoaiPhong == null || CboPhong == null)
+            {
+                return;
+            }
+
+            dangLocPhongTheoLich = true;
+            try
+            {
+                NapPhongTheoLoai(CboLoaiPhong.SelectedItem?.ToString(), phong);
+            }
+            finally
+            {
+                dangLocPhongTheoLich = false;
+            }
         }
 
         private void LoaiDatPhong_Changed(object sender, RoutedEventArgs e)
@@ -484,7 +520,7 @@ namespace QLKS_AnPhu.UserControls
                 return;
             }
 
-            decimal goiY = LamTronTien(tienPhong * 0.3m);
+            decimal goiY = LayCocGoiYTheoLoaiPhong(phong);
 
             dangCapNhatDatCoc = true;
             TxtDatCoc.Text = goiY.ToString("0");
@@ -496,6 +532,22 @@ namespace QLKS_AnPhu.UserControls
         {
             const decimal step = 50000m;
             return value <= 0 ? 0 : Math.Ceiling(value / step) * step;
+        }
+
+        private static decimal LayCocGoiYTheoLoaiPhong(PhongDTO phong)
+        {
+            string loaiPhong = (phong.LoaiPhong ?? string.Empty).ToLowerInvariant();
+            if (loaiPhong.Contains("vip"))
+            {
+                return 500000m;
+            }
+
+            if (loaiPhong.Contains("đôi") || loaiPhong.Contains("doi"))
+            {
+                return 300000m;
+            }
+
+            return 200000m;
         }
 
         private decimal TinhTienPhong()
@@ -543,6 +595,12 @@ namespace QLKS_AnPhu.UserControls
 
         private void BtnLuu_Click(object sender, RoutedEventArgs e)
         {
+            if (CboPhong.SelectedItem is not PhongDTO)
+            {
+                MessageBox.Show("Không có phòng trống phù hợp trong khoảng thời gian đã chọn.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(TxtHoTen.Text))
             {
                 MessageBox.Show("Vui lòng nhập họ tên khách hàng.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -557,7 +615,23 @@ namespace QLKS_AnPhu.UserControls
                 return;
             }
 
+            if (!phongBUS.KiemTraPhongRanh(phong.Ma, LayNgayNhanLuu(), LayNgayTraLuu(), out string lyDo))
+            {
+                MessageBox.Show(
+                    $"Phòng {phong.MaHienThi} không trống trong khoảng thời gian đã chọn.\n{lyDo}",
+                    "Thông báo",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                LocLaiPhongTheoThoiGian();
+                return;
+            }
+
             DatPhongRequested?.Invoke(this, phong);
+        }
+
+        private void BtnDatTheoDoan_Click(object sender, RoutedEventArgs e)
+        {
+            DatPhongTheoDoanRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void CapNhatGhiChuThanhToan()
@@ -569,7 +643,7 @@ namespace QLKS_AnPhu.UserControls
                 ghiChu = ghiChu[..markerIndex].Trim();
             }
 
-            string thanhToan = $"{ThanhToanMarker} DatCoc={tienDatCoc:0};TienPhong={tienPhong:0};TienDichVu={tienDichVu:0};NhanNgay={NhanNgay}";
+            string thanhToan = $"{ThanhToanMarker} DatCoc={tienDatCoc:0};TienPhong={tienPhong:0};TienDichVu={tienDichVu:0};NhanNgay={NhanNgay};CheDo={LayCheDoDatPhong()}";
             phong.GhiChu = string.IsNullOrWhiteSpace(ghiChu) ? thanhToan : $"{ghiChu} {thanhToan}";
         }
 
@@ -581,7 +655,7 @@ namespace QLKS_AnPhu.UserControls
             TxtDiaChi.Clear();
             TxtSoNguoi.Text = "1";
             TxtDatCoc.Text = "0";
-            TxtGioNhanNgay.Text = "14:00";
+            TxtGioNhanNgay.Text = "09:00";
             TxtGioTraNgay.Text = "12:00";
             TxtGioNhan.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
             TxtSoGioThue.Text = "2";
@@ -609,7 +683,7 @@ namespace QLKS_AnPhu.UserControls
                 return date.Date.Add(LayGio(TxtGioNhanNgay.Text, new TimeSpan(20, 0, 0)));
             }
 
-            TimeSpan gioNhanTheoNgay = LayGio(TxtGioNhanNgay.Text, new TimeSpan(14, 0, 0));
+            TimeSpan gioNhanTheoNgay = LayGio(TxtGioNhanNgay.Text, new TimeSpan(9, 0, 0));
             return date.Date.Add(gioNhanTheoNgay);
         }
 

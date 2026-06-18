@@ -13,7 +13,7 @@ namespace QLKS_AnPhu.View
         public PhongForm(PhongDTO? phong = null)
         {
             InitializeComponent();
-            DuLieu = phong == null ? new PhongDTO { TrangThai = "Phòng trống", LoaiPhong = "Phòng đơn" } : Clone(phong);
+            DuLieu = phong == null ? new PhongDTO { TrangThai = "Trống", LoaiPhong = "Phòng đơn" } : Clone(phong);
             NapDuLieu(phong != null);
         }
 
@@ -29,7 +29,7 @@ namespace QLKS_AnPhu.View
             TxtGiaDem.Text = DuLieu.GiaDem == 0 ? string.Empty : DuLieu.GiaDem.ToString("0");
             TxtGhiChu.Text = DuLieu.GhiChu == "--" ? string.Empty : DuLieu.GhiChu;
             SelectCombo(CboLoaiPhong, TxtLoaiPhong.Text);
-            SelectCombo(CboTrangThai, string.IsNullOrWhiteSpace(DuLieu.TrangThai) ? "Phòng trống" : DuLieu.TrangThai);
+            SelectCombo(CboTrangThai, string.IsNullOrWhiteSpace(DuLieu.TrangThai) ? "Trống" : DuLieu.TrangThai);
             dangNapDuLieu = false;
 
             if (!isEdit)
@@ -162,16 +162,16 @@ namespace QLKS_AnPhu.View
         {
             if (loaiPhong.Contains("VIP", StringComparison.OrdinalIgnoreCase))
             {
-                return (200000m, 1200000m, 900000m);
+                return (200000m, 1200000m, 1200000m);
             }
 
             if (loaiPhong.Contains("đôi", StringComparison.OrdinalIgnoreCase) ||
                 loaiPhong.Contains("doi", StringComparison.OrdinalIgnoreCase))
             {
-                return (120000m, 700000m, 500000m);
+                return (120000m, 650000m, 650000m);
             }
 
-            return (80000m, 450000m, 350000m);
+            return (80000m, 450000m, 450000m);
         }
 
         private static PhongDTO Clone(PhongDTO phong)

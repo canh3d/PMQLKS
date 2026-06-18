@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Data;
 using System.Globalization;
 using System.IO;
@@ -10,6 +10,8 @@ using System.Windows.Media.Imaging;
 using Microsoft.Data.SqlClient;
 using Microsoft.Win32;
 using QLKS_AnPhu.DAL;
+using QLKS_AnPhu.Security;
+using QLKS_AnPhu.Services;
 
 namespace QLKS_AnPhu.View
 {
@@ -33,13 +35,19 @@ namespace QLKS_AnPhu.View
 
         private void NapHoaDon()
         {
-            TxtNgayLap.Text = "Ngay lap: " + hoaDon.NgayLapHoaDon.ToString("dd/MM/yyyy HH:mm");
-            TxtMaHoaDon.Text = "Ma hoa don: " + hoaDon.MaHoaDon;
-            TxtTieuDeHoaDon.Text = hoaDon.LoaiThanhToan == "PHATSINH" ? "Hóa đơn phát sinh thêm" : "Hóa đơn nhận phòng";
-            TxtSoPhong.Text = "So phong: " + hoaDon.SoPhong;
-            TxtKhachHang.Text = "Khach hang: " + hoaDon.TenKhachHang;
-            TxtSdt.Text = "SDT: " + hoaDon.SoDienThoai;
-            TxtTongTien.Text = hoaDon.TongTien.ToString("N0", CultureInfo.InvariantCulture) + " VND";
+            TxtNgayLap.Text = "Ngày lập: " + hoaDon.NgayLapHoaDon.ToString("dd/MM/yyyy HH:mm");
+            TxtMaHoaDon.Text = "Mã hóa đơn: " + hoaDon.MaHoaDon;
+            TxtNhanVienLap.Text = "Nhân viên lập: " + LayNhanVienLap();
+            TxtTrangThai.Text = "Trạng thái: " + hoaDon.TrangThai;
+            TxtTrangThai.Foreground = hoaDon.DaThanhToan
+                ? System.Windows.Media.Brushes.ForestGreen
+                : System.Windows.Media.Brushes.DarkOrange;
+            TxtTieuDeHoaDon.Text = hoaDon.LoaiThanhToan == "PHATSINH" ? "Hóa đơn phát sinh" : "Hóa đơn nhận phòng";
+            TxtSoPhong.Text = "Phòng: " + hoaDon.SoPhong;
+            TxtThoiGianThue.Text = "Thời gian: " + hoaDon.NgayNhanPhong.ToString("dd/MM/yyyy HH:mm") + " - " + hoaDon.NgayTraPhong.ToString("dd/MM/yyyy HH:mm");
+            TxtLoaiPhong.Text = "Loại phòng: " + hoaDon.LoaiPhong;
+            TxtKhachHang.Text = "Khách hàng: " + hoaDon.TenKhachHang;
+            TxtSdt.Text = "SĐT: " + hoaDon.SoDienThoai;
 
             chiTiet.Clear();
             phongChiTiet.Clear();
@@ -56,59 +64,128 @@ namespace QLKS_AnPhu.View
             }
             else
             {
-                rooms = GioiHanTienPhongTheoHoaDon(rooms, hoaDon.TienPhong);
+                rooms = GioiHanTienPhongTheoHoaDon(rooms, hoaDon.TienPhong, hoaDon.LoaiThanhToan == "PHATSINH");
             }
 
-            foreach (RoomPrintGroup room in rooms)
+            if (hoaDon.LaPhieuDatDaHuyGiuCoc)
             {
-                if (hoaDon.LoaiThanhToan != "PHATSINH" && room.TienPhong > 0)
+                rooms[0].Items.Add(new PrintLineItem("Giữ tiền cọc do hủy đặt phòng", hoaDon.TienCoc, 1, hoaDon.TienCoc, rooms[0].SoPhong));
+            }
+            else
+            {
+                foreach (RoomPrintGroup room in rooms)
                 {
-                    room.Items.Add(new PrintLineItem("Tien phong luc check-in", room.TienPhong, 1, room.TienPhong));
+                    if (hoaDon.LoaiThanhToan != "PHATSINH" && room.TienPhong > 0)
+                    {
+                        room.Items.Add(new PrintLineItem("Tiền phòng lúc check-in", room.TienPhong, 1, room.TienPhong, room.SoPhong));
+                    }
+                    else if (hoaDon.LoaiThanhToan == "PHATSINH" && room.TienPhong > 0)
+                    {
+                        room.Items.Add(new PrintLineItem("Tiền phòng / gia hạn / đổi phòng", room.TienPhong, 1, room.TienPhong, room.SoPhong));
+                    }
                 }
-                else if (hoaDon.LoaiThanhToan == "PHATSINH" && room.TienPhong > 0)
+            }
+            if (!hoaDon.LaPhieuDatDaHuyGiuCoc && hoaDon.LoaiThanhToan == "PHATSINH" && hoaDon.TienPhong < 0)
+            {
+                rooms[0].Items.Add(new PrintLineItem(
+                    "Hoàn chênh lệch đổi xuống phòng giá thấp hơn",
+                    Math.Abs(hoaDon.TienPhong),
+                    1,
+                    hoaDon.TienPhong,
+                    rooms[0].SoPhong));
+            }
+
+            if (!hoaDon.LaPhieuDatDaHuyGiuCoc)
+            {
+                decimal tongDichVuDaNap = 0;
+                foreach (DichVuHoaDonItem item in LoadDichVu())
                 {
-                    room.Items.Add(new PrintLineItem("Gia han phong", room.TienPhong, 1, room.TienPhong));
+                    RoomPrintGroup target = item.MaPhong.HasValue
+                        ? rooms.FirstOrDefault(room => room.MaPhong == item.MaPhong) ?? rooms[0]
+                        : rooms[0];
+                    target.Items.Add(new PrintLineItem(item.TenDichVu, item.DonGia, item.SoLuong, item.ThanhTien, target.SoPhong));
+                    tongDichVuDaNap += item.ThanhTien;
+                }
+
+                decimal dichVuChuaCoChiTiet = Math.Max(0, hoaDon.TienDichVu - tongDichVuDaNap);
+                if (dichVuChuaCoChiTiet > 0)
+                {
+                    rooms[0].Items.Add(new PrintLineItem(
+                        hoaDon.LoaiThanhToan == "PHATSINH" ? "Dịch vụ phát sinh trong thời gian thuê" : "Dịch vụ tại check-in",
+                        dichVuChuaCoChiTiet,
+                        1,
+                        dichVuChuaCoChiTiet,
+                        rooms[0].SoPhong));
+                }
+
+                if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.PhuPhiHienThi > 0)
+                {
+                    rooms[0].Items.Add(new PrintLineItem("Phụ phí nhận sớm", 0, 0, hoaDon.PhuPhiHienThi, rooms[0].SoPhong));
+                }
+                else if (hoaDon.LoaiThanhToan == "PHATSINH" && hoaDon.PhuPhiHienThi > 0)
+                {
+                    rooms[0].Items.Add(new PrintLineItem("Phụ phí trả muộn", 0, 0, hoaDon.PhuPhiHienThi, rooms[0].SoPhong));
+                }
+
+                if (hoaDon.ThueVatHienThi > 0)
+                {
+                    rooms[0].Items.Add(new PrintLineItem("Thuế VAT (10%)", 0, 0, hoaDon.ThueVatHienThi, rooms[0].SoPhong));
+                }
+
+                if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.GiamGiaHienThi > 0)
+                {
+                    rooms[0].Items.Add(new PrintLineItem("Giảm giá", 0, 0, -hoaDon.GiamGiaHienThi, rooms[0].SoPhong));
+                }
+
+                if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.TienCoc > 0)
+                {
+                    rooms[0].Items.Add(new PrintLineItem("Đã đặt cọc", 0, 0, -hoaDon.TienCoc, rooms[0].SoPhong));
                 }
             }
 
-            foreach (DichVuHoaDonItem item in LoadDichVu())
-            {
-                RoomPrintGroup target = item.MaPhong.HasValue
-                    ? rooms.FirstOrDefault(room => room.MaPhong == item.MaPhong) ?? rooms[0]
-                    : rooms[0];
-                target.Items.Add(new PrintLineItem(item.TenDichVu, item.DonGia, item.SoLuong, item.ThanhTien));
-            }
-
-            if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.PhuPhi > 0)
-            {
-                rooms[0].Items.Add(new PrintLineItem("Phu phi nhan som", 0, 0, hoaDon.PhuPhi));
-            }
-            else if (hoaDon.LoaiThanhToan == "PHATSINH" && hoaDon.PhuPhi > 0)
-            {
-                rooms[0].Items.Add(new PrintLineItem("Phu phi tra muon", 0, 0, hoaDon.PhuPhi));
-            }
-
-            if (hoaDon.ThueVat > 0)
-            {
-                rooms[0].Items.Add(new PrintLineItem("Thue VAT (10%)", 0, 0, hoaDon.ThueVat));
-            }
-
-            if (hoaDon.LoaiThanhToan != "PHATSINH" && hoaDon.GiamGia > 0)
-            {
-                rooms[0].Items.Add(new PrintLineItem("Giam gia / coc", 0, 0, -hoaDon.GiamGia));
-            }
-
+            int stt = 1;
             foreach (RoomPrintGroup room in rooms)
             {
                 foreach (PrintLineItem item in room.Items)
                 {
+                    item.Stt = stt++;
                     chiTiet.Add(item);
                 }
 
                 phongChiTiet.Add(room);
             }
 
-            ItemsPhongHoaDon.ItemsSource = phongChiTiet;
+            decimal tamTinh = chiTiet.Where(item => item.ThanhTien > 0).Sum(item => item.ThanhTien);
+            decimal giamGiaCoc = chiTiet.Where(item => item.ThanhTien < 0).Sum(item => item.ThanhTien);
+            decimal tongTrenBill = Math.Max(0, tamTinh + giamGiaCoc);
+            TxtTamTinh.Text = tamTinh.ToString("N0", CultureInfo.InvariantCulture) + " VND";
+            TxtGiamGiaCoc.Text = giamGiaCoc == 0 ? "0 VND" : giamGiaCoc.ToString("N0", CultureInfo.InvariantCulture) + " VND";
+            bool daThanhToan = hoaDon.DaThanhToan;
+            TxtDaThanhToan.Text = daThanhToan
+                ? tongTrenBill.ToString("N0", CultureInfo.InvariantCulture) + " VND"
+                : "0 VND";
+            TxtTongTienLabel.Text = daThanhToan ? "Đã thanh toán" : "Cần thanh toán";
+            TxtTongTien.Foreground = daThanhToan ? Brushes.ForestGreen : Brushes.Red;
+            TxtTongTien.Text = tongTrenBill.ToString("N0", CultureInfo.InvariantCulture) + " VND";
+            TxtGhiChuHoaDon.Text = hoaDon.LoaiThanhToan == "PHATSINH"
+                ? "Hóa đơn tổng hợp tiền phòng, gia hạn/đổi phòng, dịch vụ và phụ phí phát sinh."
+                : "Dịch vụ tại check-in, phụ phí nhận sớm, VAT và cọc/giảm giá được thể hiện rõ để khách kiểm tra.";
+            ItemsChiTietHoaDon.ItemsSource = chiTiet;
+        }
+
+        private static string LayNhanVienLap()
+        {
+            if (!string.IsNullOrWhiteSpace(CurrentUser.HoTen))
+            {
+                return CurrentUser.HoTen;
+            }
+
+            if (!string.IsNullOrWhiteSpace(CurrentUser.TenDangNhap))
+            {
+                return CurrentUser.TenDangNhap;
+            }
+
+            return "Chưa xác định";
         }
 
         private List<RoomPrintGroup> LoadPhongHoaDon()
@@ -275,13 +352,17 @@ ORDER BY P.MaPhong",
                 .ToList();
         }
 
-        private static List<RoomPrintGroup> GioiHanTienPhongTheoHoaDon(IEnumerable<RoomPrintGroup> source, decimal targetTotal)
+        private static List<RoomPrintGroup> GioiHanTienPhongTheoHoaDon(IEnumerable<RoomPrintGroup> source, decimal targetTotal, bool dungDungTongHoaDon = false)
         {
             List<RoomPrintGroup> result = new();
             decimal remaining = Math.Max(0, targetTotal);
-            foreach (RoomPrintGroup room in source)
+            List<RoomPrintGroup> rooms = source.ToList();
+            for (int index = 0; index < rooms.Count; index++)
             {
-                decimal amount = Math.Min(room.TienPhong, remaining);
+                RoomPrintGroup room = rooms[index];
+                decimal amount = dungDungTongHoaDon && index == 0
+                    ? remaining
+                    : Math.Min(room.TienPhong, remaining);
                 result.Add(new RoomPrintGroup
                 {
                     MaPhong = room.MaPhong,
@@ -296,24 +377,44 @@ ORDER BY P.MaPhong",
 
         private void BtnIn_Click(object sender, RoutedEventArgs e)
         {
-            PrintDialog dialog = new();
-            if (dialog.ShowDialog() != true)
+            try
             {
-                return;
+                PrintDialog dialog = new();
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                InvoicePaper.UpdateLayout();
+                double paperWidth = Math.Max(1, InvoicePaper.ActualWidth);
+                double paperHeight = Math.Max(1, InvoicePaper.ActualHeight);
+                Size printableSize = new(dialog.PrintableAreaWidth, dialog.PrintableAreaHeight);
+                Transform? oldTransform = InvoicePaper.LayoutTransform;
+                Thickness oldMargin = InvoicePaper.Margin;
+
+                try
+                {
+                    double scale = Math.Min(printableSize.Width / paperWidth, printableSize.Height / paperHeight);
+                    scale = Math.Min(1, scale);
+                    InvoicePaper.Margin = new Thickness(0);
+                    InvoicePaper.LayoutTransform = new ScaleTransform(scale, scale);
+                    InvoicePaper.Measure(printableSize);
+                    InvoicePaper.Arrange(new Rect(new Point(0, 0), printableSize));
+                    InvoicePaper.UpdateLayout();
+
+                    dialog.PrintVisual(InvoicePaper, "Hóa đơn " + hoaDon.MaHoaDon);
+                }
+                finally
+                {
+                    InvoicePaper.LayoutTransform = oldTransform;
+                    InvoicePaper.Margin = oldMargin;
+                    InvoicePaper.UpdateLayout();
+                }
             }
-
-            Size printableSize = new(dialog.PrintableAreaWidth, dialog.PrintableAreaHeight);
-            Transform? oldTransform = InvoicePaper.LayoutTransform;
-            double scale = Math.Min(printableSize.Width / InvoicePaper.ActualWidth, printableSize.Height / InvoicePaper.ActualHeight);
-            InvoicePaper.LayoutTransform = new ScaleTransform(scale, scale);
-            InvoicePaper.Measure(printableSize);
-            InvoicePaper.Arrange(new Rect(new Point(0, 0), printableSize));
-            InvoicePaper.UpdateLayout();
-
-            dialog.PrintVisual(InvoicePaper, "Hoa don " + hoaDon.MaHoaDon);
-
-            InvoicePaper.LayoutTransform = oldTransform;
-            InvoicePaper.UpdateLayout();
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không in được hóa đơn: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void BtnXuatAnh_Click(object sender, RoutedEventArgs e)
@@ -344,8 +445,9 @@ ORDER BY P.MaPhong",
         {
             SaveFileDialog dialog = new()
             {
-                Filter = "Excel CSV (*.csv)|*.csv",
-                FileName = SafeFileName(hoaDon.MaHoaDon) + ".csv"
+                Title = "Xuất chi tiết hóa đơn",
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                FileName = SafeFileName(hoaDon.MaHoaDon) + ".xlsx"
             };
 
             if (dialog.ShowDialog() != true)
@@ -353,36 +455,46 @@ ORDER BY P.MaPhong",
                 return;
             }
 
-            StringBuilder builder = new();
-            builder.AppendLine("Khach san An Phu");
-            builder.AppendLine("Ma hoa don," + Csv(hoaDon.MaHoaDon));
-            builder.AppendLine("Ngay lap," + Csv(hoaDon.NgayLapHoaDon.ToString("dd/MM/yyyy HH:mm")));
-            builder.AppendLine("Khach hang," + Csv(hoaDon.TenKhachHang));
-            builder.AppendLine("SDT," + Csv(hoaDon.SoDienThoai));
-            builder.AppendLine("Phong," + Csv(hoaDon.SoPhong));
-            builder.AppendLine();
-            builder.AppendLine("Phong,Dich vu / vat tu,Don gia,SL,Thanh tien,Tong phong");
-            foreach (RoomPrintGroup room in phongChiTiet)
+            try
             {
-                bool first = true;
-                foreach (PrintLineItem item in room.Items)
+                ExcelDocument document = new()
                 {
-                    builder.AppendLine(
-                        Csv(first ? room.SoPhong : string.Empty) + "," +
-                        Csv(item.Ten) + "," +
-                        item.DonGia.ToString(CultureInfo.InvariantCulture) + "," +
-                        item.SoLuong.ToString(CultureInfo.InvariantCulture) + "," +
-                        item.ThanhTien.ToString(CultureInfo.InvariantCulture) + "," +
-                        (first ? room.TongPhong.ToString(CultureInfo.InvariantCulture) : string.Empty));
-                    first = false;
-                }
+                    Title = $"HÓA ĐƠN {hoaDon.MaHoaDon}",
+                    Subtitle = $"{TxtTieuDeHoaDon.Text} | Ngày lập: {hoaDon.NgayLapHoaDon:dd/MM/yyyy HH:mm}",
+                    SheetName = "Hóa đơn"
+                };
+
+                ExcelSection information = new()
+                {
+                    Title = "Thông tin hóa đơn",
+                    Headers = ["Nội dung", "Thông tin"],
+                    ColumnWidths = [22, 42]
+                };
+                information.Rows.Add(["Khách hàng", hoaDon.TenKhachHang]);
+                information.Rows.Add(["Số điện thoại", hoaDon.SoDienThoai]);
+                information.Rows.Add(["Phòng", hoaDon.SoPhong]);
+                information.Rows.Add(["Thời gian lưu trú", $"{hoaDon.NgayNhanPhong:dd/MM/yyyy HH:mm} - {hoaDon.NgayTraPhong:dd/MM/yyyy HH:mm}"]);
+                information.Rows.Add(["Trạng thái", hoaDon.TrangThai]);
+                document.Sections.Add(information);
+
+                ExcelSection details = new()
+                {
+                    Title = "Chi tiết thanh toán",
+                    Headers = ["STT", "Phòng", "Khoản mục", "Đơn giá", "Số lượng", "Thành tiền"],
+                    ColumnWidths = [8, 12, 34, 18, 12, 20],
+                    Summary = $"Tổng giá trị: {hoaDon.TongGiaTriHoaDon:N0} VND | Tiền cọc: {hoaDon.TienCoc:N0} VND | Cần thanh toán: {hoaDon.TongTien:N0} VND"
+                };
+                details.Rows.AddRange(chiTiet.Select(item => (IReadOnlyList<object?>)
+                    [item.Stt, item.SoPhong, item.Ten, new ExcelMoney(item.DonGia), item.SoLuong, new ExcelMoney(item.ThanhTien)]));
+                document.Sections.Add(details);
+
+                ExcelExportService.Export(dialog.FileName, document);
+                MessageBox.Show("Đã xuất file Excel.", "Xuất Excel", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-
-            builder.AppendLine();
-            builder.AppendLine("Tong tien,,,," + hoaDon.TongTien.ToString(CultureInfo.InvariantCulture));
-            File.WriteAllText(dialog.FileName, "\uFEFF" + builder, Encoding.UTF8);
-
-            MessageBox.Show("Da xuat file Excel.", "Xuat Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không xuất được Excel: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void BtnDong_Click(object sender, RoutedEventArgs e)
@@ -460,15 +572,18 @@ END AS decimal(18, 2))";
 
     public class PrintLineItem
     {
-        public PrintLineItem(string ten, decimal donGia, decimal soLuong, decimal thanhTien)
+        public PrintLineItem(string ten, decimal donGia, decimal soLuong, decimal thanhTien, string soPhong = "")
         {
             Ten = ten;
             DonGia = donGia;
             SoLuong = soLuong;
             ThanhTien = thanhTien;
+            SoPhong = soPhong;
         }
 
+        public int Stt { get; set; }
         public string Ten { get; }
+        public string SoPhong { get; }
         public decimal DonGia { get; }
         public decimal SoLuong { get; }
         public decimal ThanhTien { get; }
@@ -477,3 +592,4 @@ END AS decimal(18, 2))";
         public string ThanhTienText => ThanhTien.ToString("N0", CultureInfo.InvariantCulture);
     }
 }
+

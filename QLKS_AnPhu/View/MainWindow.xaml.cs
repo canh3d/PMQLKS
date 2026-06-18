@@ -8,17 +8,17 @@ namespace QLKS_AnPhu
 {
     public partial class MainWindow : Window
     {
-        private bool isSidebarExpanded = true;
         private readonly AppUser currentUser;
+        private bool isSidebarExpanded = true;
         private Button? activeMenuButton;
 
         public MainWindow() : this(new AppUser
         {
             MaTK = 0,
-            TenDangNhap = "admin",
-            VaiTro = "Quản lý",
-            HoTenNhanVien = "Admin",
-            Permissions = PermissionService.AllPermissions.Select(item => item.Code).ToHashSet(StringComparer.OrdinalIgnoreCase)
+            TenDangNhap = string.Empty,
+            VaiTro = string.Empty,
+            HoTenNhanVien = string.Empty,
+            Permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         })
         {
         }
@@ -27,14 +27,17 @@ namespace QLKS_AnPhu
         {
             InitializeComponent();
             currentUser = user;
+            CurrentUser.Set(user);
+
             LblBrandTitle.Foreground = (Brush)FindResource("TextMainBrush");
             LblBrandSubtitle.Foreground = (Brush)FindResource("TextMutedBrush");
             LblDichVu.Text = "Dịch vụ - vật tư";
             BtnMenuVatTu.Visibility = Visibility.Collapsed;
             BtnMenuCaiDat.Visibility = Visibility.Collapsed;
             TxtXinChao.Text = $"Xin chào: {GetDisplayName()} ({currentUser.VaiTro})";
+
             ApplyPermissions();
-            Navigate(PermissionService.TrangChu, () => new TrangChu(), BtnTrangChu, "Dashboard khách sạn");
+            Navigate(PermissionService.TrangChu, () => new TrangChu(currentUser), BtnTrangChu, "Dashboard khách sạn");
         }
 
         private string GetDisplayName()
@@ -152,12 +155,12 @@ namespace QLKS_AnPhu
 
         private void BtnTrangChu_Click(object sender, RoutedEventArgs e)
         {
-            Navigate(PermissionService.TrangChu, () => new TrangChu(), BtnTrangChu, "Dashboard khách sạn");
+            Navigate(PermissionService.TrangChu, () => new TrangChu(currentUser), BtnTrangChu, "Dashboard khách sạn");
         }
 
         public void NavigateToTrangChu()
         {
-            Navigate(PermissionService.TrangChu, () => new TrangChu(), BtnTrangChu, "Dashboard khách sạn");
+            Navigate(PermissionService.TrangChu, () => new TrangChu(currentUser), BtnTrangChu, "Dashboard khách sạn");
         }
 
         public void NavigateToQLPhong()
@@ -234,6 +237,7 @@ namespace QLKS_AnPhu
 
         private void BtnDangXuat_Click(object sender, RoutedEventArgs e)
         {
+            CurrentUser.Clear();
             DangNhap dangNhap = new();
             dangNhap.Show();
             Close();

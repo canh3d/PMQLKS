@@ -34,12 +34,14 @@ namespace QLKS_AnPhu.BUS
         public void Them(DichVuVatTuDTO item)
         {
             KiemTraHopLe(item);
+            KiemTraTrung(item, isEdit: false);
             dichVuVatTuDAL.Them(item);
         }
 
         public void Sua(DichVuVatTuDTO item)
         {
             KiemTraHopLe(item);
+            KiemTraTrung(item, isEdit: true);
             dichVuVatTuDAL.Sua(item);
         }
 
@@ -51,6 +53,44 @@ namespace QLKS_AnPhu.BUS
             }
 
             dichVuVatTuDAL.Xoa(item);
+        }
+
+        private void KiemTraTrung(DichVuVatTuDTO item, bool isEdit)
+        {
+            string ten = ChuanHoaVanBan(item.Ten);
+            string loai = ChuanHoaVanBan(item.Loai);
+
+            DichVuVatTuDTO? existing = LayDanhSach().FirstOrDefault(candidate =>
+                (!isEdit || !LaCungBanGhi(candidate, item)) &&
+                ChuanHoaVanBan(candidate.Ten) == ten &&
+                ChuanHoaVanBan(candidate.Loai) == loai);
+
+            if (existing != null)
+            {
+                throw new InvalidOperationException(
+                    $"{item.Loai} '{item.Ten}' đã tồn tại. Vui lòng nhập tên khác.");
+            }
+        }
+
+        private static bool LaCungBanGhi(DichVuVatTuDTO left, DichVuVatTuDTO right)
+        {
+            if (left.Ma != right.Ma)
+            {
+                return false;
+            }
+
+            return string.IsNullOrWhiteSpace(right.SourceTable) ||
+                   string.Equals(left.SourceTable, right.SourceTable, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string ChuanHoaVanBan(string value)
+        {
+            return string.Join(
+                " ",
+                (value ?? string.Empty)
+                    .Trim()
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                .ToUpperInvariant();
         }
 
         private static void KiemTraHopLe(DichVuVatTuDTO item)

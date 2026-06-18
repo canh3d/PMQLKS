@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Data;
 using System.IO;
 using System.Text;
@@ -10,6 +10,7 @@ using System.Windows.Media;
 using Microsoft.Data.SqlClient;
 using Microsoft.Win32;
 using QLKS_AnPhu.DAL;
+using QLKS_AnPhu.Services;
 
 namespace QLKS_AnPhu.View
 {
@@ -197,8 +198,32 @@ ORDER BY nv.MaNV, pc.NgayLam;";
 
             try
             {
+                bool coGhiChu = ViewSchemaHelper.ColumnExists("PHANCONGCA", "GhiChu");
                 for (DateTime ngay = tuNgay; ngay <= denNgay; ngay = ngay.AddDays(1))
                 {
+                    if (!coGhiChu)
+                    {
+                        const string sqlKhongGhiChu = @"
+IF EXISTS (SELECT 1 FROM PHANCONGCA WHERE MaNV = @MaNV AND NgayLam = @NgayLam)
+BEGIN
+    UPDATE PHANCONGCA
+    SET MaCa = @MaCa, TrangThai = N'Đang hoạt động'
+    WHERE MaNV = @MaNV AND NgayLam = @NgayLam
+END
+ELSE
+BEGIN
+    INSERT INTO PHANCONGCA (MaNV, MaCa, NgayLam, TrangThai)
+    VALUES (@MaNV, @MaCa, @NgayLam, N'Đang hoạt động')
+END";
+
+                        ConnectDB.ExecuteNonQuery(
+                            sqlKhongGhiChu,
+                            new SqlParameter("@MaNV", selected.MaNV),
+                            new SqlParameter("@MaCa", maCa),
+                            new SqlParameter("@NgayLam", SqlDbType.Date) { Value = ngay.Date });
+                        continue;
+                    }
+
                     const string sql = @"
 IF EXISTS (SELECT 1 FROM PHANCONGCA WHERE MaNV = @MaNV AND NgayLam = @NgayLam)
 BEGIN
@@ -336,6 +361,11 @@ END";
 
             try
             {
+                if (KiemTraNhanVienBiTrung(form))
+                {
+                    return;
+                }
+
                 const string sql = @"
 INSERT INTO NHANVIEN (HoTen, GioiTinh, NgaySinh, SDT, DiaChi, ChucVu, TrangThai)
 VALUES (@HoTen, @GioiTinh, @NgaySinh, @SDT, @DiaChi, @ChucVu, @TrangThai);";
@@ -370,6 +400,11 @@ VALUES (@HoTen, @GioiTinh, @NgaySinh, @SDT, @DiaChi, @ChucVu, @TrangThai);";
 
             try
             {
+                if (KiemTraNhanVienBiTrung(form, selected.MaNV))
+                {
+                    return;
+                }
+
                 const string sql = @"
 UPDATE NHANVIEN
 SET HoTen = @HoTen,
@@ -393,6 +428,73 @@ WHERE MaNV = @MaNV;";
             }
         }
 
+        private static bool KiemTraNhanVienBiTrung(NhanVienForm form, int? maNhanVienBoQua = null)
+        {
+            if (string.IsNullOrWhiteSpace(form.SoDienThoai) && !form.NgaySinh.HasValue)
+            {
+                return false;
+            }
+
+            const string sql = @"
+SELECT TOP 1
+    MaNV,
+    HoTen,
+    CASE
+        WHEN @SDT <> '' AND
+             REPLACE(REPLACE(REPLACE(REPLACE(LTRIM(RTRIM(ISNULL(SDT, ''))), ' ', ''), '.', ''), '-', ''), '+84', '0')
+             = REPLACE(REPLACE(REPLACE(REPLACE(@SDT, ' ', ''), '.', ''), '-', ''), '+84', '0')
+            THEN N'Số điện thoại'
+        ELSE N'Họ tên và ngày sinh'
+    END AS LyDoTrung
+FROM NHANVIEN
+WHERE (@MaNVBoQua IS NULL OR MaNV <> @MaNVBoQua)
+  AND
+  (
+      (
+          @SDT <> '' AND
+          REPLACE(REPLACE(REPLACE(REPLACE(LTRIM(RTRIM(ISNULL(SDT, ''))), ' ', ''), '.', ''), '-', ''), '+84', '0')
+          = REPLACE(REPLACE(REPLACE(REPLACE(@SDT, ' ', ''), '.', ''), '-', ''), '+84', '0')
+      )
+      OR
+      (
+          @NgaySinh IS NOT NULL
+          AND NgaySinh = @NgaySinh
+          AND UPPER(LTRIM(RTRIM(HoTen))) = UPPER(LTRIM(RTRIM(@HoTen)))
+      )
+  )
+ORDER BY MaNV;";
+
+            DataTable duplicate = ConnectDB.GetData(
+                sql,
+                new SqlParameter("@MaNVBoQua", SqlDbType.Int)
+                {
+                    Value = maNhanVienBoQua.HasValue ? maNhanVienBoQua.Value : DBNull.Value
+                },
+                new SqlParameter("@SDT", form.SoDienThoai),
+                new SqlParameter("@NgaySinh", SqlDbType.Date)
+                {
+                    Value = form.NgaySinh.HasValue ? form.NgaySinh.Value : DBNull.Value
+                },
+                new SqlParameter("@HoTen", form.HoTen));
+
+            if (duplicate.Rows.Count == 0)
+            {
+                return false;
+            }
+
+            DataRow row = duplicate.Rows[0];
+            string maNhanVien = $"NV{Convert.ToInt32(row["MaNV"]):000}";
+            string hoTen = row["HoTen"]?.ToString() ?? string.Empty;
+            string lyDoTrung = row["LyDoTrung"]?.ToString() ?? "Thông tin định danh";
+
+            MessageBox.Show(
+                $"{lyDoTrung} đã thuộc về nhân viên {maNhanVien} - {hoTen}. Vui lòng kiểm tra lại.",
+                "Nhân viên đã tồn tại",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return true;
+        }
+
         private void BtnXoa_Click(object sender, RoutedEventArgs e)
         {
             if (DgNhanVien.SelectedItem is not NhanVienItem selected)
@@ -402,7 +504,7 @@ WHERE MaNV = @MaNV;";
             }
 
             MessageBoxResult confirm = MessageBox.Show(
-                $"Bạn có chắc muốn chuyển nhân viên '{selected.HoTen}' sang trạng thái tạm nghỉ?",
+                $"Bạn có chắc muốn xóa nhân viên '{selected.HoTen}'? Thao tác này sẽ xóa cả tài khoản và lịch phân công ca liên quan nếu có.",
                 "Xác nhận xóa",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
@@ -414,10 +516,8 @@ WHERE MaNV = @MaNV;";
 
             try
             {
-                ConnectDB.ExecuteNonQuery(
-                    "UPDATE NHANVIEN SET TrangThai = 0 WHERE MaNV = @MaNV",
-                    new SqlParameter("@MaNV", selected.MaNV));
-                MessageBox.Show("Đã cập nhật trạng thái nhân viên.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                XoaNhanVien(selected.MaNV);
+                MessageBox.Show("Đã xóa nhân viên.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 TaiDuLieu();
             }
             catch (Exception ex)
@@ -426,13 +526,118 @@ WHERE MaNV = @MaNV;";
             }
         }
 
+        private static void XoaNhanVien(int maNhanVien)
+        {
+            string lyDoKhongTheXoa = LayLyDoNhanVienDangDuocSuDung(maNhanVien);
+            if (!string.IsNullOrWhiteSpace(lyDoKhongTheXoa))
+            {
+                throw new InvalidOperationException("Nhân viên đã có dữ liệu nghiệp vụ: " + lyDoKhongTheXoa + ". Vui lòng chuyển sang trạng thái tạm nghỉ nếu cần giữ lịch sử.");
+            }
+
+            using SqlConnection conn = ConnectDB.GetConnection();
+            using SqlTransaction tran = conn.BeginTransaction();
+
+            try
+            {
+                XoaTheoMaNhanVien(conn, tran, "PHANCONGCA", maNhanVien);
+
+                if (ViewSchemaHelper.TableExists("TAIKHOAN") && ViewSchemaHelper.ColumnExists("TAIKHOAN", "MaNV"))
+                {
+                    List<int> maTaiKhoan = new();
+                    using (SqlCommand selectTk = new("SELECT MaTK FROM dbo.TAIKHOAN WHERE MaNV = @MaNV", conn, tran))
+                    {
+                        selectTk.Parameters.Add("@MaNV", SqlDbType.Int).Value = maNhanVien;
+                        using SqlDataReader reader = selectTk.ExecuteReader();
+                        while (reader.Read())
+                        {
+                            maTaiKhoan.Add(Convert.ToInt32(reader["MaTK"]));
+                        }
+                    }
+
+                    foreach (int maTk in maTaiKhoan)
+                    {
+                        XoaTheoKhoa(conn, tran, "PHANQUYENTAIKHOAN", "MaTK", maTk);
+                    }
+
+                    XoaTheoMaNhanVien(conn, tran, "TAIKHOAN", maNhanVien);
+                }
+
+                XoaTheoKhoa(conn, tran, "NHANVIEN", "MaNV", maNhanVien);
+                tran.Commit();
+            }
+            catch
+            {
+                tran.Rollback();
+                throw;
+            }
+        }
+
+        private static string LayLyDoNhanVienDangDuocSuDung(int maNhanVien)
+        {
+            List<string> references = new();
+            foreach ((string Table, string Column, string Label) item in new[]
+                     {
+                         ("DATPHONG", "MaNV", "đặt phòng"),
+                         ("PHIEUTHUE", "MaNV", "phiếu thuê"),
+                         ("HOADON", "MaNV", "hóa đơn"),
+                         ("CHITIETPHATSINH", "MaNV", "dịch vụ phát sinh")
+                     })
+            {
+                if (!ViewSchemaHelper.TableExists(item.Table) || !ViewSchemaHelper.ColumnExists(item.Table, item.Column))
+                {
+                    continue;
+                }
+
+                object? count = ConnectDB.ExecuteScalar(
+                    "SELECT COUNT(*) FROM dbo." + item.Table + " WHERE " + item.Column + " = @MaNV",
+                    new SqlParameter("@MaNV", maNhanVien));
+
+                int total = Convert.ToInt32(count);
+                if (total > 0)
+                {
+                    references.Add(item.Label + " (" + total + ")");
+                }
+            }
+
+            return string.Join(", ", references);
+        }
+
+        private static void XoaTheoMaNhanVien(SqlConnection conn, SqlTransaction tran, string tableName, int maNhanVien)
+        {
+            if (!ViewSchemaHelper.TableExists(tableName) || !ViewSchemaHelper.ColumnExists(tableName, "MaNV"))
+            {
+                return;
+            }
+
+            using SqlCommand cmd = new("DELETE FROM dbo." + tableName + " WHERE MaNV = @MaNV", conn, tran);
+            cmd.Parameters.Add("@MaNV", SqlDbType.Int).Value = maNhanVien;
+            cmd.ExecuteNonQuery();
+        }
+
+        private static void XoaTheoKhoa(SqlConnection conn, SqlTransaction tran, string tableName, string keyColumn, int keyValue)
+        {
+            if (!ViewSchemaHelper.TableExists(tableName) || !ViewSchemaHelper.ColumnExists(tableName, keyColumn))
+            {
+                return;
+            }
+
+            using SqlCommand cmd = new("DELETE FROM dbo." + tableName + " WHERE " + keyColumn + " = @KeyValue", conn, tran);
+            cmd.Parameters.Add("@KeyValue", SqlDbType.Int).Value = keyValue;
+            cmd.ExecuteNonQuery();
+        }
         private void BtnXuatExcel_Click(object sender, RoutedEventArgs e)
         {
+            if (nhanVienHienThi.Count == 0)
+            {
+                MessageBox.Show("Không có dữ liệu nhân viên để xuất Excel.", "Xuất Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             SaveFileDialog saveFileDialog = new()
             {
                 Title = "Xuất danh sách nhân viên",
-                Filter = "Excel CSV (*.csv)|*.csv",
-                FileName = $"DanhSachNhanVien_{DateTime.Now:yyyyMMdd_HHmm}.csv"
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                FileName = $"DanhSachNhanVien_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
             };
 
             if (saveFileDialog.ShowDialog() != true)
@@ -442,24 +647,27 @@ WHERE MaNV = @MaNV;";
 
             try
             {
-                StringBuilder builder = new();
-                builder.AppendLine("Ma NV,Ho ten,Gioi tinh,Ngay sinh,Chuc vu,So dien thoai,Ca lam viec,Trang thai,Dia chi");
-
-                foreach (NhanVienItem item in nhanVienHienThi)
+                ExcelSection section = new()
                 {
-                    builder.AppendLine(string.Join(",",
-                        Csv(item.MaHienThi),
-                        Csv(item.HoTen),
-                        Csv(item.GioiTinh),
-                        Csv(item.NgaySinhHienThi),
-                        Csv(item.ChucVu),
-                        Csv(item.SDT),
-                        Csv(item.CaLamViec),
-                        Csv(item.TrangThaiHienThi),
-                        Csv(item.DiaChi)));
-                }
+                    Title = "Chi tiết nhân viên",
+                    Headers = ["Mã NV", "Họ tên", "Giới tính", "Ngày sinh", "Chức vụ", "Số điện thoại", "Ca làm việc", "Trạng thái", "Địa chỉ"],
+                    ColumnWidths = [11, 25, 12, 14, 18, 17, 18, 18, 30],
+                    Summary = $"Tổng số nhân viên: {nhanVienHienThi.Count:N0}"
+                };
+                section.Rows.AddRange(nhanVienHienThi.Select(item => (IReadOnlyList<object?>)
+                [
+                    item.MaHienThi, item.HoTen, item.GioiTinh, item.NgaySinhHienThi,
+                    item.ChucVu, item.SDT, item.CaLamViec, item.TrangThaiHienThi, item.DiaChi
+                ]));
 
-                File.WriteAllText(saveFileDialog.FileName, builder.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+                ExcelDocument document = new()
+                {
+                    Title = "DANH SÁCH NHÂN VIÊN",
+                    Subtitle = "Danh sách nhân viên đang hiển thị",
+                    SheetName = "Nhân viên"
+                };
+                document.Sections.Add(section);
+                ExcelExportService.Export(saveFileDialog.FileName, document);
                 MessageBox.Show("Xuất Excel thành công.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -470,8 +678,7 @@ WHERE MaNV = @MaNV;";
 
         private void BtnXuatPdf_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Ở hộp thoại tiếp theo, chọn máy in 'Microsoft Print to PDF' để lưu file PDF.", "Xuất PDF", MessageBoxButton.OK, MessageBoxImage.Information);
-            PrintDanhSach("Xuất PDF danh sách nhân viên");
+            PrintDanhSach("Xuất PDF danh sách nhân viên", pdfMode: true);
         }
 
         private void BtnInDanhSach_Click(object sender, RoutedEventArgs e)
@@ -484,6 +691,31 @@ WHERE MaNV = @MaNV;";
             try
             {
                 DateTime denNgay = ngayDauTuan.AddDays(6);
+                bool coGhiChu = ViewSchemaHelper.ColumnExists("PHANCONGCA", "GhiChu");
+                if (!coGhiChu)
+                {
+                    DataTable tableKhongGhiChu = ConnectDB.GetData(
+                        @"
+SELECT
+    nv.MaNV AS [Mã NV],
+    nv.HoTen AS [Họ tên],
+    cl.TenCa AS [Ca làm],
+    CONVERT(varchar(10), pc.NgayLam, 103) AS [Ngày làm],
+    CONVERT(varchar(5), cl.GioBatDau, 108) AS [Bắt đầu],
+    CONVERT(varchar(5), cl.GioKetThuc, 108) AS [Kết thúc],
+    ISNULL(pc.TrangThai, N'Đang hoạt động') AS [Trạng thái],
+    CAST(N'' AS nvarchar(255)) AS [Ghi chú]
+FROM PHANCONGCA pc
+INNER JOIN NHANVIEN nv ON nv.MaNV = pc.MaNV
+INNER JOIN CALAM cl ON cl.MaCa = pc.MaCa
+WHERE pc.NgayLam BETWEEN @TuNgay AND @DenNgay
+ORDER BY pc.NgayLam, cl.MaCa, nv.HoTen;",
+                        new SqlParameter("@TuNgay", SqlDbType.Date) { Value = ngayDauTuan.Date },
+                        new SqlParameter("@DenNgay", SqlDbType.Date) { Value = denNgay.Date });
+
+                    ShowDataTableWindow($"Lịch làm việc tuần {ngayDauTuan:dd/MM/yyyy} - {denNgay:dd/MM/yyyy}", tableKhongGhiChu);
+                    return;
+                }
                 DataTable table = ConnectDB.GetData(
                     @"
 SELECT
@@ -560,6 +792,27 @@ ORDER BY nv.MaNV;",
 
             try
             {
+                if (!ViewSchemaHelper.ColumnExists("PHANCONGCA", "GhiChu"))
+                {
+                    DataTable tableKhongGhiChu = ConnectDB.GetData(
+                        @"
+SELECT
+    CONVERT(varchar(10), pc.NgayLam, 103) AS [Ngày làm],
+    cl.TenCa AS [Ca làm],
+    CONVERT(varchar(5), cl.GioBatDau, 108) AS [Bắt đầu],
+    CONVERT(varchar(5), cl.GioKetThuc, 108) AS [Kết thúc],
+    ISNULL(pc.TrangThai, N'Đang hoạt động') AS [Trạng thái],
+    CAST(N'' AS nvarchar(255)) AS [Ghi chú]
+FROM PHANCONGCA pc
+INNER JOIN CALAM cl ON cl.MaCa = pc.MaCa
+WHERE pc.MaNV = @MaNV
+ORDER BY pc.NgayLam DESC, pc.MaPhanCong DESC;",
+                        new SqlParameter("@MaNV", selected.MaNV));
+
+                    ShowDataTableWindow($"Lịch sử ca làm - {selected.HoTen}", tableKhongGhiChu);
+                    return;
+                }
+
                 DataTable table = ConnectDB.GetData(
                     @"
 SELECT
@@ -583,23 +836,18 @@ ORDER BY pc.NgayLam DESC, pc.MaPhanCong DESC;",
             }
         }
 
-        private void PrintDanhSach(string description)
+        private void PrintDanhSach(string description, bool pdfMode = false)
         {
+            if (nhanVienHienThi.Count == 0)
+            {
+                MessageBox.Show("Không có dữ liệu nhân viên để in.", pdfMode ? "Xuất PDF" : "In danh sách", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             try
             {
-                PrintDialog printDialog = new();
-                if (printDialog.ShowDialog() != true)
-                {
-                    return;
-                }
-
                 FlowDocument document = CreateNhanVienDocument();
-                document.PageHeight = printDialog.PrintableAreaHeight;
-                document.PageWidth = printDialog.PrintableAreaWidth;
-                document.PagePadding = new Thickness(36);
-                document.ColumnWidth = printDialog.PrintableAreaWidth;
-
-                printDialog.PrintDocument(((IDocumentPaginatorSource)document).DocumentPaginator, description);
+                PrintExportService.Print(document, description, pdfMode);
             }
             catch (Exception ex)
             {
@@ -609,70 +857,32 @@ ORDER BY pc.NgayLam DESC, pc.MaPhanCong DESC;",
 
         private FlowDocument CreateNhanVienDocument()
         {
-            FlowDocument document = new()
-            {
-                FontFamily = new FontFamily("Segoe UI"),
-                FontSize = 12
-            };
+            IReadOnlyList<PrintColumn> columns =
+            [
+                new("Mã NV", 58, TextAlignment.Center, true),
+                new("Họ tên", new GridLength(1, GridUnitType.Star)),
+                new("Giới tính", 65, TextAlignment.Center, true),
+                new("Chức vụ", 90),
+                new("Số điện thoại", 92, TextAlignment.Center, true),
+                new("Ca làm việc", 95),
+                new("Trạng thái", 88, TextAlignment.Center)
+            ];
 
-            Paragraph title = new(new Run("DANH SÁCH NHÂN VIÊN"))
-            {
-                FontSize = 20,
-                FontWeight = FontWeights.Bold,
-                TextAlignment = TextAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 6)
-            };
-            document.Blocks.Add(title);
-
-            Paragraph subtitle = new(new Run($"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm} - Tổng: {nhanVienHienThi.Count} nhân viên"))
-            {
-                TextAlignment = TextAlignment.Center,
-                Foreground = Brushes.DimGray,
-                Margin = new Thickness(0, 0, 0, 16)
-            };
-            document.Blocks.Add(subtitle);
-
-            Table table = new();
-            for (int i = 0; i < 7; i++)
-            {
-                table.Columns.Add(new TableColumn());
-            }
-
-            TableRowGroup headerGroup = new();
-            TableRow header = new();
-            foreach (string column in new[] { "Mã NV", "Họ tên", "Giới tính", "Chức vụ", "SĐT", "Ca làm", "Trạng thái" })
-            {
-                header.Cells.Add(new TableCell(new Paragraph(new Run(column)))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Background = Brushes.LightGray,
-                    Padding = new Thickness(4),
-                    BorderBrush = Brushes.Gray,
-                    BorderThickness = new Thickness(0.5)
-                });
-            }
-            headerGroup.Rows.Add(header);
-            table.RowGroups.Add(headerGroup);
-
-            TableRowGroup bodyGroup = new();
-            foreach (NhanVienItem item in nhanVienHienThi)
-            {
-                TableRow row = new();
-                foreach (string value in new[] { item.MaHienThi, item.HoTen, item.GioiTinh, item.ChucVu, item.SDT, item.CaLamViec, item.TrangThaiHienThi })
-                {
-                    row.Cells.Add(new TableCell(new Paragraph(new Run(value)))
-                    {
-                        Padding = new Thickness(4),
-                        BorderBrush = Brushes.LightGray,
-                        BorderThickness = new Thickness(0.5)
-                    });
-                }
-                bodyGroup.Rows.Add(row);
-            }
-            table.RowGroups.Add(bodyGroup);
-            document.Blocks.Add(table);
-
-            return document;
+            return PrintExportService.CreateTableDocument(
+                "Danh sách nhân viên",
+                $"Danh sách đang hiển thị - Tổng cộng {nhanVienHienThi.Count:N0} nhân viên",
+                columns,
+                nhanVienHienThi.Select(item => (IReadOnlyList<string>)
+                [
+                    item.MaHienThi,
+                    item.HoTen,
+                    item.GioiTinh,
+                    item.ChucVu,
+                    item.SDT,
+                    item.CaLamViec,
+                    item.TrangThaiHienThi
+                ]),
+                $"Tổng số nhân viên: {nhanVienHienThi.Count:N0}");
         }
 
         private void ShowDataTableWindow(string title, DataTable table)

@@ -17,10 +17,21 @@
         </Style>
 
         <Style x:Key="HomeKpiIconBoxStyle" TargetType="Border">
-            <Setter Property="Width" Value="52" />
-            <Setter Property="Height" Value="52" />
-            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="46" />
+            <Setter Property="CornerRadius" Value="14" />
             <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+
+        <Style x:Key="HomeKpiCardStyle" TargetType="Border" BasedOn="{StaticResource AppKpiCardStyle}">
+            <Setter Property="Margin" Value="0,0,10,0" />
+        </Style>
+
+        <Style x:Key="KpiNumberTextStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource TextMainBrush}" />
         </Style>
     </UserControl.Resources>
 
@@ -35,7 +46,7 @@
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
-                    CornerRadius="18"
+                    CornerRadius="20"
                     Padding="30,26"
                     Effect="{StaticResource SoftShadow}">
                 <Border.Background>
@@ -53,8 +64,7 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtWelcome"
-                                   Text="Chào mừng trở lại, Admin!"
+                        <TextBlock Text="{Binding WelcomeText}"
                                    FontSize="28"
                                    FontWeight="Bold"
                                    Foreground="White" />
@@ -68,7 +78,7 @@
                                     Background="White"
                                     BorderBrush="White"
                                     Foreground="{StaticResource PrimaryBrush}"
-                                    Click="BtnDatPhongMoi_Click">
+                                    Command="{Binding DatPhongMoiCommand}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <iconPacks:PackIconMaterial Kind="Plus" Width="18" Height="18" Margin="0,0,8,0" />
                                     <TextBlock Text="Đặt phòng mới" Style="{StaticResource ButtonContentTextStyle}" />
@@ -80,7 +90,7 @@
                                     Foreground="White"
                                     BorderBrush="#FFFFFF88"
                                     Background="#FFFFFF18"
-                                    Click="BtnXemBaoCao_Click">
+                                    Command="{Binding XemBaoCaoCommand}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <iconPacks:PackIconMaterial Kind="FileChart" Width="18" Height="18" Margin="0,0,8,0" />
                                     <TextBlock Text="Xem báo cáo" Style="{StaticResource ButtonContentTextStyle}" />
@@ -116,88 +126,83 @@
                 </Grid>
             </Border>
 
-            <UniformGrid Grid.Row="2" Columns="5">
-                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,12,0">
+            <UniformGrid Grid.Row="2" Columns="5" Rows="1">
+                <Border Style="{StaticResource HomeKpiCardStyle}" Visibility="{Binding RevenueVisibility}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Style="{StaticResource HomeKpiIconBoxStyle}" Background="#DCFCE7">
-                            <iconPacks:PackIconMaterial Kind="CashMultiple" Width="28" Height="28" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <iconPacks:PackIconMaterial Kind="CashMultiple" Width="24" Height="24" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
                             <TextBlock Text="Doanh thu hôm nay" Foreground="{StaticResource TextMutedBrush}" FontSize="12" FontWeight="SemiBold" />
-                            <TextBlock x:Name="TxtDoanhThuHomNay" Text="0 đ" Margin="0,6,0,0" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                            <TextBlock x:Name="TxtDoanhThuDelta" Text="+0% so với hôm qua" Margin="0,6,0,0" FontSize="11" Foreground="{StaticResource SuccessBrush}" />
+                            <TextBlock Text="{Binding RevenueToday, NotifyOnTargetUpdated=True}" Style="{StaticResource KpiNumberTextStyle}" />
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,12,0">
+                <Border Style="{StaticResource HomeKpiCardStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Style="{StaticResource HomeKpiIconBoxStyle}" Background="#DBEAFE">
-                            <iconPacks:PackIconMaterial Kind="Bed" Width="28" Height="28" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <iconPacks:PackIconMaterial Kind="Bed" Width="24" Height="24" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
                             <TextBlock Text="Phòng đang thuê" Foreground="{StaticResource TextMutedBrush}" FontSize="12" FontWeight="SemiBold" />
-                            <TextBlock x:Name="TxtPhongDangThue" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                            <TextBlock x:Name="TxtPhongDangThueDelta" Text="+0 so với hôm qua" Margin="0,6,0,0" FontSize="11" Foreground="{StaticResource SuccessBrush}" />
+                            <TextBlock Text="{Binding RentedRooms, NotifyOnTargetUpdated=True}" Style="{StaticResource KpiNumberTextStyle}" />
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,12,0">
+                <Border Style="{StaticResource HomeKpiCardStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Style="{StaticResource HomeKpiIconBoxStyle}" Background="#DCFCE7">
-                            <iconPacks:PackIconMaterial Kind="CalendarCheck" Width="28" Height="28" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <iconPacks:PackIconMaterial Kind="CalendarCheck" Width="24" Height="24" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
                             <TextBlock Text="Phòng trống" Foreground="{StaticResource TextMutedBrush}" FontSize="12" FontWeight="SemiBold" />
-                            <TextBlock x:Name="TxtPhongTrong" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                            <TextBlock x:Name="TxtPhongTrongDelta" Text="+0 so với hôm qua" Margin="0,6,0,0" FontSize="11" Foreground="{StaticResource DangerBrush}" />
+                            <TextBlock Text="{Binding EmptyRooms, NotifyOnTargetUpdated=True}" Style="{StaticResource KpiNumberTextStyle}" />
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <Border Style="{StaticResource AppKpiCardStyle}" Margin="0,0,12,0">
+                <Border Style="{StaticResource HomeKpiCardStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Style="{StaticResource HomeKpiIconBoxStyle}" Background="#E0F2FE">
-                            <iconPacks:PackIconMaterial Kind="AccountGroup" Width="28" Height="28" Foreground="{StaticResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <iconPacks:PackIconMaterial Kind="AccountGroup" Width="24" Height="24" Foreground="{StaticResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
                             <TextBlock Text="Khách hàng" Foreground="{StaticResource TextMutedBrush}" FontSize="12" FontWeight="SemiBold" />
-                            <TextBlock x:Name="TxtKhachHang" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                            <TextBlock x:Name="TxtKhachHangDelta" Text="+0 mới hôm nay" Margin="0,6,0,0" FontSize="11" Foreground="{StaticResource SuccessBrush}" />
+                            <TextBlock Text="{Binding Customers, NotifyOnTargetUpdated=True}" Style="{StaticResource KpiNumberTextStyle}" />
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <Border Style="{StaticResource AppKpiCardStyle}">
+                <Border Style="{StaticResource HomeKpiCardStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Style="{StaticResource HomeKpiIconBoxStyle}" Background="#F5F3FF">
-                            <iconPacks:PackIconMaterial Kind="ChartDonut" Width="28" Height="28" Foreground="{StaticResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <iconPacks:PackIconMaterial Kind="ChartDonut" Width="24" Height="24" Foreground="{StaticResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
                             <TextBlock Text="Tỷ lệ lấp đầy" Foreground="{StaticResource TextMutedBrush}" FontSize="12" FontWeight="SemiBold" />
-                            <TextBlock x:Name="TxtTyLeLapDay" Text="0%" Margin="0,6,0,0" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                            <TextBlock Text="Công suất phòng" Margin="0,6,0,0" FontSize="11" Foreground="{StaticResource SuccessBrush}" />
+                            <TextBlock Text="{Binding OccupancyRate, NotifyOnTargetUpdated=True}" Style="{StaticResource KpiNumberTextStyle}" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -214,77 +219,33 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="16" />
+                            <RowDefinition Height="12" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <StackPanel>
-                            <TextBlock Text="Hoạt động nhanh" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                            <TextBlock Text="Các thao tác thường dùng trong vận hành khách sạn." Margin="0,5,0,0" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                        </StackPanel>
-
-                        <WrapPanel Grid.Row="1" Margin="0,18,0,0">
-                            <Button Style="{StaticResource HomeActionButtonStyle}" Click="BtnDatPhongMoi_Click">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <iconPacks:PackIconMaterial Kind="Plus" Width="18" Height="18" Margin="0,0,8,0" />
-                                    <StackPanel>
-                                        <TextBlock Text="Thêm mới" FontWeight="SemiBold" />
-                                        <TextBlock Text="Đặt phòng" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Style="{StaticResource HomeActionButtonStyle}" Click="BtnInDanhSachKhach_Click">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <iconPacks:PackIconMaterial Kind="Printer" Width="18" Height="18" Margin="0,0,8,0" />
-                                    <StackPanel>
-                                        <TextBlock Text="In danh sách" FontWeight="SemiBold" />
-                                        <TextBlock Text="Khách hàng" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Style="{StaticResource HomeActionButtonStyle}" Click="BtnXuatBaoCao_Click">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <iconPacks:PackIconMaterial Kind="FileExcel" Width="18" Height="18" Margin="0,0,8,0" />
-                                    <StackPanel>
-                                        <TextBlock Text="Xuất Excel" FontWeight="SemiBold" />
-                                        <TextBlock Text="Báo cáo" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Style="{StaticResource HomeActionButtonStyle}" Click="BtnLamMoi_Click">
+                        <DockPanel LastChildFill="False">
+                            <TextBlock Text="Thông báo" FontSize="18" FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource TextMainBrush}" />
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource HomeActionButtonStyle}"
+                                    Command="{Binding RefreshCommand}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <iconPacks:PackIconMaterial Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" />
                                     <StackPanel>
                                         <TextBlock Text="Làm mới" FontWeight="SemiBold" />
-                                        <TextBlock Text="Dữ liệu" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock Text="Trang" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
                                     </StackPanel>
                                 </StackPanel>
                             </Button>
-                        </WrapPanel>
+                        </DockPanel>
 
-                        <Grid Grid.Row="3">
+                        <Grid Grid.Row="2">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <DockPanel>
-                                <TextBlock Text="Thông báo" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
-                                <Button DockPanel.Dock="Right"
-                                        Style="{StaticResource AppOutlineButtonStyle}"
-                                        Padding="12,0"
-                                        Height="32"
-                                        MinWidth="86"
-                                        Click="BtnXemTatCaThongBao_Click">
-                                    <TextBlock Text="Xem tất cả" FontSize="12" />
-                                </Button>
-                            </DockPanel>
-
-                            <ItemsControl x:Name="ItemsThongBao" Grid.Row="1" Margin="0,12,0,0">
+                            <ItemsControl ItemsSource="{Binding ThongBao}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,10">
@@ -297,7 +258,7 @@
                                                 <Border Width="28" Height="28" CornerRadius="10" Background="{Binding IconBackground}">
                                                     <iconPacks:PackIconMaterial Kind="{Binding Icon}" Width="16" Height="16" Foreground="{Binding IconBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                 </Border>
-                                                <TextBlock Grid.Column="1" Text="{Binding NoiDung}" VerticalAlignment="Center" Foreground="{StaticResource TextMainBrush}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding NoiDung}" VerticalAlignment="Center" Foreground="{StaticResource TextMainBrush}" TextWrapping="Wrap" />
                                                 <TextBlock Grid.Column="2" Text="{Binding ThoiGian}" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
                                             </Grid>
                                         </Border>
@@ -320,8 +281,8 @@
                             <TextBlock Text="Các giao dịch và đặt phòng mới nhất." Margin="0,5,0,14" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
                         </StackPanel>
 
-                        <DataGrid x:Name="DgKhachHangGanDay"
-                                  Grid.Row="1"
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding KhachHangGanDay}"
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
                                   CanUserDeleteRows="False"
@@ -333,10 +294,10 @@
                                   Background="White"
                                   MinHeight="260">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Họ tên" Binding="{Binding HoTen}" Width="*" />
-                                <DataGridTextColumn Header="Phòng" Binding="{Binding Phong}" Width="110" />
-                                <DataGridTextColumn Header="Trạng thái" Binding="{Binding TrangThai}" Width="130" />
-                                <DataGridTextColumn Header="Đến từ" Binding="{Binding Nguon}" Width="120" />
+                                <DataGridTextColumn Header="Họ tên khách" Binding="{Binding HoTen}" Width="*" />
+                                <DataGridTextColumn Header="Phòng" Binding="{Binding Phong}" Width="90" />
+                                <DataGridTextColumn Header="Trạng thái" Binding="{Binding TrangThai}" Width="120" />
+                                <DataGridTextColumn Header="Ngày nhận phòng" Binding="{Binding NgayNhanPhong}" Width="145" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>

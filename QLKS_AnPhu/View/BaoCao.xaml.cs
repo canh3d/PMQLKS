@@ -1,8 +1,6 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Data;
 using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -11,6 +9,7 @@ using System.Windows.Media;
 using Microsoft.Data.SqlClient;
 using Microsoft.Win32;
 using QLKS_AnPhu.DAL;
+using QLKS_AnPhu.Services;
 
 namespace QLKS_AnPhu.View
 {
@@ -18,6 +17,7 @@ namespace QLKS_AnPhu.View
     {
         private readonly ObservableCollection<BaoCaoChiTietItem> danhSachBaoCao = new();
         private readonly ObservableCollection<BaoCaoChiTietItem> danhSachHienThi = new();
+        private readonly List<DoanhThuThangItem> doanhThuTheoNgayTrongThang = new();
         private readonly CultureInfo vietnameseCulture = new("vi-VN");
 
         public BaoCao()
@@ -78,7 +78,7 @@ namespace QLKS_AnPhu.View
             {
                 ConfigureBaoCaoColumns();
                 LoadKpi(tuNgay, denNgay);
-                LoadDoanhThuTheoThang(tuNgay.Year);
+                LoadDoanhThuTheoNgayTrongThang(tuNgay);
                 LoadTrangThaiPhong();
                 LoadBaoCaoChiTiet(tuNgay, denNgay, GetLoaiBaoCao());
                 LocBaoCao();
@@ -148,16 +148,10 @@ namespace QLKS_AnPhu.View
         private void LoadKpi(DateTime tuNgay, DateTime denNgay)
         {
             DateTime denNgayExclusive = denNgay.AddDays(1);
-
-            decimal tongDoanhThu = ToDecimal(ConnectDB.ExecuteScalar(
-                @"
-SELECT ISNULL(SUM(TongThanhToan), 0)
-FROM HOADON
-WHERE NgayLap >= @TuNgay
-  AND NgayLap < @DenNgay
-  AND (TrangThai = N'Đã thanh toán' OR DaThanhToan > 0);",
-                new SqlParameter("@TuNgay", tuNgay),
-                new SqlParameter("@DenNgay", denNgayExclusive)));
+            List<HoaDonItem> hoaDonDongBo = HoaDon.LayHoaDonDongBo(tuNgay, denNgay);
+            decimal tongDoanhThu = hoaDonDongBo
+                .Where(LaDoanhThuDaThu)
+                .Sum(item => item.TongGiaTriHoaDon);
 
             int tongPhongDat = ToInt(ConnectDB.ExecuteScalar(
                 @"
@@ -172,7 +166,7 @@ WHERE NgayDat >= @TuNgay
 
             int tongPhong = ToInt(ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM PHONG"));
             int phongLapDay = ToInt(ConnectDB.ExecuteScalar(
-                "SELECT COUNT(*) FROM PHONG WHERE TrangThai IN (N'Có khách', N'Đã đặt')"));
+                "SELECT COUNT(*) FROM PHONG WHERE TrangThai IN (N'Đang thuê', N'Có khách', N'Đã đặt', N'Dang thue', N'Co khach', N'Da dat')"));
             decimal tyLeLapDay = tongPhong == 0 ? 0 : Math.Round(phongLapDay * 100m / tongPhong, 1);
 
             TxtTongDoanhThu.Text = tongDoanhThu.ToString("N0", vietnameseCulture) + " đ";
@@ -181,73 +175,53 @@ WHERE NgayDat >= @TuNgay
             TxtTyLeLapDay.Text = tyLeLapDay.ToString("N1", vietnameseCulture) + "%";
             TxtTyLeLapDayChart.Text = TxtTyLeLapDay.Text;
             PbTyLeLapDay.Value = (double)Math.Min(100, tyLeLapDay);
-
-            DateTime previousStart = tuNgay.AddDays(-(denNgay - tuNgay).Days - 1);
-            DateTime previousEnd = tuNgay;
-            decimal previousRevenue = ToDecimal(ConnectDB.ExecuteScalar(
-                @"
-SELECT ISNULL(SUM(TongThanhToan), 0)
-FROM HOADON
-WHERE NgayLap >= @TuNgay
-  AND NgayLap < @DenNgay
-  AND (TrangThai = N'Đã thanh toán' OR DaThanhToan > 0);",
-                new SqlParameter("@TuNgay", previousStart),
-                new SqlParameter("@DenNgay", previousEnd)));
-
-            if (previousRevenue <= 0)
-            {
-                TxtDoanhThuKyTruoc.Text = "Chưa có dữ liệu kỳ trước";
-                TxtDoanhThuKyTruoc.Foreground = Brushes.DimGray;
-            }
-            else
-            {
-                decimal percent = Math.Round((tongDoanhThu - previousRevenue) * 100m / previousRevenue, 1);
-                TxtDoanhThuKyTruoc.Text = (percent >= 0 ? "+" : string.Empty) + percent.ToString("N1", vietnameseCulture) + "% so với kỳ trước";
-                TxtDoanhThuKyTruoc.Foreground = percent >= 0 ? Brushes.ForestGreen : Brushes.Firebrick;
-            }
         }
 
-        private void LoadDoanhThuTheoThang(int year)
+        private void LoadDoanhThuTheoNgayTrongThang(DateTime ngayTrongThang)
         {
-            DataTable table = ConnectDB.GetData(
-                @"
-SELECT MONTH(NgayLap) AS Thang, ISNULL(SUM(TongThanhToan), 0) AS DoanhThu
-FROM HOADON
-WHERE YEAR(NgayLap) = @Nam
-  AND (TrangThai = N'Đã thanh toán' OR DaThanhToan > 0)
-GROUP BY MONTH(NgayLap);",
-                new SqlParameter("@Nam", year));
+            DateTime dauThang = new(ngayTrongThang.Year, ngayTrongThang.Month, 1);
+            DateTime ngay30HoacCuoiThang = dauThang.AddDays(Math.Min(30, DateTime.DaysInMonth(ngayTrongThang.Year, ngayTrongThang.Month)) - 1);
+            int soNgay = DateTime.DaysInMonth(ngayTrongThang.Year, ngayTrongThang.Month);
 
-            Dictionary<int, decimal> revenueByMonth = table.Rows
-                .Cast<DataRow>()
-                .ToDictionary(row => Convert.ToInt32(row["Thang"]), row => Convert.ToDecimal(row["DoanhThu"]));
+            Dictionary<int, decimal> revenueByDay = HoaDon.LayHoaDonDongBo(dauThang, ngay30HoacCuoiThang)
+                .Where(LaDoanhThuDaThu)
+                .GroupBy(item => item.NgayLapHoaDon.Day)
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.TongGiaTriHoaDon));
 
-            decimal maxRevenue = revenueByMonth.Count == 0 ? 0 : revenueByMonth.Values.Max();
-            List<DoanhThuThangItem> items = new();
+            decimal maxRevenue = revenueByDay.Count == 0 ? 0 : revenueByDay.Values.Max();
+            doanhThuTheoNgayTrongThang.Clear();
 
-            for (int month = 1; month <= 12; month++)
+            for (int day = 1; day <= 30; day++)
             {
-                decimal revenue = revenueByMonth.TryGetValue(month, out decimal value) ? value : 0;
+                decimal revenue = day <= soNgay && revenueByDay.TryGetValue(day, out decimal value) ? value : 0;
                 double height = maxRevenue <= 0 ? 8 : Math.Max(8, (double)(revenue / maxRevenue) * 230);
 
-                items.Add(new DoanhThuThangItem
+                doanhThuTheoNgayTrongThang.Add(new DoanhThuThangItem
                 {
-                    Label = "T" + month,
+                    Label = day.ToString("00"),
+                    Ngay = day,
+                    DoanhThu = revenue,
                     BarHeight = height,
-                    Color = month % 3 == 0 ? Brushes.DeepSkyBlue : month % 2 == 0 ? Brushes.RoyalBlue : Brushes.CornflowerBlue,
-                    ToolTip = $"Tháng {month}/{year}: {revenue.ToString("N0", vietnameseCulture)} đ"
+                    Color = revenue > 0 ? Brushes.DeepSkyBlue : Brushes.CornflowerBlue,
+                    ToolTip = $"Ngày {day:00}/{ngayTrongThang.Month:00}/{ngayTrongThang.Year}: {revenue.ToString("N0", vietnameseCulture)} đ"
                 });
             }
 
-            IcDoanhThuThang.ItemsSource = items;
-            IcLabelThang.ItemsSource = items;
+            IcDoanhThuThang.ItemsSource = doanhThuTheoNgayTrongThang;
+            IcLabelThang.ItemsSource = doanhThuTheoNgayTrongThang;
         }
 
         private void LoadTrangThaiPhong()
         {
-            int coKhach = ToInt(ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM PHONG WHERE TrangThai IN (N'Có khách', N'Đã đặt')"));
-            int phongTrong = ToInt(ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM PHONG WHERE TrangThai = N'Phòng trống'"));
-            int baoTri = ToInt(ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM PHONG WHERE TrangThai NOT IN (N'Có khách', N'Đã đặt', N'Phòng trống')"));
+            int coKhach = ToInt(ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM PHONG WHERE TrangThai IN (N'Đang thuê', N'Có khách', N'Đã đặt', N'Dang thue', N'Co khach', N'Da dat')"));
+            string canDonFilter = ColumnExists("PHONG", "GhiChu")
+                ? " AND ISNULL(GhiChu, N'') NOT LIKE N'%[CAN_DON_DEP]%'"
+                : string.Empty;
+            string canDonOrOther = ColumnExists("PHONG", "GhiChu")
+                ? " OR ISNULL(GhiChu, N'') LIKE N'%[CAN_DON_DEP]%'"
+                : string.Empty;
+            int phongTrong = ToInt(ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM PHONG WHERE TrangThai IN (N'Trống', N'Phòng trống', N'Trong', N'Phong trong')" + canDonFilter));
+            int baoTri = ToInt(ConnectDB.ExecuteScalar("SELECT COUNT(*) FROM PHONG WHERE TrangThai NOT IN (N'Đang thuê', N'Có khách', N'Đã đặt', N'Dang thue', N'Co khach', N'Da dat', N'Trống', N'Phòng trống', N'Trong', N'Phong trong')" + canDonOrOther));
 
             TxtPhongCoKhach.Text = coKhach.ToString("N0", vietnameseCulture);
             TxtPhongTrong.Text = phongTrong.ToString("N0", vietnameseCulture);
@@ -275,43 +249,63 @@ GROUP BY MONTH(NgayLap);",
 
         private static DataTable LoadBaoCaoDoanhThuTheoNgay(DateTime tuNgay, DateTime denNgayExclusive)
         {
-            return ConnectDB.GetData(
-                @"
-SELECT
-    CONVERT(nvarchar(10), CAST(hd.NgayLap AS date), 112) AS MaBaoCao,
-    CAST(hd.NgayLap AS date) AS Ngay,
-    N'Doanh thu theo ngày' AS NoiDung,
-    N'Doanh thu' AS Loai,
-    COUNT(*) AS SoLuong,
-    ISNULL(SUM(hd.TongThanhToan), 0) AS DoanhThu,
-    CAST(SUM(CASE WHEN hd.TrangThai = N'Đã thanh toán' OR hd.DaThanhToan > 0 THEN 1 ELSE 0 END) AS nvarchar(20)) AS GhiChu
-FROM HOADON hd
-WHERE hd.NgayLap >= @TuNgay
-  AND hd.NgayLap < @DenNgay
-GROUP BY CAST(hd.NgayLap AS date)
-ORDER BY CAST(hd.NgayLap AS date) DESC;",
-                new SqlParameter("@TuNgay", tuNgay),
-                new SqlParameter("@DenNgay", denNgayExclusive));
+            DataTable table = TaoBangBaoCao();
+            DateTime denNgay = denNgayExclusive.AddDays(-1);
+            IEnumerable<IGrouping<DateTime, HoaDonItem>> groups = HoaDon.LayHoaDonDongBo(tuNgay, denNgay)
+                .Where(LaDoanhThuDaThu)
+                .GroupBy(item => item.NgayLapHoaDon.Date)
+                .OrderByDescending(group => group.Key);
+
+            foreach (IGrouping<DateTime, HoaDonItem> group in groups)
+            {
+                table.Rows.Add(
+                    group.Key.ToString("yyyyMMdd"),
+                    group.Key,
+                    "Doanh thu theo ngày",
+                    "Doanh thu",
+                    group.Count(),
+                    group.Sum(item => item.TongGiaTriHoaDon),
+                    group.Count().ToString(CultureInfo.InvariantCulture));
+            }
+
+            return table;
         }
 
         private static DataTable LoadBaoCaoHoaDon(DateTime tuNgay, DateTime denNgayExclusive)
         {
-            return ConnectDB.GetData(
-                @"
-SELECT
-    CONCAT(N'HD', FORMAT(hd.MaHD, '000')) AS MaBaoCao,
-    hd.NgayLap AS Ngay,
-    CONCAT(N'Hóa đơn thuê phòng #', hd.MaThue) AS NoiDung,
-    N'Doanh thu' AS Loai,
-    1 AS SoLuong,
-    hd.TongThanhToan AS DoanhThu,
-    ISNULL(hd.TrangThai, N'') AS GhiChu
-FROM HOADON hd
-WHERE hd.NgayLap >= @TuNgay
-  AND hd.NgayLap < @DenNgay
-ORDER BY hd.NgayLap DESC;",
-                new SqlParameter("@TuNgay", tuNgay),
-                new SqlParameter("@DenNgay", denNgayExclusive));
+            DataTable table = TaoBangBaoCao();
+            DateTime denNgay = denNgayExclusive.AddDays(-1);
+            foreach (HoaDonItem item in HoaDon.LayHoaDonDongBo(tuNgay, denNgay).OrderByDescending(item => item.NgayLapHoaDon))
+            {
+                table.Rows.Add(
+                    item.MaHoaDon,
+                    item.NgayLapHoaDon,
+                    item.TenKhachHang + " - phòng " + item.SoPhong,
+                    item.LoaiThanhToan == "PHATSINH" ? "Phát sinh" : "Nhận phòng",
+                    1,
+                    LaDoanhThuDaThu(item) ? item.TongGiaTriHoaDon : 0,
+                    item.TrangThai);
+            }
+
+            return table;
+        }
+
+        private static bool LaDoanhThuDaThu(HoaDonItem item)
+        {
+            return item.DaThanhToan || item.LaPhieuDatDaHuyGiuCoc;
+        }
+
+        private static DataTable TaoBangBaoCao()
+        {
+            DataTable table = new();
+            table.Columns.Add("MaBaoCao", typeof(string));
+            table.Columns.Add("Ngay", typeof(DateTime));
+            table.Columns.Add("NoiDung", typeof(string));
+            table.Columns.Add("Loai", typeof(string));
+            table.Columns.Add("SoLuong", typeof(int));
+            table.Columns.Add("DoanhThu", typeof(decimal));
+            table.Columns.Add("GhiChu", typeof(string));
+            return table;
         }
 
         private static DataTable LoadBaoCaoPhong()
@@ -476,8 +470,8 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
             SaveFileDialog saveFileDialog = new()
             {
                 Title = "Xuất báo cáo",
-                Filter = "Excel CSV (*.csv)|*.csv",
-                FileName = $"BaoCaoThongKe_{DateTime.Now:yyyyMMdd_HHmm}.csv"
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                FileName = $"BaoCaoThongKe_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
             };
 
             if (saveFileDialog.ShowDialog() != true)
@@ -487,21 +481,45 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
 
             try
             {
-                StringBuilder builder = new();
-                builder.AppendLine("Ma bao cao,Ngay phat sinh,Noi dung,Loai,So luong,Doanh thu,Ghi chu");
-                foreach (BaoCaoChiTietItem item in danhSachHienThi)
+                ExcelDocument document = new()
                 {
-                    builder.AppendLine(string.Join(",",
-                        Csv(item.MaBaoCao),
-                        Csv(item.Ngay),
-                        Csv(item.NoiDung),
-                        Csv(item.Loai),
-                        Csv(item.SoLuong.ToString("N0", vietnameseCulture)),
-                        Csv(item.DoanhThu),
-                        Csv(item.GhiChu)));
-                }
+                    Title = "BÁO CÁO - THỐNG KÊ KHÁCH SẠN",
+                    Subtitle = $"Kỳ báo cáo: {DpTuNgay.SelectedDate:dd/MM/yyyy} - {DpDenNgay.SelectedDate:dd/MM/yyyy} | {GetLoaiBaoCaoText()}",
+                    SheetName = "Báo cáo"
+                };
 
-                File.WriteAllText(saveFileDialog.FileName, builder.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+                ExcelSection overview = new()
+                {
+                    Title = "Tổng quan",
+                    Headers = ["Tổng doanh thu", "Phòng đã đặt", "Tổng khách hàng", "Tỷ lệ lấp đầy"],
+                    ColumnWidths = [22, 18, 18, 18]
+                };
+                overview.Rows.Add([TxtTongDoanhThu.Text, TxtTongPhongDat.Text, TxtTongKhachHang.Text, TxtTyLeLapDay.Text]);
+                document.Sections.Add(overview);
+
+                ExcelSection dailyRevenue = new()
+                {
+                    Title = "Doanh thu theo ngày trong tháng",
+                    Headers = ["Ngày", "Doanh thu"],
+                    ColumnWidths = [14, 22],
+                    Summary = $"Tổng doanh thu theo biểu đồ: {doanhThuTheoNgayTrongThang.Sum(item => item.DoanhThu):N0} VND"
+                };
+                dailyRevenue.Rows.AddRange(doanhThuTheoNgayTrongThang.Select(item => (IReadOnlyList<object?>)
+                    [item.Label, new ExcelMoney(item.DoanhThu)]));
+                document.Sections.Add(dailyRevenue);
+
+                ExcelSection details = new()
+                {
+                    Title = "Chi tiết báo cáo",
+                    Headers = ["Mã", "Ngày", "Nội dung", "Loại", "Số lượng", "Doanh thu", "Ghi chú"],
+                    ColumnWidths = [16, 14, 36, 18, 12, 20, 28],
+                    Summary = $"Tổng dòng: {danhSachHienThi.Count:N0} | Tổng doanh thu: {TongDoanhThuHienThi():N0} VND"
+                };
+                details.Rows.AddRange(danhSachHienThi.Select(item => (IReadOnlyList<object?>)
+                    [item.MaBaoCao, item.Ngay, item.NoiDung, item.Loai, item.SoLuong, new ExcelMoney(item.DoanhThuValue), item.GhiChu]));
+                document.Sections.Add(details);
+
+                ExcelExportService.Export(saveFileDialog.FileName, document);
                 MessageBox.Show("Xuất Excel thành công.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -512,20 +530,16 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
 
         private void BtnInBaoCao_Click(object sender, RoutedEventArgs e)
         {
+            if (danhSachHienThi.Count == 0)
+            {
+                MessageBox.Show("Không có dữ liệu báo cáo để in.", "In báo cáo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             try
             {
-                PrintDialog printDialog = new();
-                if (printDialog.ShowDialog() != true)
-                {
-                    return;
-                }
-
                 FlowDocument document = CreatePrintDocument();
-                document.PageWidth = printDialog.PrintableAreaWidth;
-                document.PageHeight = printDialog.PrintableAreaHeight;
-                document.PagePadding = new Thickness(36);
-                document.ColumnWidth = printDialog.PrintableAreaWidth;
-                printDialog.PrintDocument(((IDocumentPaginatorSource)document).DocumentPaginator, "Báo cáo thống kê khách sạn");
+                PrintExportService.Print(document, "Báo cáo thống kê khách sạn");
             }
             catch (Exception ex)
             {
@@ -556,6 +570,65 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
                 Margin = new Thickness(0, 0, 0, 16)
             });
 
+            Table kpiTable = new();
+            for (int i = 0; i < 4; i++)
+            {
+                kpiTable.Columns.Add(new TableColumn());
+            }
+
+            TableRowGroup kpiGroup = new();
+            TableRow kpiHeader = new();
+            foreach (string title in new[] { "Tổng doanh thu", "Phòng đã đặt", "Tổng khách hàng", "Tỷ lệ lấp đầy" })
+            {
+                kpiHeader.Cells.Add(CreatePrintCell(title, true));
+            }
+            kpiGroup.Rows.Add(kpiHeader);
+
+            TableRow kpiValue = new();
+            foreach (string value in new[] { TxtTongDoanhThu.Text, TxtTongPhongDat.Text, TxtTongKhachHang.Text, TxtTyLeLapDay.Text })
+            {
+                kpiValue.Cells.Add(CreatePrintCell(value, false));
+            }
+            kpiGroup.Rows.Add(kpiValue);
+            kpiTable.RowGroups.Add(kpiGroup);
+            document.Blocks.Add(kpiTable);
+
+            document.Blocks.Add(new Paragraph(new Run("Doanh thu theo ngày trong tháng (01-30)"))
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 14, 0, 6)
+            });
+
+            Table chartTable = new();
+            for (int i = 0; i < 6; i++)
+            {
+                chartTable.Columns.Add(new TableColumn());
+            }
+
+            TableRowGroup chartGroup = new();
+            foreach (IEnumerable<DoanhThuThangItem> chunk in doanhThuTheoNgayTrongThang.Chunk(6))
+            {
+                TableRow dayRow = new();
+                TableRow revenueRow = new();
+                foreach (DoanhThuThangItem item in chunk)
+                {
+                    dayRow.Cells.Add(CreatePrintCell("Ngày " + item.Label, true));
+                    revenueRow.Cells.Add(CreatePrintCell(item.DoanhThu.ToString("N0", vietnameseCulture) + " đ", false));
+                }
+                chartGroup.Rows.Add(dayRow);
+                chartGroup.Rows.Add(revenueRow);
+            }
+            chartTable.RowGroups.Add(chartGroup);
+            document.Blocks.Add(chartTable);
+
+            document.Blocks.Add(new Paragraph(new Run("Chi tiết báo cáo"))
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 14, 0, 6)
+            });
+
             Table table = new();
             for (int i = 0; i < 6; i++)
             {
@@ -566,14 +639,7 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
             TableRow header = new();
             foreach (string column in new[] { "Mã", "Ngày", "Nội dung", "Loại", "SL", "Doanh thu" })
             {
-                header.Cells.Add(new TableCell(new Paragraph(new Run(column)))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Background = Brushes.LightGray,
-                    Padding = new Thickness(4),
-                    BorderBrush = Brushes.Gray,
-                    BorderThickness = new Thickness(0.5)
-                });
+                header.Cells.Add(CreatePrintCell(column, true));
             }
             headerGroup.Rows.Add(header);
             table.RowGroups.Add(headerGroup);
@@ -584,19 +650,41 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
                 TableRow row = new();
                 foreach (string value in new[] { item.MaBaoCao, item.Ngay, item.NoiDung, item.Loai, item.SoLuong.ToString("N0", vietnameseCulture), item.DoanhThu })
                 {
-                    row.Cells.Add(new TableCell(new Paragraph(new Run(value)))
-                    {
-                        Padding = new Thickness(4),
-                        BorderBrush = Brushes.LightGray,
-                        BorderThickness = new Thickness(0.5)
-                    });
+                    row.Cells.Add(CreatePrintCell(value, false));
                 }
                 bodyGroup.Rows.Add(row);
             }
 
             table.RowGroups.Add(bodyGroup);
             document.Blocks.Add(table);
+
+            document.Blocks.Add(new Paragraph(new Run($"Tổng dòng: {danhSachHienThi.Count:N0} | Tổng doanh thu: {TongDoanhThuHienThi().ToString("N0", vietnameseCulture)} đ"))
+            {
+                FontWeight = FontWeights.Bold,
+                TextAlignment = TextAlignment.Right,
+                Margin = new Thickness(0, 14, 0, 0)
+            });
+
             return document;
+        }
+
+        private string GetLoaiBaoCaoText()
+        {
+            return CboLoaiBaoCao.SelectedItem is ComboBoxItem item
+                ? item.Content?.ToString() ?? GetLoaiBaoCao()
+                : GetLoaiBaoCao();
+        }
+
+        private static TableCell CreatePrintCell(string value, bool header)
+        {
+            return new TableCell(new Paragraph(new Run(value)))
+            {
+                FontWeight = header ? FontWeights.Bold : FontWeights.Normal,
+                Background = header ? Brushes.LightGray : Brushes.Transparent,
+                Padding = new Thickness(4),
+                BorderBrush = header ? Brushes.Gray : Brushes.LightGray,
+                BorderThickness = new Thickness(0.5)
+            };
         }
 
         private static decimal ToDecimal(object? value)
@@ -619,14 +707,16 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
             return ViewSchemaHelper.ColumnExists(tableName, columnName);
         }
 
-        private static string Csv(string value)
+        private decimal TongDoanhThuHienThi()
         {
-            return "\"" + (value ?? string.Empty).Replace("\"", "\"\"") + "\"";
+            return danhSachHienThi.Sum(item => item.DoanhThuValue);
         }
 
         private sealed class DoanhThuThangItem
         {
             public string Label { get; init; } = string.Empty;
+            public int Ngay { get; init; }
+            public decimal DoanhThu { get; init; }
             public double BarHeight { get; init; }
             public Brush Color { get; init; } = Brushes.RoyalBlue;
             public string ToolTip { get; init; } = string.Empty;
@@ -639,6 +729,7 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
             public string NoiDung { get; init; } = string.Empty;
             public string Loai { get; init; } = string.Empty;
             public int SoLuong { get; init; }
+            public decimal DoanhThuValue { get; init; }
             public string DoanhThu { get; init; } = string.Empty;
             public string GhiChu { get; init; } = string.Empty;
 
@@ -655,6 +746,7 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
                     NoiDung = row["NoiDung"].ToString() ?? string.Empty,
                     Loai = row["Loai"].ToString() ?? string.Empty,
                     SoLuong = row["SoLuong"] == DBNull.Value ? 0 : Convert.ToInt32(row["SoLuong"]),
+                    DoanhThuValue = doanhThu,
                     DoanhThu = doanhThu.ToString("N0", culture) + " đ",
                     GhiChu = row["GhiChu"].ToString() ?? string.Empty
                 };
@@ -662,3 +754,4 @@ ORDER BY DoanhThu DESC, dv.TenDVVT;",
         }
     }
 }
+

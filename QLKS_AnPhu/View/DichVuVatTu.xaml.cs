@@ -1,9 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
+using Microsoft.Win32;
 using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DTO;
+using QLKS_AnPhu.Services;
 
 namespace QLKS_AnPhu.View
 {
@@ -211,6 +215,120 @@ namespace QLKS_AnPhu.View
         private void DgDichVuVatTu_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             DataContext = DgDichVuVatTu.SelectedItem as DichVuVatTuDTO;
+        }
+
+        private void BtnXuatPdf_Click(object sender, RoutedEventArgs e)
+        {
+            InDanhSach(pdfMode: true);
+        }
+
+        private void BtnXuatExcel_Click(object sender, RoutedEventArgs e)
+        {
+            List<DichVuVatTuDTO> rows = DgDichVuVatTu.Items.OfType<DichVuVatTuDTO>().ToList();
+            if (rows.Count == 0)
+            {
+                MessageBox.Show("Không có dữ liệu dịch vụ - vật tư để xuất Excel.", "Xuất Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            SaveFileDialog dialog = new()
+            {
+                Title = "Xuất danh sách dịch vụ - vật tư",
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                FileName = $"DanhSachDichVuVatTu_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
+            };
+            if (dialog.ShowDialog(Window.GetWindow(this)) != true)
+            {
+                return;
+            }
+
+            try
+            {
+                ExcelSection section = new()
+                {
+                    Title = "Chi tiết dịch vụ - vật tư",
+                    Headers = ["Mã", "Tên dịch vụ / vật tư", "Loại", "Đơn vị tính", "Đơn giá", "Số lượng tồn", "Trạng thái", "Ghi chú"],
+                    ColumnWidths = [10, 32, 16, 14, 16, 15, 18, 30],
+                    Summary = $"Tổng số mục: {rows.Count:N0} | Tổng tồn kho: {rows.Sum(item => item.SoLuongTon):N0}"
+                };
+                section.Rows.AddRange(rows.Select(item => (IReadOnlyList<object?>)
+                [
+                    $"DV{item.Ma:000}", item.Ten, item.Loai, item.DonViTinh,
+                    new ExcelMoney(item.DonGia), item.SoLuongTon, item.TrangThai, item.GhiChu
+                ]));
+
+                ExcelDocument document = new()
+                {
+                    Title = "DANH SÁCH DỊCH VỤ - VẬT TƯ",
+                    Subtitle = "Dữ liệu đang hiển thị trong phần mềm quản lý khách sạn",
+                    SheetName = "Dịch vụ - vật tư"
+                };
+                document.Sections.Add(section);
+                ExcelExportService.Export(dialog.FileName, document);
+                MessageBox.Show("Xuất Excel thành công.", "Xuất Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không xuất được Excel: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnInDanhSach_Click(object sender, RoutedEventArgs e)
+        {
+            InDanhSach(pdfMode: false);
+        }
+
+        private void InDanhSach(bool pdfMode)
+        {
+            List<DichVuVatTuDTO> rows = DgDichVuVatTu.Items.OfType<DichVuVatTuDTO>().ToList();
+            if (rows.Count == 0)
+            {
+                MessageBox.Show("Không có dữ liệu dịch vụ - vật tư để in.", pdfMode ? "Xuất PDF" : "In danh sách", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                IReadOnlyList<PrintColumn> columns =
+                [
+                    new("Mã", 55, TextAlignment.Center, true),
+                    new("Tên dịch vụ / vật tư", new GridLength(1, GridUnitType.Star)),
+                    new("Loại", 85, TextAlignment.Center),
+                    new("ĐVT", 65, TextAlignment.Center, true),
+                    new("Đơn giá", 90, TextAlignment.Right, true),
+                    new("SL tồn", 65, TextAlignment.Right, true),
+                    new("Trạng thái", 95, TextAlignment.Center)
+                ];
+
+                FlowDocument document = PrintExportService.CreateTableDocument(
+                    "Danh sách dịch vụ - vật tư",
+                    $"Dữ liệu đang hiển thị - Tổng cộng {rows.Count:N0} mục",
+                    columns,
+                    rows.Select(item => (IReadOnlyList<string>)
+                    [
+                        $"DV{item.Ma:000}",
+                        item.Ten,
+                        item.Loai,
+                        item.DonViTinh,
+                        item.DonGia.ToString("N0"),
+                        item.SoLuongTon.ToString("N0"),
+                        item.TrangThai
+                    ]),
+                    $"Tổng số mục: {rows.Count:N0}  |  Tổng tồn kho: {rows.Sum(item => item.SoLuongTon):N0}");
+
+                PrintExportService.Print(
+                    document,
+                    pdfMode ? "Xuất PDF danh sách dịch vụ - vật tư" : "In danh sách dịch vụ - vật tư",
+                    pdfMode);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    (pdfMode ? "Không xuất được PDF: " : "Không in được danh sách: ") + ex.Message,
+                    "Lỗi",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
     }

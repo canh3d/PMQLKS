@@ -4,6 +4,8 @@ namespace QLKS_AnPhu.DTO
     {
         public PhongDTO Phong { get; set; } = new();
         public KhachHangDTO KhachHang { get; set; } = new();
+        public int? MaDoan { get; set; }
+        public int MaNhanVien { get; set; }
         public DateTime NgayNhan { get; set; }
         public DateTime NgayTra { get; set; }
         public int SoNguoi { get; set; }
@@ -12,6 +14,7 @@ namespace QLKS_AnPhu.DTO
         public decimal TienCoc { get; set; }
         public decimal TienPhong { get; set; }
         public decimal TienDichVu { get; set; }
+        public decimal PhuPhiNhanSom { get; set; }
         public List<DichVuDatPhongDTO> DichVuDaThem { get; set; } = new();
         public string GhiChu { get; set; } = string.Empty;
     }

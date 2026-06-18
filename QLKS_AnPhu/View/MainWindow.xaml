@@ -168,7 +168,7 @@
                     <Border Grid.Column="2" Background="#F8FAFC" CornerRadius="14" BorderBrush="#E2E8F0" BorderThickness="1" Padding="14,8" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="AccountCircle" Width="22" Height="22" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,8,0" />
-                            <TextBlock x:Name="TxtXinChao" Text="Xin chào: Admin" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextMainBrush}" />
+                            <TextBlock x:Name="TxtXinChao" Text="Xin chào: --" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextMainBrush}" />
                         </StackPanel>
                     </Border>
 

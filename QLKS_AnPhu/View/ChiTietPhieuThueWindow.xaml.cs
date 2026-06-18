@@ -1,8 +1,11 @@
 using System.Data;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Windows;
 using Microsoft.Data.SqlClient;
 using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DAL;
+using QLKS_AnPhu.DTO;
 
 namespace QLKS_AnPhu.View
 {
@@ -13,6 +16,7 @@ namespace QLKS_AnPhu.View
         private readonly PhongBUS phongBUS = new();
         private readonly ThanhToanFlowBUS thanhToanBUS = new();
         private DataRow? currentRow;
+        private ThongTinPhongChiTiet? thongTinPhongHienTai;
 
         public bool DuLieuDaThayDoi { get; private set; }
 
@@ -43,18 +47,28 @@ namespace QLKS_AnPhu.View
 
                 currentRow = data.Rows[0];
                 ThongTinPhongChiTiet thongTinPhong = LayThongTinPhongChiTiet();
+                thongTinPhongHienTai = thongTinPhong;
+                string trangThaiHienThi = GetString(currentRow, "TrangThaiHienThi");
+                bool phieuDaHuy = LaTrangThaiHuy(trangThaiHienThi);
                 decimal tienPhong = thongTinPhong.TienPhong > 0 ? thongTinPhong.TienPhong : GetDecimal(currentRow, "TienPhong");
                 decimal phuThu = thongTinPhong.PhuPhi > 0 ? thongTinPhong.PhuPhi : GetDecimal(currentRow, "PhuPhi");
-                decimal tienCoc = GetDecimal(currentRow, "TienCoc");
-                decimal tienDichVu = LoadDichVuSuDung();
-                bool laVip = GetString(currentRow, "LoaiKhach").Contains("VIP", StringComparison.OrdinalIgnoreCase);
-                decimal giamGia = laVip ? Math.Round((tienPhong + phuThu) * 0.1m, 0) : 0;
-                decimal tongTien = Math.Max(0, tienPhong + phuThu + tienDichVu - giamGia);
-                decimal conLai = Math.Max(0, tongTien - tienCoc);
+                decimal tienCocGiuLai = phieuDaHuy
+                    ? HoaDonItem.LayTienCocGiuLaiTheoHoaDon(loaiPhieu, maGoc) ?? 0
+                    : 0;
+                decimal tienDichVu = phieuDaHuy ? 0 : LoadDichVuSuDung();
+                if (phieuDaHuy)
+                {
+                    DgDichVu.ItemsSource = null;
+                    TxtTongDichVu.Text = "Tổng cộng dịch vụ: 0 VND";
+                    tienPhong = 0;
+                    phuThu = 0;
+                }
+                decimal daThanhToanCheckIn = phieuDaHuy ? 0 : LayDaThanhToanLucCheckIn();
+                decimal canThanhToanThem = phieuDaHuy ? 0 : LayCanThanhToanThemTrongLucThue();
 
                 TxtTieuDe.Text = "Chi tiết phiếu thuê / đặt phòng";
                 TxtMaPhieu.Text = TaoMaPhieuHienThi(GetString(currentRow, "MaPhieu"), thongTinPhong.SoLuongPhong);
-                TxtTrangThai.Text = GetString(currentRow, "TrangThaiHienThi");
+                TxtTrangThai.Text = trangThaiHienThi;
                 TxtHoTen.Text = GetString(currentRow, "HoTen");
                 TxtSDT.Text = GetString(currentRow, "SDT");
                 TxtCCCD.Text = GetString(currentRow, "CCCD");
@@ -76,22 +90,20 @@ namespace QLKS_AnPhu.View
                     GetDate(currentRow, "NgayNhan"),
                     GetDate(currentRow, "NgayTraDuKien"),
                     TxtTrangThai.Text);
-                TxtLoaiPhieu.Text = loaiPhieu == "DAT" ? "Phiếu đặt phòng" : "Phiếu thuê";
-                TxtTienPhong.Text = tienPhong.ToString("N0") + " VND";
-                TxtPhuThuLabel.Text = TaoNhanPhuPhiNhanSom(
-                    GetNullableDate(currentRow, "NgayNhanThucTe"),
-                    GetNullableDate(currentRow, "NgayNhanDuKien"));
-                TxtPhuThu.Text = phuThu.ToString("N0") + " VND";
-                TxtGiamGia.Text = giamGia.ToString("N0") + " VND";
-                TxtTienCoc.Text = tienCoc.ToString("N0") + " VND";
-                TxtTongTien.Text = tongTien.ToString("N0") + " VND";
-                TxtConLai.Text = conLai.ToString("N0") + " VND";
+                TxtLoaiPhieu.Text = TaoLoaiPhieuHienThi(loaiPhieu, thongTinPhong.SoLuongPhong);
+                TxtDaThanhToanCheckIn.Text = daThanhToanCheckIn.ToString("N0") + " VND";
+                TxtCanThanhToanThem.Text = canThanhToanThem.ToString("N0") + " VND";
                 TxtGhiChu.Text = GetString(currentRow, "GhiChu");
+                LoadLichSuGiaHan();
+                LoadLichSuDoiPhong();
 
                 bool daDat = string.Equals(TxtTrangThai.Text, "Đã đặt", StringComparison.OrdinalIgnoreCase);
                 bool dangThue = string.Equals(TxtTrangThai.Text, "Đang thuê", StringComparison.OrdinalIgnoreCase);
                 BtnNhanPhong.IsEnabled = loaiPhieu == "DAT" && daDat;
                 BtnTraPhong.IsEnabled = loaiPhieu == "THUE" && dangThue;
+                BtnGiaHanPhong.IsEnabled = loaiPhieu == "THUE" && dangThue && thongTinPhong.MaPhongDaiDien > 0;
+                BtnDoiPhong.IsEnabled = ((loaiPhieu == "THUE" && dangThue) || (loaiPhieu == "DAT" && daDat)) && thongTinPhong.MaPhongDaiDien > 0;
+                BtnHuyDat.IsEnabled = loaiPhieu == "DAT" && daDat;
             }
             catch (Exception ex)
             {
@@ -117,6 +129,156 @@ namespace QLKS_AnPhu.View
             return $"Phụ phí nhận sớm ({thoiGian})";
         }
 
+        private static bool LaTrangThaiHuy(string trangThai)
+        {
+            string normalized = BoDau(trangThai).ToLowerInvariant();
+            return normalized.Contains("huy") ||
+                   normalized.Contains("no-show") ||
+                   normalized.Contains("no show") ||
+                   normalized.Contains("khach khong den");
+        }
+
+        private void LoadLichSuGiaHan()
+        {
+            DataTable table = TaoBangLichSuGiaHan();
+            decimal tongTien = 0;
+            int stt = 1;
+
+            if (loaiPhieu == "THUE" && currentRow != null)
+            {
+                string ghiChu = GetString(currentRow, "GhiChu");
+                foreach (Match match in Regex.Matches(ghiChu, @"\[GIAHAN\]\s*Tu=(?<tu>[^;]+);Den=(?<den>[^;]+);SoTien=(?<tien>-?\d+(?:[\.,]\d+)?)", RegexOptions.IgnoreCase))
+                {
+                    if (!TryParseIsoDate(match.Groups["tu"].Value, out DateTime tuNgay) ||
+                        !TryParseIsoDate(match.Groups["den"].Value, out DateTime denNgay))
+                    {
+                        continue;
+                    }
+
+                    decimal soTien = ParseMoney(match.Groups["tien"].Value);
+                    tongTien += soTien;
+                    table.Rows.Add(
+                        stt++,
+                        tuNgay.ToString("dd/MM/yyyy HH:mm"),
+                        denNgay.ToString("dd/MM/yyyy HH:mm"),
+                        TinhThoiLuongGiaHan(tuNgay, denNgay),
+                        soTien.ToString("N0") + " VND");
+                }
+            }
+
+            DgGiaHan.ItemsSource = table.DefaultView;
+            TxtTongGiaHan.Text = table.Rows.Count == 0
+                ? "Chưa có lịch sử gia hạn."
+                : $"Tổng gia hạn: {tongTien:N0} VND";
+        }
+
+        private void LoadLichSuDoiPhong()
+        {
+            DataTable table = TaoBangLichSuDoiPhong();
+            decimal tongChenhLech = 0;
+
+            if (loaiPhieu == "THUE" &&
+                TableExists("DOIPHONG") &&
+                ColumnExists("DOIPHONG", "MaThue") &&
+                ColumnExists("DOIPHONG", "MaPhongCu") &&
+                ColumnExists("DOIPHONG", "MaPhongMoi"))
+            {
+                string tenPhongCu = TenPhongSql("PC");
+                string tenPhongMoi = TenPhongSql("PM");
+                string lyDoExpr = ColumnExists("DOIPHONG", "LyDo") ? "ISNULL(DP.LyDo, N'')" : "CAST(N'' AS nvarchar(255))";
+                string chenhLechExpr = ColumnExists("DOIPHONG", "ChenhLechTien") ? "ISNULL(DP.ChenhLechTien, 0)" : "CAST(0 AS decimal(18,2))";
+                string thoiDiemExpr = ColumnExists("DOIPHONG", "ThoiDiemDoi") ? "DP.ThoiDiemDoi" : "GETDATE()";
+
+                DataTable data = ConnectDB.GetData(
+                    @"SELECT " + thoiDiemExpr + @" AS ThoiDiem,
+                             " + tenPhongCu + @" AS PhongCu,
+                             " + tenPhongMoi + @" AS PhongMoi,
+                             " + lyDoExpr + @" AS LyDo,
+                             " + chenhLechExpr + @" AS ChenhLechTien
+                      FROM dbo.DOIPHONG DP
+                      LEFT JOIN dbo.PHONG PC ON DP.MaPhongCu = PC.MaPhong
+                      LEFT JOIN dbo.PHONG PM ON DP.MaPhongMoi = PM.MaPhong
+                      WHERE DP.MaThue = @MaThue
+                      ORDER BY " + thoiDiemExpr,
+                    new SqlParameter("@MaThue", maGoc));
+
+                int stt = 1;
+                foreach (DataRow row in data.Rows)
+                {
+                    DateTime thoiDiem = GetDate(row, "ThoiDiem");
+                    decimal chenhLech = GetDecimal(row, "ChenhLechTien");
+                    tongChenhLech += chenhLech;
+                    table.Rows.Add(
+                        stt++,
+                        thoiDiem.ToString("dd/MM/yyyy HH:mm"),
+                        GetString(row, "PhongCu"),
+                        GetString(row, "PhongMoi"),
+                        chenhLech.ToString("N0") + " VND",
+                        GetString(row, "LyDo"));
+                }
+            }
+
+            DgDoiPhong.ItemsSource = table.DefaultView;
+            TxtTongDoiPhong.Text = table.Rows.Count == 0
+                ? "Chưa có lịch sử đổi phòng."
+                : $"Tổng chênh lệch đổi phòng: {tongChenhLech:N0} VND";
+        }
+
+        private static DataTable TaoBangLichSuGiaHan()
+        {
+            DataTable table = new();
+            table.Columns.Add("Lần", typeof(int));
+            table.Columns.Add("Từ ngày", typeof(string));
+            table.Columns.Add("Đến ngày", typeof(string));
+            table.Columns.Add("Thời lượng", typeof(string));
+            table.Columns.Add("Số tiền", typeof(string));
+            return table;
+        }
+
+        private static DataTable TaoBangLichSuDoiPhong()
+        {
+            DataTable table = new();
+            table.Columns.Add("Lần", typeof(int));
+            table.Columns.Add("Thời điểm", typeof(string));
+            table.Columns.Add("Phòng cũ", typeof(string));
+            table.Columns.Add("Phòng mới", typeof(string));
+            table.Columns.Add("Chênh lệch", typeof(string));
+            table.Columns.Add("Lý do", typeof(string));
+            return table;
+        }
+
+        private static bool TryParseIsoDate(string value, out DateTime date)
+        {
+            return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) ||
+                   DateTime.TryParse(value, out date);
+        }
+
+        private static decimal ParseMoney(string value)
+        {
+            string normalized = (value ?? string.Empty).Replace(',', '.');
+            return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal result)
+                ? result
+                : 0;
+        }
+
+        private static string TinhThoiLuongGiaHan(DateTime start, DateTime end)
+        {
+            if (end <= start)
+            {
+                return "0 giờ";
+            }
+
+            TimeSpan span = end - start;
+            if (span.TotalHours < 24)
+            {
+                int hours = Math.Max(1, (int)Math.Ceiling(span.TotalHours));
+                return hours + " giờ";
+            }
+
+            int days = Math.Max(1, (int)Math.Ceiling(span.TotalDays));
+            return days + " ngày";
+        }
+
         private string SqlPhieuThue()
         {
             string bangDatPhong = TableExists("PHIEUDATPHONG") ? "PHIEUDATPHONG" : TableExists("DATPHONG") ? "DATPHONG" : string.Empty;
@@ -129,14 +291,23 @@ namespace QLKS_AnPhu.View
             string tenPhongExpr = TenPhongSql("P");
             string ngayTraThucTeExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong") ? "PT.NgayTraPhong" : "CAST(NULL AS datetime)";
             string tienPhongExpr = PricingHelper.TienPhongSql(ngayNhanDuKienExpr, ngayTraDuKienExpr, ngayTraDuKienExpr);
-            string phuPhiExpr = PricingHelper.PhuThuNhanSomSql("PT.NgayNhan", ngayNhanDuKienExpr);
+            string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
+            string giaGioExpr = "ISNULL(NULLIF(LP.DonGiaGio, 0), " + giaNgayExpr + " / 24.0)";
+            string giaDemExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), " + giaNgayExpr + ")";
+            string phuPhiExpr = PricingHelper.PhuThuNhanSomSql("PT.NgayNhan", ngayNhanDuKienExpr, ngayTraDuKienExpr, giaNgayExpr, giaGioExpr, giaDemExpr);
             string diaChiExpr = ColumnExists("KHACHHANG", "DiaChi") ? "KH.DiaChi" : "CAST(NULL AS nvarchar(255))";
             string ghiChuExpr = ColumnExists("PHIEUTHUE", "GhiChu") ? "PT.GhiChu" : "CAST(NULL AS nvarchar(255))";
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
+            string maDatPhongExpr = coPhieuDatLienKet ? "PT.MaDatPhong" : "CAST(NULL AS int)";
+            string maDoanExpr = coPhieuDatLienKet && ColumnExists(bangDatPhong, "MaDoan") ? "ISNULL(DP.MaDoan, 0)" : "CAST(0 AS int)";
 
             return @"SELECT N'PT' + RIGHT('000000' + CAST(PT.MaThue AS nvarchar(20)), 6) AS MaPhieu,
+                            PT.MaThue AS MaThue,
+                            PT.MaPhong AS MaPhong,
+                            " + maDatPhongExpr + @" AS MaDatPhong,
+                            " + maDoanExpr + @" AS MaDoan,
                             CASE
-                                WHEN PT.TrangThai IN (N'Đã hủy', N'Da huy') THEN N'Đã hủy'
+                                WHEN PT.TrangThai IN (N'Đã hủy', N'Da huy', N'Hủy', N'Huy', N'No-Show', N'No Show', N'Khach khong den') THEN N'Đã hủy'
                                 WHEN PT.TrangThai IN (N'Đã trả', N'Da tra', N'Đã trả phòng', N'Da tra phong') THEN N'Đã trả phòng'
                                 WHEN PT.TrangThai IN (N'Đang thuê', N'Dang thue') OR P.TrangThai IN (N'Có khách', N'Co khach', N'Đang thuê', N'Dang thue') THEN N'Đang thuê'
                                 ELSE ISNULL(PT.TrangThai, N'Đang thuê')
@@ -173,6 +344,14 @@ namespace QLKS_AnPhu.View
                 : maPhieu;
         }
 
+        private static string TaoLoaiPhieuHienThi(string loaiPhieu, int soLuongPhong)
+        {
+            bool laDoan = soLuongPhong > 1;
+            return loaiPhieu == "DAT"
+                ? laDoan ? "Phiếu đặt phòng đoàn" : "Phiếu đặt phòng"
+                : laDoan ? "Phiếu thuê đoàn" : "Phiếu thuê";
+        }
+
         private string SqlDatPhong()
         {
             string bangDatPhong = TableExists("PHIEUDATPHONG") ? "PHIEUDATPHONG" : "DATPHONG";
@@ -184,14 +363,18 @@ namespace QLKS_AnPhu.View
             string diaChiExpr = ColumnExists("KHACHHANG", "DiaChi") ? "KH.DiaChi" : "CAST(NULL AS nvarchar(255))";
             string ghiChuExpr = ColumnExists(bangDatPhong, "GhiChu") ? "DP.GhiChu" : "CAST(NULL AS nvarchar(255))";
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
+            string maDoanExpr = ColumnExists(bangDatPhong, "MaDoan") ? "ISNULL(DP.MaDoan, 0)" : "CAST(0 AS int)";
             string joinPhong = TableExists("CHITIETDATPHONG")
                 ? @"JOIN dbo.CHITIETDATPHONG CT ON DP.MaDatPhong = CT.MaDatPhong
                      JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong"
                 : "JOIN dbo.PHONG P ON DP.MaPhong = P.MaPhong";
 
             return @"SELECT N'DP' + RIGHT('000000' + CAST(DP.MaDatPhong AS nvarchar(20)), 6) AS MaPhieu,
+                            DP.MaDatPhong AS MaDatPhong,
+                            P.MaPhong AS MaPhong,
+                            " + maDoanExpr + @" AS MaDoan,
                             CASE
-                                WHEN DP.TrangThai IN (N'Đã hủy', N'Da huy') THEN N'Đã hủy'
+                                WHEN DP.TrangThai IN (N'Đã hủy', N'Da huy', N'Hủy', N'Huy', N'No-Show', N'No Show', N'Khach khong den') THEN N'Đã hủy'
                                 WHEN P.TrangThai IN (N'Có khách', N'Co khach', N'Đang thuê', N'Dang thue') THEN N'Đang thuê'
                                 ELSE N'Đã đặt'
                             END AS TrangThaiHienThi,
@@ -238,20 +421,242 @@ namespace QLKS_AnPhu.View
             string soLuong = ColumnExists(table, "SoLuong") ? "PS.SoLuong" : "1";
             string donGia = ColumnExists(table, "DonGia") ? "ISNULL(PS.DonGia, DV.DonGia)" : "DV.DonGia";
             string thanhTien = ColumnExists(table, "ThanhTien") ? "PS.ThanhTien" : "(" + soLuong + " * " + donGia + ")";
+            string maPhongExpr = ColumnExists(table, "MaPhong")
+                ? "PS.MaPhong"
+                : keyColumn == "MaThue" && TableExists("PHIEUTHUE") && ColumnExists("PHIEUTHUE", "MaPhong")
+                    ? "(SELECT TOP 1 PT0.MaPhong FROM dbo.PHIEUTHUE PT0 WHERE PT0.MaThue = PS.MaThue)"
+                    : "CAST(NULL AS int)";
+            string soPhongExpr = "ISNULL((SELECT TOP 1 " + TenPhongSql("P0") + " FROM dbo.PHONG P0 WHERE P0.MaPhong = " + maPhongExpr + "), N'--')";
+            string whereDichVu = "PS." + keyColumn + " = @Ma";
+            int parameterValue = maGoc;
+            int maDoan = currentRow == null ? 0 : GetInt(currentRow, "MaDoan");
+
+            if (loaiPhieu == "THUE" &&
+                maDoan > 0 &&
+                keyColumn == "MaThue" &&
+                TableExists("PHIEUTHUE") &&
+                ColumnExists("PHIEUTHUE", "MaDoan"))
+            {
+                whereDichVu = "EXISTS (SELECT 1 FROM dbo.PHIEUTHUE PT0 WHERE PT0.MaThue = PS.MaThue AND PT0.MaDoan = @Ma)";
+                parameterValue = maDoan;
+            }
 
             DataTable data = ConnectDB.GetData(
-                @"SELECT DV." + tenDichVu + @" AS [Tên dịch vụ],
+                @"SELECT " + soPhongExpr + @" AS [Phòng],
+                         DV." + tenDichVu + @" AS [Tên dịch vụ],
                          " + soLuong + @" AS [SL],
                          " + donGia + @" AS [Đơn giá],
                          " + thanhTien + @" AS [Thành tiền]
                   FROM dbo." + table + @" PS
                   JOIN dbo.DICHVUVATTU DV ON PS." + maDvPs + " = DV." + maDv + @"
-                  WHERE PS." + keyColumn + " = @Ma",
-                new SqlParameter("@Ma", maGoc));
+                  WHERE " + whereDichVu + @"
+                  ORDER BY [Phòng], [Tên dịch vụ]",
+                new SqlParameter("@Ma", parameterValue));
             DgDichVu.ItemsSource = data.DefaultView;
             decimal total = data.AsEnumerable().Sum(row => GetDecimal(row, "Thành tiền"));
             TxtTongDichVu.Text = "Tổng cộng dịch vụ: " + total.ToString("N0") + " VND";
             return total;
+        }
+
+        private decimal LayTongHoaDonCheckInDaChot(IEnumerable<int> maThueLienQuan)
+        {
+            if (loaiPhieu != "THUE" ||
+                !TableExists("HOADON") ||
+                !ColumnExists("HOADON", "MaThue"))
+            {
+                return 0;
+            }
+
+            string tongThanhToanColumn = ViewSchemaHelper.GetFirstExistingColumn(
+                "HOADON",
+                "TongThanhToan",
+                "TongTien",
+                "ThanhTien");
+            string tienCocColumn = ViewSchemaHelper.GetFirstExistingColumn(
+                "HOADON",
+                "TienCoc",
+                "TienDatCocTruoc",
+                "DatCoc");
+
+            if (string.IsNullOrWhiteSpace(tongThanhToanColumn))
+            {
+                return 0;
+            }
+
+            List<int> ids = maThueLienQuan.Where(value => value > 0).Distinct().ToList();
+            if (ids.Count == 0)
+            {
+                return 0;
+            }
+
+            List<SqlParameter> parameters = new();
+            List<string> placeholders = new();
+            for (int index = 0; index < ids.Count; index++)
+            {
+                string parameterName = "@MaThueHoaDon" + index;
+                placeholders.Add(parameterName);
+                parameters.Add(new SqlParameter(parameterName, ids[index]));
+            }
+
+            string tienCocExpr = string.IsNullOrWhiteSpace(tienCocColumn)
+                ? "CAST(0 AS decimal(18,2))"
+                : "ISNULL(" + tienCocColumn + ", 0)";
+            object? value = ConnectDB.ExecuteScalar(
+                "SELECT ISNULL(SUM(ISNULL(" + tongThanhToanColumn + ", 0) + " + tienCocExpr + "), 0) " +
+                "FROM dbo.HOADON WHERE MaThue IN (" + string.Join(", ", placeholders) + ")",
+                parameters.ToArray());
+
+            return value == null || value == DBNull.Value ? 0 : Convert.ToDecimal(value);
+        }
+
+        private decimal LayDaThanhToanLucCheckIn()
+        {
+            if (loaiPhieu != "THUE")
+            {
+                return 0;
+            }
+
+            List<int> maThueLienQuan = LayDanhSachMaThueLienQuan();
+            if (!TableExists("CHITIETTHANHTOAN") ||
+                !ColumnExists("CHITIETTHANHTOAN", "MaThue") ||
+                !ColumnExists("CHITIETTHANHTOAN", "LoaiThanhToan"))
+            {
+                return LayTongHoaDonCheckInDaChot(maThueLienQuan);
+            }
+
+            string amountColumn = ColumnExists("CHITIETTHANHTOAN", "SoTien")
+                ? "SoTien"
+                : ColumnExists("CHITIETTHANHTOAN", "TienThanhToan")
+                    ? "TienThanhToan"
+                    : string.Empty;
+            if (string.IsNullOrWhiteSpace(amountColumn))
+            {
+                return LayTongHoaDonCheckInDaChot(maThueLienQuan);
+            }
+
+            List<SqlParameter> parameters = new();
+            List<string> placeholders = new();
+            for (int index = 0; index < maThueLienQuan.Count; index++)
+            {
+                string parameterName = "@MaThue" + index;
+                placeholders.Add(parameterName);
+                parameters.Add(new SqlParameter(parameterName, maThueLienQuan[index]));
+            }
+
+            object? value = ConnectDB.ExecuteScalar(
+                "SELECT ISNULL(SUM(" + amountColumn + "), 0) " +
+                "FROM dbo.CHITIETTHANHTOAN " +
+                "WHERE MaThue IN (" + string.Join(", ", placeholders) + ") " +
+                "AND LoaiThanhToan IN (N'RoomCheckIn', N'ServiceCheckIn')",
+                parameters.ToArray());
+            decimal tienThuTaiCheckIn = value == null || value == DBNull.Value ? 0 : Convert.ToDecimal(value);
+            if (tienThuTaiCheckIn <= 0)
+            {
+                return LayTongHoaDonCheckInDaChot(maThueLienQuan);
+            }
+
+            decimal tienCocDaThu = maThueLienQuan.Sum(LayTienCocHoaDonCheckIn);
+            return tienThuTaiCheckIn + tienCocDaThu;
+        }
+
+        private static decimal LayTienCocHoaDonCheckIn(int maThue)
+        {
+            if (!TableExists("HOADON") || !ColumnExists("HOADON", "MaThue"))
+            {
+                return 0;
+            }
+
+            string keyColumn = ViewSchemaHelper.GetFirstExistingColumn(
+                "HOADON",
+                "MaHoaDon",
+                "MaHD",
+                "IDHoaDon",
+                "HoaDonID",
+                "ID",
+                "Ma");
+            string depositColumn = ViewSchemaHelper.GetFirstExistingColumn(
+                "HOADON",
+                "TienCoc",
+                "TienDatCocTruoc",
+                "DatCoc");
+            if (string.IsNullOrWhiteSpace(keyColumn) || string.IsNullOrWhiteSpace(depositColumn))
+            {
+                return 0;
+            }
+
+            object? value = ConnectDB.ExecuteScalar(
+                "SELECT TOP 1 ISNULL(" + depositColumn + ", 0) " +
+                "FROM dbo.HOADON WHERE MaThue = @MaThue ORDER BY " + keyColumn + " ASC",
+                new SqlParameter("@MaThue", maThue));
+            return value == null || value == DBNull.Value ? 0 : Convert.ToDecimal(value);
+        }
+
+        private decimal LayCanThanhToanThemTrongLucThue()
+        {
+            if (loaiPhieu != "THUE" ||
+                currentRow == null ||
+                !string.Equals(GetString(currentRow, "TrangThaiHienThi"), "Đang thuê", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            decimal total = 0;
+            foreach (int maThue in LayDanhSachMaThueLienQuan())
+            {
+                total += thanhToanBUS.DuToanCheckOut(maThue).CanThuThem;
+            }
+            return total;
+        }
+
+        private List<int> LayDanhSachMaThueLienQuan()
+        {
+            List<int> result = new() { maGoc };
+            if (loaiPhieu != "THUE" || currentRow == null || !TableExists("PHIEUTHUE"))
+            {
+                return result;
+            }
+
+            int maDoan = GetInt(currentRow, "MaDoan");
+            if (maDoan <= 0)
+            {
+                return result;
+            }
+
+            DataTable data;
+            if (ColumnExists("PHIEUTHUE", "MaDoan"))
+            {
+                data = ConnectDB.GetData(
+                    "SELECT DISTINCT MaThue FROM dbo.PHIEUTHUE WHERE MaDoan = @MaDoan",
+                    new SqlParameter("@MaDoan", maDoan));
+            }
+            else
+            {
+                string bangDatPhong = TableExists("PHIEUDATPHONG")
+                    ? "PHIEUDATPHONG"
+                    : TableExists("DATPHONG")
+                        ? "DATPHONG"
+                        : string.Empty;
+                if (string.IsNullOrWhiteSpace(bangDatPhong) ||
+                    !ColumnExists("PHIEUTHUE", "MaDatPhong") ||
+                    !ColumnExists(bangDatPhong, "MaDoan"))
+                {
+                    return result;
+                }
+
+                data = ConnectDB.GetData(
+                    "SELECT DISTINCT PT.MaThue " +
+                    "FROM dbo.PHIEUTHUE PT " +
+                    "JOIN dbo." + bangDatPhong + " DP ON PT.MaDatPhong = DP.MaDatPhong " +
+                    "WHERE DP.MaDoan = @MaDoan",
+                    new SqlParameter("@MaDoan", maDoan));
+            }
+
+            List<int> ids = data.AsEnumerable()
+                .Select(row => GetInt(row, "MaThue"))
+                .Where(value => value > 0)
+                .Distinct()
+                .ToList();
+            return ids.Count > 0 ? ids : result;
         }
 
         private ThongTinPhongChiTiet LayThongTinPhongChiTiet()
@@ -262,7 +667,9 @@ namespace QLKS_AnPhu.View
                 TenLoaiPhong = GetString(currentRow!, "TenLoaiPhong"),
                 SoLuongPhong = 1,
                 TienPhong = GetDecimal(currentRow!, "TienPhong"),
-                PhuPhi = GetDecimal(currentRow!, "PhuPhi")
+                PhuPhi = GetDecimal(currentRow!, "PhuPhi"),
+                MaPhongDaiDien = GetInt(currentRow!, "MaPhong"),
+                MaDatPhong = GetNullableInt(currentRow!, "MaDatPhong")
             };
 
             try
@@ -289,15 +696,21 @@ namespace QLKS_AnPhu.View
 
                 decimal tienPhong = rooms.AsEnumerable().Sum(row => PricingHelper.TinhTienPhong(ngayNhanDuKien, ngayTraDuKien, GetDecimal(row, "DonGiaGio"), GetDecimal(row, "DonGiaNgay")));
                 decimal phuPhi = loaiPhieu == "THUE" && ngayNhanThucTe.HasValue
-                    ? rooms.AsEnumerable().Sum(row => PricingHelper.TinhPhuThuNhanSom(ngayNhanThucTe.Value, ngayNhanDuKien, GetDecimal(row, "DonGiaGio"), GetDecimal(row, "DonGiaNgay")))
+                    ? rooms.AsEnumerable().Sum(row => PricingHelper.TinhPhuThuNhanSom(ngayNhanThucTe.Value, ngayNhanDuKien, ngayTraDuKien, GetDecimal(row, "DonGiaGio"), GetDecimal(row, "DonGiaNgay"), GetDecimal(row, "DonGiaDem")))
                     : 0;
+                DataRow firstRoom = rooms.Rows[0];
                 return new ThongTinPhongChiTiet
                 {
                     SoPhong = string.Join(", ", soPhong),
                     TenLoaiPhong = string.Join(", ", loaiPhong),
                     SoLuongPhong = soPhong.Count,
                     TienPhong = tienPhong,
-                    PhuPhi = phuPhi
+                    PhuPhi = phuPhi,
+                    MaPhongDaiDien = GetInt(firstRoom, "MaPhong"),
+                    MaDatPhong = GetNullableInt(currentRow!, "MaDatPhong"),
+                    GiaGio = GetDecimal(firstRoom, "DonGiaGio"),
+                    GiaNgay = GetDecimal(firstRoom, "DonGiaNgay"),
+                    GiaDem = GetDecimal(firstRoom, "DonGiaDem")
                 };
             }
             catch
@@ -312,17 +725,49 @@ namespace QLKS_AnPhu.View
             string tenPhongExpr = TenPhongSql("P");
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
             string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
+            string giaDemExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), " + giaNgayExpr + ")";
             bool coMaDatPhong = ColumnExists("PHIEUTHUE", "MaDatPhong");
+
+            if (coMaDatPhong &&
+                !string.IsNullOrWhiteSpace(bangDatPhong) &&
+                ColumnExists(bangDatPhong, "MaDoan") &&
+                (TableExists("CHITIETDATPHONG") || ColumnExists(bangDatPhong, "MaPhong")))
+            {
+                string joinPhongDoan = TableExists("CHITIETDATPHONG")
+                    ? @"JOIN dbo.CHITIETDATPHONG CT ON DPG.MaDatPhong = CT.MaDatPhong
+JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong"
+                    : "JOIN dbo.PHONG P ON DPG.MaPhong = P.MaPhong";
+                DataTable theoDoan = ConnectDB.GetData(@"
+SELECT P.MaPhong AS MaPhong,
+       " + tenPhongExpr + @" AS SoPhong,
+       " + tenLoaiPhongExpr + @" AS TenLoaiPhong,
+       ISNULL(LP.DonGiaGio, 0) AS DonGiaGio,
+       " + giaNgayExpr + @" AS DonGiaNgay,
+       " + giaDemExpr + @" AS DonGiaDem
+FROM dbo.PHIEUTHUE PT
+JOIN dbo." + bangDatPhong + @" DP0 ON PT.MaDatPhong = DP0.MaDatPhong
+JOIN dbo." + bangDatPhong + @" DPG ON DPG.MaDoan = DP0.MaDoan AND ISNULL(DPG.MaDoan, 0) > 0
+" + joinPhongDoan + @"
+LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
+WHERE PT.MaThue = @Ma
+ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
+                if (theoDoan.Rows.Count > 0)
+                {
+                    return theoDoan;
+                }
+            }
 
             if (coMaDatPhong && !string.IsNullOrWhiteSpace(bangDatPhong) && ColumnExists(bangDatPhong, "MaPhong"))
             {
                 string ngayNhanColumn = ColumnExists(bangDatPhong, "NgayNhanDuKien") ? "NgayNhanDuKien" : "NgayNhanPhong";
                 string ngayTraColumn = ColumnExists(bangDatPhong, "NgayTraDuKien") ? "NgayTraDuKien" : "NgayTraPhong";
                 DataTable nhomCu = ConnectDB.GetData(@"
-SELECT " + tenPhongExpr + @" AS SoPhong,
+SELECT P.MaPhong AS MaPhong,
+       " + tenPhongExpr + @" AS SoPhong,
        " + tenLoaiPhongExpr + @" AS TenLoaiPhong,
        ISNULL(LP.DonGiaGio, 0) AS DonGiaGio,
-       " + giaNgayExpr + @" AS DonGiaNgay
+       " + giaNgayExpr + @" AS DonGiaNgay,
+       " + giaDemExpr + @" AS DonGiaDem
 FROM dbo.PHIEUTHUE PT
 JOIN dbo." + bangDatPhong + @" DP0 ON PT.MaDatPhong = DP0.MaDatPhong
 JOIN dbo." + bangDatPhong + @" DPG ON DPG.MaKH = DP0.MaKH
@@ -341,10 +786,12 @@ ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
             if (coMaDatPhong && TableExists("CHITIETDATPHONG"))
             {
                 DataTable chiTiet = ConnectDB.GetData(@"
-SELECT " + tenPhongExpr + @" AS SoPhong,
+SELECT P.MaPhong AS MaPhong,
+       " + tenPhongExpr + @" AS SoPhong,
        " + tenLoaiPhongExpr + @" AS TenLoaiPhong,
        ISNULL(LP.DonGiaGio, 0) AS DonGiaGio,
-       " + giaNgayExpr + @" AS DonGiaNgay
+       " + giaNgayExpr + @" AS DonGiaNgay,
+       " + giaDemExpr + @" AS DonGiaDem
 FROM dbo.PHIEUTHUE PT
 JOIN dbo.CHITIETDATPHONG CT ON PT.MaDatPhong = CT.MaDatPhong
 JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong
@@ -358,10 +805,12 @@ ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
             }
 
             return ConnectDB.GetData(@"
-SELECT " + tenPhongExpr + @" AS SoPhong,
+SELECT P.MaPhong AS MaPhong,
+       " + tenPhongExpr + @" AS SoPhong,
        " + tenLoaiPhongExpr + @" AS TenLoaiPhong,
        ISNULL(LP.DonGiaGio, 0) AS DonGiaGio,
-       " + giaNgayExpr + @" AS DonGiaNgay
+       " + giaNgayExpr + @" AS DonGiaNgay,
+       " + giaDemExpr + @" AS DonGiaDem
 FROM dbo.PHIEUTHUE PT
 JOIN dbo.PHONG P ON PT.MaPhong = P.MaPhong
 LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
@@ -374,16 +823,45 @@ WHERE PT.MaThue = @Ma", new SqlParameter("@Ma", maGoc));
             string tenPhongExpr = TenPhongSql("P");
             string tenLoaiPhongExpr = ColumnExists("LOAIPHONG", "TenLoaiPhong") ? "LP.TenLoaiPhong" : "CAST(P.MaLoaiPhong AS nvarchar(50))";
             string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
+            string giaDemExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), " + giaNgayExpr + ")";
+
+            if (ColumnExists(bangDatPhong, "MaDoan") &&
+                (TableExists("CHITIETDATPHONG") || ColumnExists(bangDatPhong, "MaPhong")))
+            {
+                string joinPhongDoan = TableExists("CHITIETDATPHONG")
+                    ? @"JOIN dbo.CHITIETDATPHONG CT ON DPG.MaDatPhong = CT.MaDatPhong
+JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong"
+                    : "JOIN dbo.PHONG P ON DPG.MaPhong = P.MaPhong";
+                DataTable theoDoan = ConnectDB.GetData(@"
+SELECT P.MaPhong AS MaPhong,
+       " + tenPhongExpr + @" AS SoPhong,
+       " + tenLoaiPhongExpr + @" AS TenLoaiPhong,
+       ISNULL(LP.DonGiaGio, 0) AS DonGiaGio,
+       " + giaNgayExpr + @" AS DonGiaNgay,
+       " + giaDemExpr + @" AS DonGiaDem
+FROM dbo." + bangDatPhong + @" DP0
+JOIN dbo." + bangDatPhong + @" DPG ON DPG.MaDoan = DP0.MaDoan AND ISNULL(DPG.MaDoan, 0) > 0
+" + joinPhongDoan + @"
+LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
+WHERE DP0.MaDatPhong = @Ma
+ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
+                if (theoDoan.Rows.Count > 0)
+                {
+                    return theoDoan;
+                }
+            }
 
             if (ColumnExists(bangDatPhong, "MaPhong"))
             {
                 string ngayNhanColumn = ColumnExists(bangDatPhong, "NgayNhanDuKien") ? "NgayNhanDuKien" : "NgayNhanPhong";
                 string ngayTraColumn = ColumnExists(bangDatPhong, "NgayTraDuKien") ? "NgayTraDuKien" : "NgayTraPhong";
                 DataTable nhomCu = ConnectDB.GetData(@"
-SELECT " + tenPhongExpr + @" AS SoPhong,
+SELECT P.MaPhong AS MaPhong,
+       " + tenPhongExpr + @" AS SoPhong,
        " + tenLoaiPhongExpr + @" AS TenLoaiPhong,
        ISNULL(LP.DonGiaGio, 0) AS DonGiaGio,
-       " + giaNgayExpr + @" AS DonGiaNgay
+       " + giaNgayExpr + @" AS DonGiaNgay,
+       " + giaDemExpr + @" AS DonGiaDem
 FROM dbo." + bangDatPhong + @" DP0
 JOIN dbo." + bangDatPhong + @" DPG ON DPG.MaKH = DP0.MaKH
     AND CONVERT(date, DPG." + ngayNhanColumn + @") = CONVERT(date, DP0." + ngayNhanColumn + @")
@@ -392,7 +870,7 @@ JOIN dbo.PHONG P ON DPG.MaPhong = P.MaPhong
 LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
 WHERE DP0.MaDatPhong = @Ma
 ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
-                if (nhomCu.Rows.Count > 0)
+                if (nhomCu.Rows.Count > 1)
                 {
                     return nhomCu;
                 }
@@ -401,10 +879,12 @@ ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
             if (TableExists("CHITIETDATPHONG"))
             {
                 return ConnectDB.GetData(@"
-SELECT " + tenPhongExpr + @" AS SoPhong,
+SELECT P.MaPhong AS MaPhong,
+       " + tenPhongExpr + @" AS SoPhong,
        " + tenLoaiPhongExpr + @" AS TenLoaiPhong,
        ISNULL(LP.DonGiaGio, 0) AS DonGiaGio,
-       " + giaNgayExpr + @" AS DonGiaNgay
+       " + giaNgayExpr + @" AS DonGiaNgay,
+       " + giaDemExpr + @" AS DonGiaDem
 FROM dbo.CHITIETDATPHONG CT
 JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong
 LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
@@ -473,13 +953,21 @@ ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
                     return;
                 }
 
-                phongBUS.NhanPhongTuDatPhong(
+                KetQuaCheckInThanhToanDTO result = phongBUS.NhanPhongTuDatPhong(
                     maGoc,
                     tongTienDuKien,
                     tienDatCocTruoc,
                     Math.Max(0, tienPhongCheckIn + phuThuCheckIn - giamGiaCheckIn));
+                HoaDonItem billSauThanhToan = TaoBillCheckInSauThanhToan(
+                    result,
+                    tienPhongCheckIn,
+                    tienDichVuCheckIn,
+                    phuThuCheckIn,
+                    tienDatCocTruoc,
+                    giamGiaCheckIn);
                 DuLieuDaThayDoi = true;
                 MessageBox.Show("Đã nhận phòng. Phòng đã chuyển sang trạng thái đang thuê.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                HienThiBillSauThanhToan(billSauThanhToan);
                 LoadChiTiet();
             }
             catch (Exception ex)
@@ -502,15 +990,215 @@ ORDER BY P.MaPhong", new SqlParameter("@Ma", maGoc));
 
             try
             {
-                thanhToanBUS.CheckOut(maGoc);
+                DuToanCheckOutDTO duToan = thanhToanBUS.DuToanCheckOut(maGoc);
+                ThanhToanCheckOutWindow dialog = new(duToan);
+                if (DialogService.ShowDimmedDialogResult(dialog, this) != true)
+                {
+                    return;
+                }
+
+                HoaDonItem? billSauThanhToan = dialog.ThanhToanSau ? null : TaoBillPhatSinhSauThanhToan(duToan);
+                KetQuaCheckOutThanhToanDTO result = thanhToanBUS.CheckOut(maGoc, !dialog.ThanhToanSau);
+                if (billSauThanhToan != null && result.DaThanhToan)
+                {
+                    billSauThanhToan = HoaDonItem.TaoCheckOutTam(billSauThanhToan, result.MaHoaDon);
+                }
                 DuLieuDaThayDoi = true;
                 MessageBox.Show("Đã trả phòng.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (billSauThanhToan != null && result.DaThanhToan)
+                {
+                    HienThiBillSauThanhToan(billSauThanhToan);
+                }
                 LoadChiTiet();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Không thể trả phòng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void BtnHuyDat_Click(object sender, RoutedEventArgs e)
+        {
+            if (loaiPhieu != "DAT")
+            {
+                return;
+            }
+
+            List<int> maDatPhongCanHuy = LayMaDatPhongLienQuan();
+            if (maDatPhongCanHuy.Count == 0)
+            {
+                MessageBox.Show("Không tìm thấy phiếu đặt đang chờ nhận phòng để hủy.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                List<DuToanHuyDatPhongDTO> duToanHuy = maDatPhongCanHuy
+                    .Select(maDatPhong => phongBUS.DuToanHuyDatPhong(maDatPhong))
+                    .ToList();
+                HuyDatPhongWindow confirm = new(duToanHuy);
+                if (DialogService.ShowDimmedDialogResult(confirm, this) != true)
+                {
+                    return;
+                }
+
+                foreach (int maDatPhong in maDatPhongCanHuy)
+                {
+                    phongBUS.NoShow(maDatPhong);
+                }
+
+                DuLieuDaThayDoi = true;
+                MessageBox.Show("Đã hủy đặt phòng và chuyển phòng về trạng thái trống.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                LoadChiTiet();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không thể hủy đặt phòng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnGiaHanPhong_Click(object sender, RoutedEventArgs e)
+        {
+            if (loaiPhieu != "THUE" || currentRow == null)
+            {
+                return;
+            }
+
+            ThongTinPhongChiTiet thongTinPhong = thongTinPhongHienTai ?? LayThongTinPhongChiTiet();
+            if (thongTinPhong.MaPhongDaiDien <= 0)
+            {
+                MessageBox.Show("Không xác định được phòng để gia hạn.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DateTime ngayTraDuKien = GetDate(currentRow, "NgayTraDuKien");
+            GiaHanPhongWindow window = new(
+                new GiaHanPhongRequestDTO
+                {
+                    MaThue = maGoc,
+                    MaDatPhong = thongTinPhong.MaDatPhong,
+                    MaPhong = thongTinPhong.MaPhongDaiDien,
+                    NgayTraCu = ngayTraDuKien,
+                    NgayTraMoi = ngayTraDuKien,
+                    GiaGio = thongTinPhong.GiaGio,
+                    GiaNgay = thongTinPhong.GiaNgay,
+                    GiaDem = thongTinPhong.GiaDem,
+                    SoPhongGiaHan = Math.Max(1, thongTinPhong.SoLuongPhong)
+                },
+                LaySoPhongDaiDien(thongTinPhong));
+
+            DialogService.ShowDimmedDialogResult(window, this);
+            if (window.DuLieuDaThayDoi)
+            {
+                DuLieuDaThayDoi = true;
+                LoadChiTiet();
+            }
+        }
+
+        private void BtnDoiPhong_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentRow == null)
+            {
+                return;
+            }
+
+            ThongTinPhongChiTiet thongTinPhong = thongTinPhongHienTai ?? LayThongTinPhongChiTiet();
+            if (thongTinPhong.MaPhongDaiDien <= 0)
+            {
+                MessageBox.Show("Không xác định được phòng hiện tại để đổi.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DateTime ngayTraDuKien = GetDate(currentRow, "NgayTraDuKien");
+            DoiPhongWindow window = new(
+                new DoiPhongRequestDTO
+                {
+                    MaThue = loaiPhieu == "THUE" ? maGoc : 0,
+                    MaDatPhong = thongTinPhong.MaDatPhong ?? (loaiPhieu == "DAT" ? maGoc : null),
+                    MaPhongCu = thongTinPhong.MaPhongDaiDien,
+                    NgayBatDau = loaiPhieu == "THUE" ? DateTime.Now : GetDate(currentRow, "NgayNhanDuKien"),
+                    NgayTraDuKien = ngayTraDuKien
+                },
+                LaySoPhongDaiDien(thongTinPhong));
+
+            DialogService.ShowDimmedDialogResult(window, this);
+            if (window.DuLieuDaThayDoi)
+            {
+                DuLieuDaThayDoi = true;
+                LoadChiTiet();
+            }
+        }
+
+        private void HienThiBillSauThanhToan(HoaDonItem hoaDon)
+        {
+            HoaDonPrintWindow window = new(hoaDon);
+            DialogService.ShowDimmedDialogResult(window, this);
+        }
+
+        private HoaDonItem TaoBillCheckInSauThanhToan(
+            KetQuaCheckInThanhToanDTO result,
+            decimal tienPhong,
+            decimal tienDichVu,
+            decimal phuPhi,
+            decimal tienCoc,
+            decimal giamGia)
+        {
+            ThongTinPhongChiTiet thongTinPhong = LayThongTinPhongChiTiet();
+            return HoaDonItem.TaoCheckInTam(
+                result.MaHoaDon > 0 ? "HD-" + result.MaHoaDon.ToString("0000") : "HD-TAM-" + maGoc,
+                result.MaThue ?? maGoc,
+                GetString(currentRow!, "HoTen"),
+                GetString(currentRow!, "SDT"),
+                GetString(currentRow!, "DiaChi"),
+                thongTinPhong.SoPhong,
+                thongTinPhong.TenLoaiPhong,
+                GetDate(currentRow!, "NgayNhanDuKien"),
+                GetDate(currentRow!, "NgayTraDuKien"),
+                string.Empty,
+                0,
+                0,
+                0,
+                tienPhong,
+                tienDichVu,
+                phuPhi,
+                tienCoc,
+                giamGia);
+        }
+
+        private HoaDonItem TaoBillPhatSinhSauThanhToan(DuToanCheckOutDTO duToan)
+        {
+            ThongTinPhongChiTiet thongTinPhong = LayThongTinPhongChiTiet();
+            decimal tienPhong = duToan.TienPhongPhatSinh;
+
+            return new HoaDonItem
+            {
+                LoaiPhieu = "THUE",
+                LoaiThanhToan = "PHATSINH",
+                MaGoc = maGoc,
+                MaHoaDon = duToan.MaHoaDon > 0 ? "HD-" + duToan.MaHoaDon.ToString("0000") : "HD-TAM-" + maGoc,
+                MaPhieuThue = "PT-" + maGoc,
+                TenKhachHang = GetString(currentRow!, "HoTen"),
+                SoDienThoai = GetString(currentRow!, "SDT"),
+                DiaChi = GetString(currentRow!, "DiaChi"),
+                SoPhong = thongTinPhong.SoPhong,
+                LoaiPhong = thongTinPhong.TenLoaiPhong,
+                NgayNhanPhong = GetDate(currentRow!, "NgayNhanDuKien"),
+                NgayTraPhong = duToan.NgayTraDuKien,
+                CheDoDatPhong = duToan.CheDoDatPhong,
+                NgayNhanThucTe = GetNullableDate(currentRow!, "NgayNhanThucTe"),
+                NgayTraThucTe = duToan.NgayTraThucTe,
+                GiaGioTinhPhi = duToan.GiaGio,
+                GiaNgayTinhPhi = duToan.GiaNgay,
+                GiaDemTinhPhi = duToan.GiaDem,
+                NgayLapHoaDon = DateTime.Now,
+                TienPhong = tienPhong,
+                TienDichVu = duToan.TienDichVuPhatSinh,
+                PhuPhi = duToan.PhuPhiTraMuon,
+                ThueVat = duToan.ThueVat,
+                GiamGia = 0,
+                TienCoc = 0,
+                TrangThai = "Da thanh toan"
+            };
         }
 
         private static string TienPhongSql(string startExpr, string plannedEndExpr, string actualEndExpr)
@@ -532,7 +1220,7 @@ END AS decimal(18, 2))";
             using SqlTransaction tran = conn.BeginTransaction();
             try
             {
-                string trangThaiPhong = "Chưa dọn dẹp";
+                string trangThaiPhong = "Trống";
                 CapNhatTrangThaiPhongTheoNhomThue(conn, tran, maGoc, trangThaiPhong);
                 using (SqlCommand cmd = new(
                            @"UPDATE P
@@ -546,6 +1234,20 @@ END AS decimal(18, 2))";
                     cmd.Parameters.AddWithValue("@TrangThai", trangThaiPhong);
                     cmd.Parameters.AddWithValue("@Ma", maGoc);
                     cmd.ExecuteNonQuery();
+                }
+
+                if (ColumnExists("PHONG", "GhiChu"))
+                {
+                    using SqlCommand note = new(
+                        @"UPDATE P
+                          SET P.GhiChu = CONCAT(NULLIF(P.GhiChu, N''), CASE WHEN NULLIF(P.GhiChu, N'') IS NULL THEN N'' ELSE N' - ' END, N'[CAN_DON_DEP] Can don dep sau khi tra phong')
+                          FROM dbo.PHONG P
+                          JOIN dbo.PHIEUTHUE PT ON P.MaPhong = PT.MaPhong
+                          WHERE PT.MaThue = @Ma",
+                        conn,
+                        tran);
+                    note.Parameters.AddWithValue("@Ma", maGoc);
+                    note.ExecuteNonQuery();
                 }
 
                 string setNgayTra = ColumnExists("PHIEUTHUE", "NgayTraPhong") ? ", NgayTraPhong = @NgayTra" : string.Empty;
@@ -606,6 +1308,47 @@ END AS decimal(18, 2))";
                 cmd.Parameters.AddWithValue("@Ma", maThue);
                 cmd.ExecuteNonQuery();
             }
+        }
+
+        private List<int> LayMaDatPhongLienQuan()
+        {
+            if (currentRow == null)
+            {
+                return new List<int>();
+            }
+
+            int maDatPhong = GetInt(currentRow, "MaDatPhong");
+            if (maDatPhong <= 0 && loaiPhieu == "DAT")
+            {
+                maDatPhong = maGoc;
+            }
+
+            string bangDatPhong = TableExists("PHIEUDATPHONG") ? "PHIEUDATPHONG" : TableExists("DATPHONG") ? "DATPHONG" : string.Empty;
+            int maDoan = GetInt(currentRow, "MaDoan");
+            if (!string.IsNullOrWhiteSpace(bangDatPhong) && maDoan > 0 && ColumnExists(bangDatPhong, "MaDoan"))
+            {
+                DataTable data = ConnectDB.GetData(
+                    "SELECT MaDatPhong FROM dbo." + bangDatPhong + " WHERE MaDoan = @MaDoan ORDER BY MaDatPhong",
+                    new SqlParameter("@MaDoan", maDoan));
+                List<int> ids = data.AsEnumerable()
+                    .Select(row => GetInt(row, "MaDatPhong"))
+                    .Where(value => value > 0)
+                    .Distinct()
+                    .ToList();
+                if (ids.Count > 0)
+                {
+                    return ids;
+                }
+            }
+
+            return maDatPhong > 0 ? new List<int> { maDatPhong } : new List<int>();
+        }
+
+        private static string LaySoPhongDaiDien(ThongTinPhongChiTiet thongTinPhong)
+        {
+            string[] parts = thongTinPhong.SoPhong
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return parts.Length > 0 ? parts[0] : thongTinPhong.SoPhong;
         }
 
         private void BtnDong_Click(object sender, RoutedEventArgs e)
@@ -686,6 +1429,21 @@ END AS decimal(18, 2))";
                 : null;
         }
 
+        private static int GetInt(DataRow row, string column)
+        {
+            return row.Table.Columns.Contains(column) &&
+                   row[column] != DBNull.Value &&
+                   int.TryParse(row[column]?.ToString(), out int value)
+                ? value
+                : 0;
+        }
+
+        private static int? GetNullableInt(DataRow row, string column)
+        {
+            int value = GetInt(row, column);
+            return value > 0 ? value : null;
+        }
+
         private static string GetDateText(DataRow row, string column)
         {
             return row.Table.Columns.Contains(column) &&
@@ -727,6 +1485,11 @@ END AS decimal(18, 2))";
             public int SoLuongPhong { get; set; } = 1;
             public decimal TienPhong { get; set; }
             public decimal PhuPhi { get; set; }
+            public int MaPhongDaiDien { get; set; }
+            public int? MaDatPhong { get; set; }
+            public decimal GiaGio { get; set; }
+            public decimal GiaNgay { get; set; }
+            public decimal GiaDem { get; set; }
         }
     }
 }

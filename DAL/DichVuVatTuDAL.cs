@@ -20,6 +20,16 @@ namespace QLKS_AnPhu.DAL
         public List<DichVuVatTuDTO> LayDanhSach()
         {
             List<TableMap> maps = GetTableMaps();
+            List<TableMap> unifiedMaps = maps
+                .Where(map => map.Name.Equals("DICHVUVATTU", StringComparison.OrdinalIgnoreCase) ||
+                              map.Name.Equals("DichVuVatTu", StringComparison.OrdinalIgnoreCase) ||
+                              map.Name.Equals("DichVu_VatTu", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (unifiedMaps.Count > 0)
+            {
+                maps = unifiedMaps;
+            }
+
             List<DichVuVatTuDTO> result = new();
 
             foreach (TableMap map in maps)
@@ -86,9 +96,25 @@ namespace QLKS_AnPhu.DAL
 
         private static DichVuVatTuDTO MapRow(DataRow row, TableMap map, string defaultType)
         {
-            int soLuongTon = GetInt(row, "SoLuongTon", "SLTon", "SoLuong", "TonKho", "SoLuongCon", "SL");
+            int soLuongTon = GetInt(
+                row,
+                "SoLuongTon",
+                "SLTon",
+                "TonKho",
+                "SoLuongKho",
+                "TonHienTai",
+                "SoLuongHienTai",
+                "SoLuongCon",
+                "SoLuongVatTu",
+                "SoLuong",
+                "SL");
+            string loai = GetStringOrDefault(row, defaultType, "Loai", "LoaiDichVu", "PhanLoai", "Nhom", "LoaiHang", "Type");
             string statusColumn = GetFirstExisting(map.Columns, "TrangThai", "TinhTrang", "Status");
-            string trangThai = GetTrangThai(row, map, statusColumn, soLuongTon);
+            string trangThai = GetTrangThai(row, map, statusColumn, soLuongTon, loai);
+            if (string.IsNullOrWhiteSpace(trangThai) && IsDichVu(loai))
+            {
+                trangThai = "Đang dùng";
+            }
 
             if (string.IsNullOrWhiteSpace(trangThai))
             {
@@ -99,7 +125,7 @@ namespace QLKS_AnPhu.DAL
             {
                 Ma = GetInt(row, "MaDVVT", "MaDichVuVatTu", "MaDichVu", "MaVatTu", "MaDV", "MaVT", "Ma", "ID"),
                 Ten = GetString(row, "TenDVVT", "TenDichVuVatTu", "TenDichVu", "TenVatTu", "TenDV", "TenVT", "Ten", "TenHang", "TenMatHang"),
-                Loai = GetStringOrDefault(row, defaultType, "Loai", "LoaiDichVu", "PhanLoai", "Nhom", "LoaiHang", "Type"),
+                Loai = loai,
                 DonViTinh = GetString(row, "DonViTinh", "DVT", "DonVi", "Unit"),
                 DonGia = GetDecimal(row, "DonGia", "Gia", "GiaBan", "GiaTien", "Price"),
                 SoLuongTon = soLuongTon,
@@ -119,7 +145,20 @@ namespace QLKS_AnPhu.DAL
             AddIfExists(values, map, item.Loai, "Loai", "LoaiDichVu", "PhanLoai", "Nhom", "LoaiHang", "Type");
             AddIfExists(values, map, item.DonViTinh, "DonViTinh", "DVT", "DonVi", "Unit");
             AddIfExists(values, map, item.DonGia, "DonGia", "Gia", "GiaBan", "GiaTien", "Price");
-            AddIfExists(values, map, item.SoLuongTon, "SoLuongTon", "SLTon", "SoLuong", "TonKho", "SoLuongCon", "SL");
+            AddIfExists(
+                values,
+                map,
+                item.SoLuongTon,
+                "SoLuongTon",
+                "SLTon",
+                "TonKho",
+                "SoLuongKho",
+                "TonHienTai",
+                "SoLuongHienTai",
+                "SoLuongCon",
+                "SoLuongVatTu",
+                "SoLuong",
+                "SL");
             AddIfExists(values, map, item.TrangThai, "TrangThai", "TinhTrang", "Status");
             AddIfExists(values, map, item.GhiChu, "GhiChu", "MoTa", "Note");
 
@@ -279,7 +318,7 @@ namespace QLKS_AnPhu.DAL
                    text.Equals("Dang dung", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string GetTrangThai(DataRow row, TableMap map, string column, int soLuongTon)
+        private static string GetTrangThai(DataRow row, TableMap map, string column, int soLuongTon, string loai)
         {
             if (string.IsNullOrWhiteSpace(column) || !row.Table.Columns.Contains(column) || row[column] == DBNull.Value)
             {
@@ -290,6 +329,10 @@ namespace QLKS_AnPhu.DAL
                 dataType.Equals("bit", StringComparison.OrdinalIgnoreCase))
             {
                 bool isActive = Convert.ToBoolean(row[column]);
+                if (IsDichVu(loai))
+                {
+                    return isActive ? "Đang dùng" : "Ngừng dùng";
+                }
 
                 if (!isActive)
                 {
@@ -300,6 +343,23 @@ namespace QLKS_AnPhu.DAL
             }
 
             return row[column]?.ToString() ?? string.Empty;
+        }
+
+        private static bool IsDichVu(string loai)
+        {
+            string text = RemoveDiacritics(loai).ToLowerInvariant();
+            return text.Contains("dich vu") || text.Contains("service");
+        }
+
+        private static string RemoveDiacritics(string value)
+        {
+            string normalized = (value ?? string.Empty).Normalize(System.Text.NormalizationForm.FormD);
+            return new string(normalized
+                .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                .ToArray())
+                .Replace('đ', 'd')
+                .Replace('Đ', 'D')
+                .Normalize(System.Text.NormalizationForm.FormC);
         }
 
         private static string Quote(string identifier)
@@ -351,9 +411,39 @@ namespace QLKS_AnPhu.DAL
         {
             foreach (string name in names)
             {
-                if (row.Table.Columns.Contains(name) && int.TryParse(row[name]?.ToString(), out int value))
+                if (!row.Table.Columns.Contains(name) || row[name] == DBNull.Value)
                 {
-                    return value;
+                    continue;
+                }
+
+                object rawValue = row[name];
+                try
+                {
+                    return rawValue switch
+                    {
+                        byte value => value,
+                        short value => value,
+                        int value => value,
+                        long value => checked((int)value),
+                        decimal value => decimal.ToInt32(decimal.Truncate(value)),
+                        double value => checked((int)Math.Truncate(value)),
+                        float value => checked((int)Math.Truncate(value)),
+                        _ when decimal.TryParse(
+                            rawValue.ToString(),
+                            System.Globalization.NumberStyles.Any,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out decimal invariantValue) => decimal.ToInt32(decimal.Truncate(invariantValue)),
+                        _ when decimal.TryParse(
+                            rawValue.ToString(),
+                            System.Globalization.NumberStyles.Any,
+                            System.Globalization.CultureInfo.CurrentCulture,
+                            out decimal currentValue) => decimal.ToInt32(decimal.Truncate(currentValue)),
+                        _ => 0
+                    };
+                }
+                catch (OverflowException)
+                {
+                    return 0;
                 }
             }
 

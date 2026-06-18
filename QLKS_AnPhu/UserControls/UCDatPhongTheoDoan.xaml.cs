@@ -8,18 +8,23 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DTO;
+using QLKS_AnPhu.Security;
 
 namespace QLKS_AnPhu.UserControls
 {
     public partial class UCDatPhongTheoDoan : UserControl
     {
         private readonly DichVuVatTuBUS dichVuVatTuBUS = new();
+        private readonly PhongBUS phongBUS = new();
         private readonly ObservableCollection<PhongDoanItem> danhSachPhong = new();
+        private List<PhongDTO> danhSachPhongNguon = new();
         private PhongDoanItem? phongDangChon;
         private bool dangNap;
+        private bool dangLocPhongTheoLich;
         private decimal tongTienPhong;
         private decimal tongTienDichVu;
         private decimal cocGoiY;
+        private readonly KhachHangDTO? khachHangMacDinh;
 
         public event EventHandler? CloseRequested;
         public event EventHandler<List<DatPhongRequestDTO>>? DatPhongDoanRequested;
@@ -29,6 +34,11 @@ namespace QLKS_AnPhu.UserControls
             dangNap = true;
             InitializeComponent();
             Loaded += (_, _) => KhoiTao(danhSachPhongTrong);
+        }
+
+        public UCDatPhongTheoDoan(IEnumerable<PhongDTO> danhSachPhongTrong, KhachHangDTO khachHang) : this(danhSachPhongTrong)
+        {
+            khachHangMacDinh = khachHang;
         }
 
         private void KhoiTao(IEnumerable<PhongDTO> danhSachPhongTrong)
@@ -42,19 +52,36 @@ namespace QLKS_AnPhu.UserControls
             TxtDatCoc.Text = "0";
             TxtSoLuongDichVu.Text = "1";
 
-            danhSachPhong.Clear();
-            foreach (PhongDTO phong in danhSachPhongTrong.Where(LaPhongCoTheDat).OrderBy(item => item.Tang).ThenBy(item => item.MaHienThi))
-            {
-                danhSachPhong.Add(new PhongDoanItem(phong));
-            }
+            danhSachPhongNguon = danhSachPhongTrong
+                .Where(LaPhongCoTheDat)
+                .OrderBy(item => item.Tang)
+                .ThenBy(item => item.MaHienThi)
+                .ToList();
+            NapDanhSachPhongTheoLich();
 
             DgPhong.ItemsSource = danhSachPhong;
             NapDichVu();
+            NapKhachHangMacDinh();
             DgPhong.SelectedIndex = danhSachPhong.Count > 0 ? 0 : -1;
             phongDangChon = DgPhong.SelectedItem as PhongDoanItem ?? danhSachPhong.FirstOrDefault();
             CapNhatDichVuPhongDangChon();
             dangNap = false;
             CapNhatTongTien();
+        }
+
+        private void NapKhachHangMacDinh()
+        {
+            if (khachHangMacDinh == null)
+            {
+                return;
+            }
+
+            TxtTenDaiDien.Text = khachHangMacDinh.HoTen;
+            TxtSDT.Text = khachHangMacDinh.SDT;
+            TxtCCCD.Text = khachHangMacDinh.CCCD;
+            TxtDiaChi.Text = khachHangMacDinh.DiaChi;
+            SelectComboItem(CboGioiTinh, string.IsNullOrWhiteSpace(khachHangMacDinh.GioiTinh) ? "Nam" : khachHangMacDinh.GioiTinh);
+            SelectComboItem(CboLoaiKhach, "Khách đoàn");
         }
 
         private void BtnChonTatCa_Click(object sender, RoutedEventArgs e)
@@ -216,6 +243,7 @@ namespace QLKS_AnPhu.UserControls
         {
             if (!dangNap && IsLoaded)
             {
+                NapDanhSachPhongTheoLich();
                 CapNhatTongTien();
             }
         }
@@ -276,6 +304,14 @@ namespace QLKS_AnPhu.UserControls
                 throw new InvalidOperationException("Ngày trả phải sau ngày nhận.");
             }
 
+            foreach (PhongDoanItem item in phongDaChon)
+            {
+                if (!phongBUS.KiemTraPhongRanh(item.Phong.Ma, ngayNhan, ngayTra, out string lyDo))
+                {
+                    throw new InvalidOperationException($"Phòng {item.Phong.MaHienThi} không trống trong khoảng thời gian đã chọn. {lyDo}");
+                }
+            }
+
             int soNguoi = Math.Max(1, ParseInt(TxtSoNguoi.Text, 1));
             decimal tongDatCoc = RbNhanNgay.IsChecked == true ? 0 : ParseMoney(TxtDatCoc.Text);
             decimal tongCocConLai = tongDatCoc;
@@ -314,6 +350,7 @@ namespace QLKS_AnPhu.UserControls
                 requests.Add(new DatPhongRequestDTO
                 {
                     Phong = phong,
+                    MaNhanVien = CurrentUser.MaNV,
                     KhachHang = khachHang,
                     NgayNhan = ngayNhan,
                     NgayTra = ngayTra,
@@ -344,7 +381,9 @@ namespace QLKS_AnPhu.UserControls
             List<PhongDoanItem> phongDaChon = danhSachPhong.Where(item => item.Chon).ToList();
             tongTienPhong = phongDaChon.Sum(item => TinhTienPhong(item.Phong, ngayNhan, ngayTra));
             tongTienDichVu = phongDaChon.Sum(item => item.TongDichVu);
-            cocGoiY = RbNhanNgay.IsChecked == true ? 0 : LamTronTien((tongTienPhong + tongTienDichVu) * 0.3m);
+            cocGoiY = RbNhanNgay.IsChecked == true
+                ? 0
+                : phongDaChon.Sum(item => LayCocGoiYTheoLoaiPhong(item.Phong));
 
             TxtSoPhongChon.Text = $"{phongDaChon.Count} phòng";
             TxtTienPhong.Text = FormatMoney(tongTienPhong);
@@ -375,6 +414,53 @@ namespace QLKS_AnPhu.UserControls
             return RbNhanNgay?.IsChecked == true && ngay.Date == DateTime.Today
                 ? DateTime.Now
                 : ngay.Date.Add(LayGio(TxtGioNhan?.Text, new TimeSpan(14, 0, 0)));
+        }
+
+        private void NapDanhSachPhongTheoLich()
+        {
+            if (dangLocPhongTheoLich || DgPhong == null)
+            {
+                return;
+            }
+
+            dangLocPhongTheoLich = true;
+            try
+            {
+                HashSet<int> daChon = danhSachPhong.Where(item => item.Chon).Select(item => item.Phong.Ma).ToHashSet();
+                int? maPhongDangChon = phongDangChon?.Phong.Ma;
+
+                danhSachPhong.Clear();
+                foreach (PhongDTO phong in danhSachPhongNguon.Where(LaPhongRanhTheoLich))
+                {
+                    PhongDoanItem item = new(phong)
+                    {
+                        Chon = daChon.Contains(phong.Ma)
+                    };
+                    danhSachPhong.Add(item);
+                }
+
+                phongDangChon = maPhongDangChon.HasValue
+                    ? danhSachPhong.FirstOrDefault(item => item.Phong.Ma == maPhongDangChon.Value)
+                    : danhSachPhong.FirstOrDefault();
+                DgPhong.SelectedItem = phongDangChon;
+                CapNhatDichVuPhongDangChon();
+            }
+            finally
+            {
+                dangLocPhongTheoLich = false;
+            }
+        }
+
+        private bool LaPhongRanhTheoLich(PhongDTO phong)
+        {
+            try
+            {
+                return phongBUS.KiemTraPhongRanh(phong.Ma, LayNgayNhan(), LayNgayTra(), out _);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private DateTime LayNgayTra()
@@ -414,13 +500,9 @@ namespace QLKS_AnPhu.UserControls
                 return true;
             }
 
-            return trangThai.Contains("trong")
-                   || (!trangThai.Contains("thue")
-                       && !trangThai.Contains("dang")
-                       && !trangThai.Contains("dat")
-                       && !trangThai.Contains("sua")
-                       && !trangThai.Contains("don")
-                       && !trangThai.Contains("ban"));
+            return !trangThai.Contains("sua")
+                   && !trangThai.Contains("bao tri")
+                   && !trangThai.Contains("don");
         }
 
         private static string TaoMoTaDichVu(PhongDoanItem phongItem)
@@ -437,6 +519,22 @@ namespace QLKS_AnPhu.UserControls
             }
 
             return string.IsNullOrWhiteSpace(ghiChuNguoiDung) ? marker : $"{marker} - {ghiChuNguoiDung}";
+        }
+
+        private static decimal LayCocGoiYTheoLoaiPhong(PhongDTO phong)
+        {
+            string loaiPhong = (phong.LoaiPhong ?? string.Empty).ToLowerInvariant();
+            if (loaiPhong.Contains("vip"))
+            {
+                return 500000m;
+            }
+
+            if (loaiPhong.Contains("đôi") || loaiPhong.Contains("doi"))
+            {
+                return 300000m;
+            }
+
+            return 200000m;
         }
 
         private static decimal LamTronTien(decimal value)
@@ -469,6 +567,18 @@ namespace QLKS_AnPhu.UserControls
         private static string GetComboText(ComboBox comboBox)
         {
             return (comboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? comboBox.Text;
+        }
+
+        private static void SelectComboItem(ComboBox comboBox, string value)
+        {
+            foreach (ComboBoxItem item in comboBox.Items)
+            {
+                if (string.Equals(item.Content?.ToString(), value, StringComparison.OrdinalIgnoreCase))
+                {
+                    comboBox.SelectedItem = item;
+                    return;
+                }
+            }
         }
 
         private static string RemoveDiacritics(string text)

@@ -358,6 +358,7 @@
                         <DataGridTextColumn Header="#" Binding="{Binding STT}" Width="46" ElementStyle="{StaticResource TableCellTextStyle}" />
                         <DataGridTextColumn Header="Mã phiếu" Binding="{Binding MaPhieuThue}" Width="96" ElementStyle="{StaticResource TableCellTextStyle}" />
                         <DataGridTextColumn Header="Khách/đoàn đặt" Binding="{Binding TenKhachHang}" Width="2*" MinWidth="190" ElementStyle="{StaticResource TableCellTextStyle}" />
+                        <DataGridTextColumn Header="Số phòng" Binding="{Binding SoLuongPhong}" Width="86" ElementStyle="{StaticResource TableCellTextStyle}" />
                         <DataGridTemplateColumn Header="Số điện thoại" Width="160">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

@@ -1,9 +1,12 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using QLKS_AnPhu.BUS;
 using QLKS_AnPhu.DTO;
+using QLKS_AnPhu.Services;
 using QLKS_AnPhu.UserControls;
 
 namespace QLKS_AnPhu.View
@@ -176,8 +179,47 @@ namespace QLKS_AnPhu.View
             }
             catch (Exception ex)
             {
+                if (CoTheXoaBatBuoc(ex) && XacNhanXoaBatBuoc(selectedItem))
+                {
+                    XoaBatBuoc(selectedItem);
+                    return;
+                }
+
                 MessageBox.Show("Không xóa được khách hàng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private bool XacNhanXoaBatBuoc(KhachHangDTO selectedItem)
+        {
+            MessageBoxResult confirm = MessageBox.Show(
+                $"Khách hàng '{selectedItem.HoTen}' đã có đặt phòng, phiếu thuê hoặc hóa đơn liên quan.\n\n" +
+                "Bạn vẫn muốn xóa khách hàng này và toàn bộ dữ liệu liên quan không?",
+                "Vẫn xóa khách hàng?",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            return confirm == MessageBoxResult.Yes;
+        }
+
+        private void XoaBatBuoc(KhachHangDTO selectedItem)
+        {
+            try
+            {
+                khachHangBUS.XoaBatBuoc(selectedItem);
+                MessageBox.Show("Đã xóa khách hàng và dữ liệu liên quan.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                TaiDuLieu();
+            }
+            catch (Exception forceDeleteEx)
+            {
+                MessageBox.Show("Không xóa bắt buộc được khách hàng: " + forceDeleteEx.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static bool CoTheXoaBatBuoc(Exception ex)
+        {
+            return ex.Message.Contains("dữ liệu đặt phòng", StringComparison.OrdinalIgnoreCase) ||
+                   ex.Message.Contains("REFERENCE constraint", StringComparison.OrdinalIgnoreCase) ||
+                   (ex.InnerException?.Message.Contains("REFERENCE constraint", StringComparison.OrdinalIgnoreCase) ?? false);
         }
 
         private void TxtTimKiem_KeyDown(object sender, KeyEventArgs e)
@@ -257,6 +299,54 @@ namespace QLKS_AnPhu.View
             DialogService.ShowDimmedDialogResult(window, Window.GetWindow(this));
         }
 
+        private void BtnInDanhSach_Click(object sender, RoutedEventArgs e)
+        {
+            List<KhachHangDTO> rows = DgKhachHang.Items.OfType<KhachHangDTO>().ToList();
+            if (rows.Count == 0)
+            {
+                MessageBox.Show("Không có dữ liệu khách hàng để in.", "In danh sách", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                IReadOnlyList<PrintColumn> columns =
+                [
+                    new("Mã KH", 55, TextAlignment.Center, true),
+                    new("Họ tên khách hàng", 150),
+                    new("Giới tính", 65, TextAlignment.Center, true),
+                    new("Ngày sinh", 78, TextAlignment.Center, true),
+                    new("Số điện thoại", 92, TextAlignment.Center, true),
+                    new("CCCD/CMND", 100, TextAlignment.Center, true),
+                    new("Loại khách", 82, TextAlignment.Center),
+                    new("Địa chỉ", new GridLength(1, GridUnitType.Star))
+                ];
+
+                FlowDocument document = PrintExportService.CreateTableDocument(
+                    "Danh sách khách hàng",
+                    $"Danh sách đang hiển thị - Tổng cộng {rows.Count:N0} khách hàng",
+                    columns,
+                    rows.Select(item => (IReadOnlyList<string>)
+                    [
+                        $"KH{item.Ma:000}",
+                        item.HoTen,
+                        item.GioiTinh,
+                        item.NgaySinhHienThi,
+                        item.SDT,
+                        item.CCCD,
+                        item.LoaiKhach,
+                        item.DiaChi
+                    ]),
+                    $"Tổng số khách hàng: {rows.Count:N0}");
+
+                PrintExportService.Print(document, "Danh sách khách hàng");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không in được danh sách khách hàng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void BtnDatPhong_Click(object sender, RoutedEventArgs e)
         {
             if (!TryGetSelectedKhachHang(out KhachHangDTO? khachHang))
@@ -290,12 +380,14 @@ namespace QLKS_AnPhu.View
             UCDatPhongMoi ucDatPhong = new(phongTrong, khachHang!);
             ucDatPhong.CloseRequested += UcDatPhong_CloseRequested;
             ucDatPhong.DatPhongRequested += UcDatPhong_DatPhongRequested;
+            ucDatPhong.DatPhongTheoDoanRequested += UcDatPhong_DatPhongTheoDoanRequested;
 
             Window dialog = DialogService.CreateContentDialog(ucDatPhong, "Đặt phòng mới", 1100, 650);
             DialogService.ShowDimmedDialogResult(dialog, Window.GetWindow(this));
 
             ucDatPhong.CloseRequested -= UcDatPhong_CloseRequested;
             ucDatPhong.DatPhongRequested -= UcDatPhong_DatPhongRequested;
+            ucDatPhong.DatPhongTheoDoanRequested -= UcDatPhong_DatPhongTheoDoanRequested;
         }
 
         private void UcDatPhong_CloseRequested(object? sender, EventArgs e)
@@ -311,6 +403,7 @@ namespace QLKS_AnPhu.View
             try
             {
                 bool nhanNgay = sender is UCDatPhongMoi { NhanNgay: true };
+                HoaDonItem? billSauThanhToan = null;
                 if (sender is UCDatPhongMoi ucDatPhong)
                 {
                     DatPhongRequestDTO request = ucDatPhong.TaoYeuCauDatPhong();
@@ -321,7 +414,11 @@ namespace QLKS_AnPhu.View
                         {
                             return;
                         }
-                        phongBUS.NhanPhong(request);
+                        KetQuaCheckInThanhToanDTO result = phongBUS.NhanPhong(request);
+                        billSauThanhToan = HoaDonItem.TaoCheckInTam(
+                            request,
+                            result.MaHoaDon > 0 ? "HD-" + result.MaHoaDon.ToString("0000") : "HD-TAM",
+                            result.MaThue.GetValueOrDefault());
                     }
                     else
                     {
@@ -335,6 +432,12 @@ namespace QLKS_AnPhu.View
 
                 MessageBox.Show(nhanNgay ? "Nhận phòng thành công." : "Đặt phòng thành công.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
 
+                if (billSauThanhToan != null)
+                {
+                    HoaDonPrintWindow window = new(billSauThanhToan);
+                    DialogService.ShowDimmedDialogResult(window, Window.GetWindow(this));
+                }
+
                 if (sender is FrameworkElement element)
                 {
                     Window.GetWindow(element)?.Close();
@@ -344,6 +447,95 @@ namespace QLKS_AnPhu.View
             {
                 MessageBox.Show("Không đặt được phòng: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void UcDatPhong_DatPhongTheoDoanRequested(object? sender, EventArgs e)
+        {
+            if (sender is FrameworkElement element)
+            {
+                Window.GetWindow(element)?.Close();
+            }
+
+            if (!TryGetSelectedKhachHang(out KhachHangDTO? khachHang) || khachHang == null)
+            {
+                return;
+            }
+
+            List<PhongDTO> phongTrong;
+            try
+            {
+                phongTrong = phongBUS.LayDanhSach()
+                    .Where(LaPhongTrongSanSang)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Khong tai duoc danh sach phong: " + ex.Message, "Loi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (phongTrong.Count == 0)
+            {
+                MessageBox.Show("Khong co phong trong de dat theo doan.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            UCDatPhongTheoDoan ucDatPhong = new(phongTrong, khachHang);
+            ucDatPhong.CloseRequested += UcDatPhongTheoDoan_CloseRequested;
+            ucDatPhong.DatPhongDoanRequested += UcDatPhongTheoDoan_DatPhongDoanRequested;
+
+            Window dialog = DialogService.CreateContentDialog(ucDatPhong, "Dat phong cho doan", 1450, 800);
+            DialogService.ShowDimmedDialogResult(dialog, Window.GetWindow(this));
+
+            ucDatPhong.CloseRequested -= UcDatPhongTheoDoan_CloseRequested;
+            ucDatPhong.DatPhongDoanRequested -= UcDatPhongTheoDoan_DatPhongDoanRequested;
+        }
+
+        private void UcDatPhongTheoDoan_CloseRequested(object? sender, EventArgs e)
+        {
+            if (sender is FrameworkElement element)
+            {
+                Window.GetWindow(element)?.Close();
+            }
+        }
+
+        private void UcDatPhongTheoDoan_DatPhongDoanRequested(object? sender, List<DatPhongRequestDTO> requests)
+        {
+            try
+            {
+                bool nhanNgay = requests.Any(item => item.NhanNgay);
+                if (nhanNgay && !DialogService.XacNhanThanhToanCheckIn(
+                        Window.GetWindow(this),
+                        "Nhan phong cho doan",
+                        requests.Sum(item => item.TienPhong),
+                        requests.Sum(item => item.TienDichVu),
+                        giamGia: requests.Sum(item => item.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round(item.TienPhong * 0.1m, 0) : 0)))
+                {
+                    return;
+                }
+
+                phongBUS.LuuDatPhongDoan(requests);
+                MessageBox.Show(nhanNgay ? "Nhan phong cho doan thanh cong." : "Dat phong cho doan thanh cong.", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (sender is FrameworkElement element)
+                {
+                    Window.GetWindow(element)?.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Khong dat phong cho doan duoc: " + ex.Message, "Loi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static bool LaPhongTrongSanSang(PhongDTO phong)
+        {
+            string trangThai = phong.TrangThai ?? string.Empty;
+            return !trangThai.Contains("thuê", StringComparison.OrdinalIgnoreCase) &&
+                   !trangThai.Contains("thue", StringComparison.OrdinalIgnoreCase) &&
+                   !trangThai.Contains("đặt", StringComparison.OrdinalIgnoreCase) &&
+                   !trangThai.Contains("dat", StringComparison.OrdinalIgnoreCase) &&
+                   !trangThai.Contains("sửa", StringComparison.OrdinalIgnoreCase) &&
+                   !trangThai.Contains("sua", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool TryGetSelectedKhachHang(out KhachHangDTO? khachHang)

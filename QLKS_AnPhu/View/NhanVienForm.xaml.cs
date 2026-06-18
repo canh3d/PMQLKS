@@ -7,6 +7,10 @@ namespace QLKS_AnPhu.View
 {
     public partial class NhanVienForm : Window
     {
+        public string HoTen => TxtHoTen.Text.Trim();
+        public string SoDienThoai => TxtSDT.Text.Trim();
+        public DateTime? NgaySinh => DpNgaySinh.SelectedDate?.Date;
+
         public NhanVienForm()
         {
             InitializeComponent();

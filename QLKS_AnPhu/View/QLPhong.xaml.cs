@@ -24,6 +24,12 @@ namespace QLKS_AnPhu.View
         public QLPhong()
         {
             InitializeComponent();
+            if (!CboTrangThai.Items.OfType<ComboBoxItem>()
+                    .Any(item => string.Equals(item.Content?.ToString(), "Chưa dọn dẹp", StringComparison.OrdinalIgnoreCase)))
+            {
+                CboTrangThai.Items.Add(new ComboBoxItem { Content = "Chưa dọn dẹp" });
+            }
+            CboTrangThai.SelectedIndex = 0;
             Loaded += QLPhong_Loaded;
         }
 
@@ -125,7 +131,10 @@ namespace QLKS_AnPhu.View
             ChonPhong(phong);
             PhongChiTietWindow window = new(phong);
             DialogService.ShowDimmedDialogResult(window, Window.GetWindow(this));
-            TaiDuLieu();
+            if (window.DuLieuDaThayDoi)
+            {
+                TaiDuLieu();
+            }
         }
 
         private void ChonPhong(PhongDTO? phong)
@@ -197,12 +206,14 @@ namespace QLKS_AnPhu.View
             UCDatPhongMoi ucDatPhong = new(phongDangChon);
             ucDatPhong.CloseRequested += UcDatPhong_CloseRequested;
             ucDatPhong.DatPhongRequested += UcDatPhong_DatPhongRequested;
+            ucDatPhong.DatPhongTheoDoanRequested += UcDatPhong_DatPhongTheoDoanRequested;
 
             Window dialog = DialogService.CreateContentDialog(ucDatPhong, "Đặt phòng mới", 1100, 650);
             DialogService.ShowDimmedDialogResult(dialog, Window.GetWindow(this));
 
             ucDatPhong.CloseRequested -= UcDatPhong_CloseRequested;
             ucDatPhong.DatPhongRequested -= UcDatPhong_DatPhongRequested;
+            ucDatPhong.DatPhongTheoDoanRequested -= UcDatPhong_DatPhongTheoDoanRequested;
         }
 
         private void UcDatPhong_CloseRequested(object? sender, EventArgs e)
@@ -218,17 +229,31 @@ namespace QLKS_AnPhu.View
             try
             {
                 bool nhanNgay = sender is UCDatPhongMoi { NhanNgay: true };
+                HoaDonItem? billSauThanhToan = null;
                 if (sender is UCDatPhongMoi ucDatPhong)
                 {
                     DatPhongRequestDTO request = ucDatPhong.TaoYeuCauDatPhong();
                     if (nhanNgay)
                     {
-                        decimal giamGia = request.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round(request.TienPhong * 0.1m, 0) : 0;
-                        if (!DialogService.XacNhanThanhToanCheckIn(Window.GetWindow(this), "Phòng " + request.Phong.MaHienThi, request.TienPhong, request.TienDichVu, giamGia: giamGia))
+                        CheckInPhuPhiResult phuPhiNhanSom = CheckInPhuPhiHelper.Tinh(request.Phong, request.NgayNhan, request.NgayTra, DateTime.Now, request.TienPhong, request.CheDoDatPhong);
+                        request.PhuPhiNhanSom = phuPhiNhanSom.SoTien;
+                        decimal giamGia = request.KhachHang.LoaiKhach.Contains("VIP", StringComparison.OrdinalIgnoreCase) ? Math.Round((request.TienPhong + phuPhiNhanSom.SoTien) * 0.1m, 0) : 0;
+                        if (!DialogService.XacNhanThanhToanCheckIn(
+                                Window.GetWindow(this),
+                                "Phòng " + request.Phong.MaHienThi,
+                                request.TienPhong,
+                                request.TienDichVu,
+                                phuPhiNhanSom.SoTien,
+                                giamGia: giamGia,
+                                moTaPhuPhi: phuPhiNhanSom.MoTa))
                         {
                             return;
                         }
-                        phongBUS.NhanPhong(request);
+                        KetQuaCheckInThanhToanDTO result = phongBUS.NhanPhong(request);
+                        billSauThanhToan = HoaDonItem.TaoCheckInTam(
+                            request,
+                            result.MaHoaDon > 0 ? "HD-" + result.MaHoaDon.ToString("0000") : "HD-TAM",
+                            result.MaThue.GetValueOrDefault());
                     }
                     else
                     {
@@ -241,6 +266,11 @@ namespace QLKS_AnPhu.View
                 }
 
                 MessageBox.Show(nhanNgay ? "Nhận phòng thành công." : "Đặt phòng thành công.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (billSauThanhToan != null)
+                {
+                    HoaDonPrintWindow window = new(billSauThanhToan);
+                    DialogService.ShowDimmedDialogResult(window, Window.GetWindow(this));
+                }
                 if (sender is FrameworkElement element)
                 {
                     Window.GetWindow(element)?.Close();
@@ -254,6 +284,21 @@ namespace QLKS_AnPhu.View
         }
 
         private void BtnDatPhongTheoDoan_Click(object sender, RoutedEventArgs e)
+        {
+            MoDatPhongTheoDoan();
+        }
+
+        private void UcDatPhong_DatPhongTheoDoanRequested(object? sender, EventArgs e)
+        {
+            if (sender is FrameworkElement element)
+            {
+                Window.GetWindow(element)?.Close();
+            }
+
+            MoDatPhongTheoDoan();
+        }
+
+        private void MoDatPhongTheoDoan()
         {
             List<PhongDTO> phongTrong = danhSachHienThi
                 .Where(LaPhongCoTheDat)
@@ -424,10 +469,7 @@ namespace QLKS_AnPhu.View
                 || trangThai.Contains("ready")
                 || trangThai.Contains("available");
 
-            bool biChan = trangThai.Contains("thue")
-                || trangThai.Contains("co khach")
-                || trangThai.Contains("da dat")
-                || trangThai.Contains("chua don")
+            bool biChan = trangThai.Contains("chua don")
                 || trangThai.Contains("sua")
                 || trangThai.Contains("bao tri")
                 || donDep.Contains("chua")
@@ -444,7 +486,10 @@ namespace QLKS_AnPhu.View
                 .Where(ch => CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
                 .ToArray();
 
-            return new string(chars).Normalize(NormalizationForm.FormC);
+            return new string(chars)
+                .Replace('đ', 'd')
+                .Replace('Đ', 'D')
+                .Normalize(NormalizationForm.FormC);
         }
 
         private static string GetComboText(ComboBox comboBox)

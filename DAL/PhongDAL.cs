@@ -20,6 +20,8 @@ namespace QLKS_AnPhu.DAL
 
         public List<PhongDTO> LayDanhSach()
         {
+            DongBoBangGiaPhongMacDinh();
+            XoaGhiChuTuDongCu();
             List<TableMap> maps = GetTableMaps();
             List<PhongDTO> result = new();
 
@@ -123,6 +125,10 @@ namespace QLKS_AnPhu.DAL
             string tenPhong = GetString(row, "TenPhong", "SoPhong", "MaSoPhong", "RoomNumber", "Name");
             string maPhong = GetString(row, "MaPhong", "Code", "RoomCode");
             string soPhong = GetString(row, "SoPhong", "RoomNumber");
+            string ghiChuGoc = GetStringOrDefault(row, "--", "GhiChu", "MoTa", "Note");
+            string trangThaiGoc = GetTrangThai(row, map, statusColumn);
+            bool canDonDep = BoDau(trangThaiGoc).Contains("chua don", StringComparison.OrdinalIgnoreCase);
+            bool daDonSauDoiPhong = false;
 
             if (string.IsNullOrWhiteSpace(tenPhong))
             {
@@ -142,12 +148,12 @@ namespace QLKS_AnPhu.DAL
                 GiaNgay = giaNgay,
                 GiaDem = giaDem,
                 GiaPhong = giaPhong,
-                TrangThai = GetTrangThai(row, map, statusColumn),
-                TinhTrangDonDep = GetDonDep(row),
+                TrangThai = canDonDep ? "Chưa dọn dẹp" : daDonSauDoiPhong ? "Trống" : GetTrangThai(row, map, statusColumn),
+                TinhTrangDonDep = canDonDep ? "Chưa dọn dẹp" : daDonSauDoiPhong ? "Đã dọn dẹp" : GetDonDep(row),
                 KhachHienTai = GetStringOrDefault(row, "--", "KhachHienTai", "TenKhachHang", "KhachHang", "CustomerName"),
                 GioNhanPhong = GetStringOrDefault(row, "--", "GioNhanPhong", "NgayNhanPhong", "CheckIn"),
                 GioTraDuKien = GetStringOrDefault(row, "--", "GioTraDuKien", "NgayTraDuKien", "CheckOut"),
-                GhiChu = GetStringOrDefault(row, "--", "GhiChu", "MoTa", "Note"),
+                GhiChu = LamSachGhiChuHienThi(ghiChuGoc),
                 SourceSchema = map.Schema,
                 SourceTable = map.Name,
                 KeyColumn = map.KeyColumn
@@ -165,7 +171,7 @@ namespace QLKS_AnPhu.DAL
                     phong.KhachHienTai = thue.HoTen;
                     phong.GioNhanPhong = thue.NgayNhan;
                     phong.GioTraDuKien = thue.NgayTra;
-                    phong.GhiChu = string.IsNullOrWhiteSpace(thue.GhiChu) ? phong.GhiChu : thue.GhiChu;
+                    phong.GhiChu = string.IsNullOrWhiteSpace(thue.GhiChu) ? phong.GhiChu : LamSachGhiChuHienThi(thue.GhiChu);
                     return;
                 }
 
@@ -176,7 +182,17 @@ namespace QLKS_AnPhu.DAL
                     phong.KhachHienTai = dat.HoTen;
                     phong.GioNhanPhong = dat.NgayNhan;
                     phong.GioTraDuKien = dat.NgayTra;
-                    phong.GhiChu = string.IsNullOrWhiteSpace(dat.GhiChu) ? phong.GhiChu : dat.GhiChu;
+                    phong.GhiChu = string.IsNullOrWhiteSpace(dat.GhiChu) ? phong.GhiChu : LamSachGhiChuHienThi(dat.GhiChu);
+                    return;
+                }
+
+                if (LaPhongCuDoiPhongCanDonDep(phong.Ma, phong.GhiChu))
+                {
+                    phong.TrangThai = "Chưa dọn dẹp";
+                    phong.TinhTrangDonDep = "Chưa dọn dẹp";
+                    phong.KhachHienTai = "--";
+                    phong.GioNhanPhong = "--";
+                    phong.GioTraDuKien = "--";
                     return;
                 }
 
@@ -203,20 +219,41 @@ namespace QLKS_AnPhu.DAL
                 return null;
             }
 
-            string ngayTraExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong")
+            bool coChiTietDatPhong = TableExists("CHITIETDATPHONG") &&
+                                      ColumnExists("PHIEUTHUE", "MaDatPhong") &&
+                                      ColumnExists("CHITIETDATPHONG", "MaDatPhong") &&
+                                      ColumnExists("CHITIETDATPHONG", "MaPhong");
+            string ngayNhanChiTiet = coChiTietDatPhong
+                ? GetFirstExistingColumn("CHITIETDATPHONG", "NgayNhanDuKien", "NgayNhanPhong", "NgayNhan")
+                : string.Empty;
+            string ngayTraChiTiet = coChiTietDatPhong
+                ? GetFirstExistingColumn("CHITIETDATPHONG", "NgayTraDuKien", "NgayTraPhong", "NgayTra")
+                : string.Empty;
+            string ngayTraPhieuExpr = ColumnExists("PHIEUTHUE", "NgayTraPhong")
                 ? "ISNULL(PT.NgayTraPhong, PT.NgayTraDuKien)"
                 : "PT.NgayTraDuKien";
+            string ngayNhanExpr = string.IsNullOrWhiteSpace(ngayNhanChiTiet)
+                ? "PT.NgayNhan"
+                : "ISNULL(CT." + ngayNhanChiTiet + ", PT.NgayNhan)";
+            string ngayTraExpr = string.IsNullOrWhiteSpace(ngayTraChiTiet)
+                ? ngayTraPhieuExpr
+                : "ISNULL(CT." + ngayTraChiTiet + ", " + ngayTraPhieuExpr + ")";
             string ghiChuExpr = ColumnExists("PHIEUTHUE", "GhiChu") ? "PT.GhiChu" : "CAST(NULL AS nvarchar(1000))";
+            string joinChiTiet = coChiTietDatPhong
+                ? "LEFT JOIN dbo.CHITIETDATPHONG CT ON PT.MaDatPhong = CT.MaDatPhong"
+                : string.Empty;
+            string phongExpr = coChiTietDatPhong ? "ISNULL(CT.MaPhong, PT.MaPhong)" : "PT.MaPhong";
 
             DataTable data = ConnectDB.GetData(@"
 SELECT TOP 1 KH.HoTen,
-       PT.NgayNhan,
-       PT.NgayTraDuKien AS NgayTra,
+       " + ngayNhanExpr + @" AS NgayNhan,
+       " + ngayTraExpr + @" AS NgayTra,
        " + ghiChuExpr + @" AS GhiChu
 FROM dbo.PHIEUTHUE PT
 JOIN dbo.KHACHHANG KH ON PT.MaKH = KH.MaKH
-LEFT JOIN dbo.PHONG P ON PT.MaPhong = P.MaPhong
-WHERE PT.MaPhong = @MaPhong
+" + joinChiTiet + @"
+LEFT JOIN dbo.PHONG P ON " + phongExpr + @" = P.MaPhong
+WHERE " + phongExpr + @" = @MaPhong
   AND (
         PT.TrangThai IN (N'Đang thuê', N'Dang thue', N'Có khách', N'Co khach')
         OR P.TrangThai IN (N'Đang thuê', N'Dang thue', N'Có khách', N'Co khach')
@@ -259,6 +296,41 @@ ORDER BY DP.MaDatPhong DESC",
                 new SqlParameter("@MaPhong", maPhong));
 
             return data.Rows.Count == 0 ? null : MapRoomStay(data.Rows[0]);
+        }
+
+        private static bool LaPhongCuDoiPhongCanDonDep(int maPhong, string ghiChuPhong)
+        {
+            if (!TableExists("DOIPHONG") ||
+                !TableExists("PHIEUTHUE") ||
+                !ColumnExists("DOIPHONG", "MaDoiPhong") ||
+                !ColumnExists("DOIPHONG", "MaThue") ||
+                !ColumnExists("DOIPHONG", "MaPhongCu") ||
+                !ColumnExists("PHIEUTHUE", "MaThue") ||
+                !ColumnExists("PHIEUTHUE", "MaPhong") ||
+                !ColumnExists("PHIEUTHUE", "TrangThai"))
+            {
+                return false;
+            }
+
+            string orderBy = ColumnExists("DOIPHONG", "ThoiDiemDoi")
+                ? "DP.ThoiDiemDoi DESC, DP.MaDoiPhong DESC"
+                : "DP.MaDoiPhong DESC";
+            object? result = ConnectDB.ExecuteScalar(@"
+SELECT TOP 1 DP.MaDoiPhong
+FROM dbo.DOIPHONG DP
+JOIN dbo.PHIEUTHUE PT ON DP.MaThue = PT.MaThue
+WHERE DP.MaPhongCu = @MaPhong
+  AND ISNULL(PT.MaPhong, 0) <> @MaPhong
+  AND PT.TrangThai IN (N'Đang thuê', N'Dang thue', N'Có khách', N'Co khach')
+ORDER BY " + orderBy,
+                new SqlParameter("@MaPhong", maPhong));
+
+            if (result == null || result == DBNull.Value || !int.TryParse(result.ToString(), out int maDoiPhong))
+            {
+                return false;
+            }
+
+            return !ghiChuPhong.Contains("[DA_DON_DEP_DOIPHONG:" + maDoiPhong + "]", StringComparison.OrdinalIgnoreCase);
         }
 
         private static RoomStayInfo MapRoomStay(DataRow row)
@@ -320,9 +392,9 @@ ORDER BY DP.MaDatPhong DESC",
         {
             (decimal gio, decimal ngay, decimal dem) = loaiPhong.ToLowerInvariant() switch
             {
-                string value when value.Contains("vip") => (200000m, 1200000m, 900000m),
-                string value when value.Contains("đôi") || value.Contains("doi") => (120000m, 700000m, 500000m),
-                _ => (80000m, 450000m, 350000m)
+                string value when value.Contains("vip") => (200000m, 1200000m, 1200000m),
+                string value when value.Contains("đôi") || value.Contains("doi") => (120000m, 650000m, 650000m),
+                _ => (80000m, 450000m, 450000m)
             };
 
             if (giaGio <= 0)
@@ -348,7 +420,7 @@ ORDER BY DP.MaDatPhong DESC",
 
         private static void AddIfExists(Dictionary<string, object?> values, TableMap map, object? value, params string[] candidates)
         {
-            string? column = candidates.FirstOrDefault(map.Columns.Contains);
+            string? column = candidates.FirstOrDefault(column => map.Columns.Contains(column) && !map.ComputedColumns.Contains(column));
 
             if (!string.IsNullOrWhiteSpace(column) && !values.ContainsKey(column))
             {
@@ -500,7 +572,8 @@ ORDER BY DP.MaDatPhong DESC",
                          c.TABLE_NAME,
                          c.COLUMN_NAME,
                          c.DATA_TYPE,
-                         COLUMNPROPERTY(OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)), c.COLUMN_NAME, 'IsIdentity') AS IsIdentity
+                         COLUMNPROPERTY(OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)), c.COLUMN_NAME, 'IsIdentity') AS IsIdentity,
+                         COLUMNPROPERTY(OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)), c.COLUMN_NAME, 'IsComputed') AS IsComputed
                   FROM INFORMATION_SCHEMA.COLUMNS c
                   ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION");
 
@@ -529,7 +602,13 @@ ORDER BY DP.MaDatPhong DESC",
                         .ToDictionary(group => group.Key, group => group.First().Type, StringComparer.OrdinalIgnoreCase);
 
                     HashSet<string> identityColumns = group
-                        .Where(row => Convert.ToInt32(row["IsIdentity"]) == 1)
+                        .Where(row => ToIntMetadata(row["IsIdentity"]) == 1)
+                        .Select(row => row["COLUMN_NAME"].ToString() ?? string.Empty)
+                        .Where(column => !string.IsNullOrWhiteSpace(column))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    HashSet<string> computedColumns = group
+                        .Where(row => ToIntMetadata(row["IsComputed"]) == 1)
                         .Select(row => row["COLUMN_NAME"].ToString() ?? string.Empty)
                         .Where(column => !string.IsNullOrWhiteSpace(column))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -540,6 +619,7 @@ ORDER BY DP.MaDatPhong DESC",
                         Name = group.Key.Name,
                         Columns = tableColumns,
                         IdentityColumns = identityColumns,
+                        ComputedColumns = computedColumns,
                         ColumnTypes = columnTypes,
                         KeyColumn = GetFirstExisting(tableColumns, "MaPhong", "PhongID", "ID", "Ma")
                     };
@@ -575,6 +655,99 @@ ORDER BY DP.MaDatPhong DESC",
         private static string GetFirstExisting(HashSet<string> columns, params string[] candidates)
         {
             return candidates.FirstOrDefault(columns.Contains) ?? string.Empty;
+        }
+
+        private static string GetFirstExistingColumn(string tableName, params string[] candidates)
+        {
+            return candidates.FirstOrDefault(column => ColumnExists(tableName, column)) ?? string.Empty;
+        }
+
+        private static int ToIntMetadata(object value)
+        {
+            return value == null || value == DBNull.Value ? 0 : Convert.ToInt32(value);
+        }
+
+        private static void DongBoBangGiaPhongMacDinh()
+        {
+            try
+            {
+                if (!TableExists("LOAIPHONG") ||
+                    !ColumnExists("LOAIPHONG", "TenLoaiPhong") ||
+                    !ColumnExists("LOAIPHONG", "DonGiaNgay") ||
+                    !ColumnExists("LOAIPHONG", "DonGiaDem"))
+                {
+                    return;
+                }
+
+                string tienCocSet = ColumnExists("LOAIPHONG", "TienCocGoiY")
+                    ? @",
+    TienCocGoiY = CASE
+        WHEN TenLoaiPhong LIKE N'%VIP%' THEN 500000
+        WHEN TenLoaiPhong LIKE N'%đôi%' OR TenLoaiPhong LIKE N'%doi%' THEN 300000
+        ELSE 200000
+    END"
+                    : string.Empty;
+
+                ConnectDB.ExecuteNonQuery(@"
+UPDATE dbo.LOAIPHONG
+SET DonGiaNgay = CASE
+        WHEN TenLoaiPhong LIKE N'%VIP%' THEN 1200000
+        WHEN TenLoaiPhong LIKE N'%đôi%' OR TenLoaiPhong LIKE N'%doi%' THEN 650000
+        ELSE 450000
+    END,
+    DonGiaDem = CASE
+        WHEN TenLoaiPhong LIKE N'%VIP%' THEN 1200000
+        WHEN TenLoaiPhong LIKE N'%đôi%' OR TenLoaiPhong LIKE N'%doi%' THEN 650000
+        ELSE 450000
+    END" + tienCocSet + @"
+WHERE TenLoaiPhong LIKE N'%VIP%'
+   OR TenLoaiPhong LIKE N'%đơn%'
+   OR TenLoaiPhong LIKE N'%don%'
+   OR TenLoaiPhong LIKE N'%đôi%'
+   OR TenLoaiPhong LIKE N'%doi%'");
+            }
+            catch
+            {
+                // Keep room loading usable on older/custom schemas.
+            }
+        }
+
+        private static void XoaGhiChuTuDongCu()
+        {
+            try
+            {
+                if (!TableExists("PHONG") || !ColumnExists("PHONG", "GhiChu"))
+                {
+                    return;
+                }
+
+                ConnectDB.ExecuteNonQuery(@"
+UPDATE dbo.PHONG
+SET GhiChu = STUFF(
+        GhiChu,
+        CHARINDEX(N'[DA_DON_DEP_DOIPHONG:', GhiChu),
+        CHARINDEX(N']', GhiChu, CHARINDEX(N'[DA_DON_DEP_DOIPHONG:', GhiChu))
+            - CHARINDEX(N'[DA_DON_DEP_DOIPHONG:', GhiChu) + 1,
+        N'')
+WHERE CHARINDEX(N'[DA_DON_DEP_DOIPHONG:', ISNULL(GhiChu, N'')) > 0
+  AND CHARINDEX(N']', GhiChu, CHARINDEX(N'[DA_DON_DEP_DOIPHONG:', GhiChu)) > 0;
+
+UPDATE dbo.PHONG
+SET GhiChu = NULLIF(LTRIM(RTRIM(
+    REPLACE(REPLACE(REPLACE(REPLACE(
+        ISNULL(GhiChu, N''),
+        N'[CAN_DON_DEP] Can don dep sau khi doi phong', N''),
+        N'[CAN_DON_DEP] Can don dep sau khi tra phong', N''),
+        N'Can don dep sau khi doi phong', N''),
+        N'Can don dep sau khi tra phong', N'')
+)), N'')
+WHERE CHARINDEX(N'[CAN_DON_DEP]', ISNULL(GhiChu, N'')) > 0
+   OR CHARINDEX(N'Can don dep sau khi', ISNULL(GhiChu, N'')) > 0;");
+            }
+            catch
+            {
+                // Dữ liệu phòng vẫn tải được nếu tài khoản chỉ có quyền đọc.
+            }
         }
 
         private static string ToParameterName(string column)
@@ -662,6 +835,27 @@ ORDER BY DP.MaDatPhong DESC",
             return Convert.ToInt32(result) > 0;
         }
 
+        private static string LamSachGhiChuHienThi(string ghiChu)
+        {
+            if (string.IsNullOrWhiteSpace(ghiChu) || ghiChu.Trim() == "--")
+            {
+                return "--";
+            }
+
+            string cleaned = Regex.Replace(
+                ghiChu,
+                @"\[(GIAHAN|DICHVU_CHECKIN|DICHVU_PHATSINH|CAN_DON_DEP|DA_DON_DEP_DOIPHONG)\][^-\r\n]*(\s*-\s*)?",
+                string.Empty,
+                RegexOptions.IgnoreCase);
+            cleaned = Regex.Replace(
+                cleaned,
+                @"\[(CAN_DON_DEP|DA_DON_DEP_DOIPHONG):?[^\]]*\](\s*-\s*)?",
+                string.Empty,
+                RegexOptions.IgnoreCase);
+            cleaned = Regex.Replace(cleaned, @"\s*-\s*", " - ").Trim(' ', '-');
+            return string.IsNullOrWhiteSpace(cleaned) ? "--" : cleaned;
+        }
+
         private class RoomStayInfo
         {
             public string HoTen { get; set; } = "--";
@@ -677,6 +871,7 @@ ORDER BY DP.MaDatPhong DESC",
             public string Name { get; set; } = string.Empty;
             public HashSet<string> Columns { get; set; } = new(StringComparer.OrdinalIgnoreCase);
             public HashSet<string> IdentityColumns { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+            public HashSet<string> ComputedColumns { get; set; } = new(StringComparer.OrdinalIgnoreCase);
             public Dictionary<string, string> ColumnTypes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
             public string KeyColumn { get; set; } = string.Empty;
         }

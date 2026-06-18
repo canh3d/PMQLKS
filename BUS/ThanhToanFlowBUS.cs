@@ -34,14 +34,44 @@ namespace QLKS_AnPhu.BUS
             thanhToanDAL.CongDichVuPhatSinh(maThue, chiPhiDichVuMoi);
         }
 
-        public KetQuaCheckOutThanhToanDTO CheckOut(int maThue)
+        public KetQuaCheckOutThanhToanDTO CheckOut(int maThue, bool thanhToanNgay = true)
         {
             if (maThue <= 0)
             {
                 throw new InvalidOperationException("Phieu thue khong hop le.");
             }
 
-            return thanhToanDAL.CheckOut(maThue);
+            return thanhToanDAL.CheckOut(maThue, thanhToanNgay);
+        }
+
+        public void ThanhToanHoaDon(int maThue)
+        {
+            if (maThue <= 0)
+            {
+                throw new InvalidOperationException("Phieu thue khong hop le.");
+            }
+
+            thanhToanDAL.ThanhToanHoaDon(maThue);
+        }
+
+        public void ThanhToanHoaDonTheoDoan(int maDoan)
+        {
+            if (maDoan <= 0)
+            {
+                throw new InvalidOperationException("Doan khach khong hop le.");
+            }
+
+            thanhToanDAL.ThanhToanHoaDonTheoDoan(maDoan);
+        }
+
+        public DuToanCheckOutDTO DuToanCheckOut(int maThue)
+        {
+            if (maThue <= 0)
+            {
+                throw new InvalidOperationException("Phieu thue khong hop le.");
+            }
+
+            return thanhToanDAL.DuToanCheckOut(maThue, DateTime.Now);
         }
 
         public void NoShow(int maDatPhong)
@@ -52,6 +82,16 @@ namespace QLKS_AnPhu.BUS
             }
 
             thanhToanDAL.NoShow(maDatPhong);
+        }
+
+        public DuToanHuyDatPhongDTO DuToanHuyDatPhong(int maDatPhong)
+        {
+            if (maDatPhong <= 0)
+            {
+                throw new InvalidOperationException("Phieu dat phong khong hop le.");
+            }
+
+            return thanhToanDAL.DuToanHuyDatPhong(maDatPhong);
         }
     }
 }
