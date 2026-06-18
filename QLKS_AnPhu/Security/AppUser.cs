@@ -9,9 +9,7 @@ namespace QLKS_AnPhu.Security
         public string HoTenNhanVien { get; init; } = string.Empty;
         public HashSet<string> Permissions { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public bool IsManager =>
-            VaiTro.Equals("Quản lý", StringComparison.OrdinalIgnoreCase)
-            || VaiTro.Equals("Quan ly", StringComparison.OrdinalIgnoreCase);
+        public bool IsManager => RoleHelper.IsManagerRole(VaiTro);
 
         public bool CanAccess(string permissionCode)
         {

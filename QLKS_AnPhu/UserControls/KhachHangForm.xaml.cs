@@ -40,6 +40,27 @@ namespace QLKS_AnPhu.View
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(TxtSDT.Text))
+            {
+                TxtThongBao.Text = "Vui lòng nhập số điện thoại khách hàng.";
+                TxtSDT.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(TxtCCCD.Text))
+            {
+                TxtThongBao.Text = "Vui lòng nhập CCCD/CMND khách hàng.";
+                TxtCCCD.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(TxtDiaChi.Text))
+            {
+                TxtThongBao.Text = "Vui lòng nhập địa chỉ khách hàng.";
+                TxtDiaChi.Focus();
+                return;
+            }
+
             DuLieu.HoTen = TxtHoTen.Text.Trim();
             DuLieu.SDT = TxtSDT.Text.Trim();
             DuLieu.CCCD = TxtCCCD.Text.Trim();

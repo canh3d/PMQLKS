@@ -392,9 +392,9 @@ ORDER BY " + orderBy,
         {
             (decimal gio, decimal ngay, decimal dem) = loaiPhong.ToLowerInvariant() switch
             {
-                string value when value.Contains("vip") => (200000m, 1200000m, 1200000m),
-                string value when value.Contains("đôi") || value.Contains("doi") => (120000m, 650000m, 650000m),
-                _ => (80000m, 450000m, 450000m)
+                string value when value.Contains("vip") => (200000m, 1200000m, 900000m),
+                string value when value.Contains("đôi") || value.Contains("doi") => (120000m, 700000m, 500000m),
+                _ => (80000m, 450000m, 350000m)
             };
 
             if (giaGio <= 0)
@@ -692,13 +692,13 @@ ORDER BY " + orderBy,
 UPDATE dbo.LOAIPHONG
 SET DonGiaNgay = CASE
         WHEN TenLoaiPhong LIKE N'%VIP%' THEN 1200000
-        WHEN TenLoaiPhong LIKE N'%đôi%' OR TenLoaiPhong LIKE N'%doi%' THEN 650000
+        WHEN TenLoaiPhong LIKE N'%đôi%' OR TenLoaiPhong LIKE N'%doi%' THEN 700000
         ELSE 450000
     END,
     DonGiaDem = CASE
-        WHEN TenLoaiPhong LIKE N'%VIP%' THEN 1200000
-        WHEN TenLoaiPhong LIKE N'%đôi%' OR TenLoaiPhong LIKE N'%doi%' THEN 650000
-        ELSE 450000
+        WHEN TenLoaiPhong LIKE N'%VIP%' THEN 900000
+        WHEN TenLoaiPhong LIKE N'%đôi%' OR TenLoaiPhong LIKE N'%doi%' THEN 500000
+        ELSE 350000
     END" + tienCocSet + @"
 WHERE TenLoaiPhong LIKE N'%VIP%'
    OR TenLoaiPhong LIKE N'%đơn%'
@@ -844,7 +844,7 @@ WHERE CHARINDEX(N'[CAN_DON_DEP]', ISNULL(GhiChu, N'')) > 0
 
             string cleaned = Regex.Replace(
                 ghiChu,
-                @"\[(GIAHAN|DICHVU_CHECKIN|DICHVU_PHATSINH|CAN_DON_DEP|DA_DON_DEP_DOIPHONG)\][^-\r\n]*(\s*-\s*)?",
+                @"\[(GIAHAN|DICHVU_CHECKIN|DICHVU_PHATSINH|CAN_DON_DEP|DA_DON_DEP_DOIPHONG|DATPHONG|DAT_DOAN|DOI_PHONG)[^\]]*\]\s*",
                 string.Empty,
                 RegexOptions.IgnoreCase);
             cleaned = Regex.Replace(
@@ -852,8 +852,32 @@ WHERE CHARINDEX(N'[CAN_DON_DEP]', ISNULL(GhiChu, N'')) > 0
                 @"\[(CAN_DON_DEP|DA_DON_DEP_DOIPHONG):?[^\]]*\](\s*-\s*)?",
                 string.Empty,
                 RegexOptions.IgnoreCase);
+
+            string[] noteParts = cleaned
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(BoKeyTuDongTrongPhanGhiChu)
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .ToArray();
+            cleaned = string.Join("; ", noteParts);
             cleaned = Regex.Replace(cleaned, @"\s*-\s*", " - ").Trim(' ', '-');
             return string.IsNullOrWhiteSpace(cleaned) ? "--" : cleaned;
+        }
+
+        private static string BoKeyTuDongTrongPhanGhiChu(string part)
+        {
+            const string autoKeyPattern =
+                @"^(TongTienPhong|TienPhong|TongTienDichVu|TienDichVu|TongCoc|TienCoc|DatCoc|SoTien|CheDo|CheDoDatPhong|LoaiDat|LoaiDatPhong|NhanNgay|Tu|Den|NgayNhan|NgayTra|NgayNhanDuKien|NgayTraDuKien|SoNguoi|SoPhong|Phong|TuPhong|ThoiDiem|PhuPhiNhanSom|DonGia|MaDatPhong|MaThue|MaPhong)\s*=";
+
+            if (!Regex.IsMatch(part, autoKeyPattern, RegexOptions.IgnoreCase))
+            {
+                string trimmed = part.Trim();
+                return Regex.IsMatch(trimmed, @"^\d{2}\s*-\s*\d{2}T\d{2}:\d{2}:\d{2}", RegexOptions.IgnoreCase)
+                    ? string.Empty
+                    : trimmed;
+            }
+
+            int userNoteIndex = part.IndexOf(" - ", StringComparison.Ordinal);
+            return userNoteIndex >= 0 ? part[(userNoteIndex + 3)..].Trim() : string.Empty;
         }
 
         private class RoomStayInfo

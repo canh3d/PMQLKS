@@ -49,7 +49,7 @@ namespace QLKS_AnPhu.ViewModels
 
             string displayName = string.IsNullOrWhiteSpace(user.HoTenNhanVien) ? user.TenDangNhap : user.HoTenNhanVien;
             WelcomeText = $"Chào mừng trở lại, {displayName}!";
-            RevenueVisibility = user.IsManager ? Visibility.Visible : Visibility.Collapsed;
+            RevenueVisibility = RoleHelper.IsManagerRole(user.VaiTro) ? Visibility.Visible : Visibility.Collapsed;
 
             RefreshCommand = new AsyncRelayCommand(LoadDashboardDataAsync);
             DatPhongMoiCommand = new RelayCommand(_ => this.navigateToDatPhong?.Invoke());
@@ -299,7 +299,7 @@ namespace QLKS_AnPhu.ViewModels
                     Headers = ["Chỉ số", "Giá trị"],
                     ColumnWidths = [30, 22]
                 };
-                if (User.IsManager)
+                if (RoleHelper.IsManagerRole(User.VaiTro))
                 {
                     overview.Rows.Add(["Doanh thu hôm nay", RevenueToday]);
                 }

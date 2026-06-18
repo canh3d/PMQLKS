@@ -83,6 +83,12 @@
             <Setter Property="FontSize" Value="15" />
         </Style>
 
+        <Style x:Key="BookingActionButtonStyle" TargetType="Button" BasedOn="{StaticResource LargeActionButtonStyle}">
+            <Setter Property="Height" Value="62" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Padding" Value="18,0" />
+        </Style>
+
         <Style x:Key="DetailTextBoxStyle" TargetType="TextBox">
             <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="8,0" />
@@ -207,7 +213,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="14" />
-                <RowDefinition Height="74" />
+                <RowDefinition Height="92" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource PanelStyle}">
@@ -455,7 +461,7 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource PanelStyle}" Padding="14,10">
+            <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource PanelStyle}" Padding="14,14">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -465,10 +471,18 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="4" Style="{StaticResource LargeActionButtonStyle}" Background="#6B7280" BorderBrush="#6B7280" Foreground="White" VerticalAlignment="Center" Click="BtnDatPhong_Click">
+                    <Button Grid.Column="0"
+                            Grid.ColumnSpan="5"
+                            Style="{StaticResource BookingActionButtonStyle}"
+                            Background="#6B7280"
+                            BorderBrush="#6B7280"
+                            Foreground="White"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Stretch"
+                            Click="BtnDatPhong_Click">
                         <StackPanel>
-                            <iconPacks:PackIconMaterial Kind="Calendar" Width="20" Height="20" HorizontalAlignment="Center" />
-                            <TextBlock Text="Đặt phòng" Margin="0,1,0,0" />
+                            <iconPacks:PackIconMaterial Kind="Calendar" Width="26" Height="26" HorizontalAlignment="Center" />
+                            <TextBlock Text="Đặt phòng" Margin="0,3,0,0" FontWeight="SemiBold" />
                         </StackPanel>
                     </Button>
                 </Grid>

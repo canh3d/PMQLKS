@@ -6,160 +6,216 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Danh sách phòng"
-        Width="1080"
-        Height="600"
-        MinWidth="960"
-        MinHeight="560"
+        Width="1180"
+        Height="700"
+        MinWidth="1080"
+        MinHeight="640"
         WindowStartupLocation="CenterOwner"
-        Background="White">
-    <Grid Margin="18,18,18,16">
+        Background="{StaticResource AppBackgroundBrush}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Window.Resources>
+        <Style x:Key="RoomFilterLabelStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextMainBrush}" />
+            <Setter Property="Margin" Value="0,0,7,0" />
+        </Style>
+
+        <Style x:Key="RoomActionButtonStyle" TargetType="Button" BasedOn="{StaticResource AppButtonStyle}">
+            <Setter Property="Width" Value="116" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="12,0" />
+        </Style>
+
+        <Style x:Key="RoomCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource AppOutlineButtonStyle}">
+            <Setter Property="Width" Value="118" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Effect" Value="{x:Null}" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="42" />
-            <RowDefinition Height="54" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="56" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Text="Danh sách phòng"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="16"
-                   Foreground="#0F1F33" />
+        <Border Grid.Row="0"
+                Padding="20,16"
+                CornerRadius="18"
+                Background="{StaticResource HeaderBrush}"
+                BorderBrush="#E2E8F0"
+                BorderThickness="1"
+                Effect="{StaticResource SoftShadow}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="1"
-                    Orientation="Horizontal"
-                    VerticalAlignment="Center">
-            <Button Width="112"
-                    Height="34"
-                    Background="#22C55E"
-                    BorderBrush="#22C55E"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    Click="BtnThem_Click">
-                <TextBlock Text="Thêm" />
-            </Button>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="46" Height="46" CornerRadius="15">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#2563EB" Offset="0" />
+                                <GradientStop Color="#06B6D4" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <iconPacks:PackIconMaterial Kind="Bed" Width="25" Height="25" Foreground="White" />
+                    </Border>
 
-            <Button Width="104"
-                    Height="34"
-                    Margin="12,0,0,0"
-                    Background="#F59E0B"
-                    BorderBrush="#F59E0B"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    Click="BtnSua_Click">
-                <TextBlock Text="Sửa" />
-            </Button>
-
-            <Button Width="104"
-                    Height="34"
-                    Margin="12,0,0,0"
-                    Background="#EF4444"
-                    BorderBrush="#EF4444"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    Click="BtnXoa_Click">
-                <TextBlock Text="Xóa" />
-            </Button>
-
-            <Button Width="132"
-                    Height="34"
-                    Margin="12,0,0,0"
-                    Background="#667085"
-                    BorderBrush="#667085"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    Click="BtnLamMoi_Click">
-                <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial Kind="Refresh"
-                                                Width="14"
-                                                Height="14"
-                                                Margin="0,0,6,0"
-                                                VerticalAlignment="Center" />
-                    <TextBlock Text="Làm mới" />
+                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Danh sách phòng" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextMainBrush}" />
+                        <TextBlock Text="Quản lý thông tin phòng, bảng giá và trạng thái vận hành"
+                                   Margin="0,4,0,0"
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
                 </StackPanel>
-            </Button>
 
-            <TextBlock Text="Tìm"
-                       Margin="28,0,6,0"
-                       VerticalAlignment="Center"
-                       FontWeight="SemiBold"
-                       Foreground="#334155" />
-            <TextBox x:Name="TxtTimKiem"
-                     Width="160"
-                     Height="34"
-                     Padding="8,0"
-                     VerticalContentAlignment="Center"
-                     TextChanged="BoLoc_Changed" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource RoomActionButtonStyle}"
+                            Background="{StaticResource SuccessBrush}"
+                            BorderBrush="{StaticResource SuccessBrush}"
+                            Click="BtnThem_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Plus" Width="17" Height="17" Margin="0,0,7,0" />
+                            <TextBlock Text="Thêm" Style="{StaticResource ButtonContentTextStyle}" />
+                        </StackPanel>
+                    </Button>
 
-            <TextBlock Text="Loại"
-                       Margin="12,0,6,0"
-                       VerticalAlignment="Center"
-                       FontWeight="SemiBold"
-                       Foreground="#334155" />
-            <ComboBox x:Name="CboLocLoaiPhong"
-                      Width="132"
-                      Height="34"
-                      SelectionChanged="BoLoc_Changed" />
+                    <Button Style="{StaticResource RoomActionButtonStyle}"
+                            Margin="10,0,0,0"
+                            Background="{StaticResource WarningBrush}"
+                            BorderBrush="{StaticResource WarningBrush}"
+                            Click="BtnSua_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Pencil" Width="16" Height="16" Margin="0,0,7,0" />
+                            <TextBlock Text="Sửa" Style="{StaticResource ButtonContentTextStyle}" />
+                        </StackPanel>
+                    </Button>
 
-            <TextBlock Text="Trạng thái"
-                       Margin="12,0,6,0"
-                       VerticalAlignment="Center"
-                       FontWeight="SemiBold"
-                       Foreground="#334155" />
-            <ComboBox x:Name="CboLocTrangThai"
-                      Width="132"
-                      Height="34"
-                      SelectionChanged="BoLoc_Changed" />
-        </StackPanel>
+                    <Button Style="{StaticResource RoomActionButtonStyle}"
+                            Margin="10,0,0,0"
+                            Background="{StaticResource DangerBrush}"
+                            BorderBrush="{StaticResource DangerBrush}"
+                            Click="BtnXoa_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Delete" Width="16" Height="16" Margin="0,0,7,0" />
+                            <TextBlock Text="Xóa" Style="{StaticResource ButtonContentTextStyle}" />
+                        </StackPanel>
+                    </Button>
 
-        <DataGrid x:Name="DgPhong"
-                  Grid.Row="2"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  IsReadOnly="True"
-                  SelectionMode="Single"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal"
-                  RowHeight="24"
-                  FontSize="14"
-                  AlternatingRowBackground="#F8FAFC">
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Height" Value="38" />
-                    <Setter Property="FontWeight" Value="SemiBold" />
-                    <Setter Property="Background" Value="#DEE5EE" />
-                    <Setter Property="BorderBrush" Value="#AAB4C2" />
-                    <Setter Property="BorderThickness" Value="0,0,1,1" />
-                    <Setter Property="HorizontalContentAlignment" Value="Center" />
-                </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Số phòng" Binding="{Binding SoPhong}" Width="80" />
-                <DataGridTextColumn Header="Tầng" Binding="{Binding Tang}" Width="105" />
-                <DataGridTextColumn Header="Loại phòng" Binding="{Binding LoaiPhong}" Width="110" />
-                <DataGridTextColumn Header="GiaGio" Binding="{Binding GiaGio, StringFormat={}{0:N0}}" Width="106" />
-                <DataGridTextColumn Header="GiaNgay" Binding="{Binding GiaNgay, StringFormat={}{0:N0}}" Width="106" />
-                <DataGridTextColumn Header="GiaDem" Binding="{Binding GiaDem, StringFormat={}{0:N0}}" Width="106" />
-                <DataGridTextColumn Header="Trạng thái" Binding="{Binding TrangThai}" Width="108" />
-                <DataGridTextColumn Header="Ghi chú" Binding="{Binding GhiChuHienThi}" Width="*" />
-            </DataGrid.Columns>
-        </DataGrid>
+                    <Button Style="{StaticResource RoomActionButtonStyle}"
+                            Margin="10,0,0,0"
+                            Background="#64748B"
+                            BorderBrush="#64748B"
+                            Click="BtnLamMoi_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Refresh" Width="16" Height="16" Margin="0,0,7,0" />
+                            <TextBlock Text="Làm mới" Style="{StaticResource ButtonContentTextStyle}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
 
-        <Button Grid.Row="3"
-                Width="112"
-                Height="34"
+        <Border Grid.Row="1"
+                Margin="0,16,0,0"
+                Padding="18"
+                CornerRadius="18"
+                Background="White"
+                BorderBrush="#E2E8F0"
+                BorderThickness="1"
+                Effect="{StaticResource SoftShadow}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Danh sách dữ liệu"
+                               VerticalAlignment="Center"
+                               FontSize="17"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextMainBrush}" />
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <TextBlock Text="Tìm" Style="{StaticResource RoomFilterLabelStyle}" />
+                        <TextBox x:Name="TxtTimKiem"
+                                 Width="190"
+                                 Height="38"
+                                 Padding="12,0"
+                                 VerticalContentAlignment="Center"
+                                 TextChanged="BoLoc_Changed" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <TextBlock Text="Loại" Style="{StaticResource RoomFilterLabelStyle}" />
+                        <ComboBox x:Name="CboLocLoaiPhong"
+                                  Width="150"
+                                  Height="38"
+                                  SelectionChanged="BoLoc_Changed" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Trạng thái" Style="{StaticResource RoomFilterLabelStyle}" />
+                        <ComboBox x:Name="CboLocTrangThai"
+                                  Width="150"
+                                  Height="38"
+                                  SelectionChanged="BoLoc_Changed" />
+                    </StackPanel>
+                </Grid>
+
+                <DataGrid x:Name="DgPhong"
+                          Grid.Row="1"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="None"
+                          RowHeight="40"
+                          ColumnHeaderHeight="44"
+                          FontSize="14"
+                          AlternatingRowBackground="#F8FAFC"
+                          BorderThickness="1"
+                          BorderBrush="#E2E8F0"
+                          Background="White">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Số phòng" Binding="{Binding SoPhong}" Width="90" />
+                        <DataGridTextColumn Header="Tầng" Binding="{Binding Tang}" Width="75" />
+                        <DataGridTextColumn Header="Loại phòng" Binding="{Binding LoaiPhong}" Width="130" />
+                        <DataGridTextColumn Header="Giá giờ" Binding="{Binding GiaGio, StringFormat={}{0:N0}}" Width="110" />
+                        <DataGridTextColumn Header="Giá ngày" Binding="{Binding GiaNgay, StringFormat={}{0:N0}}" Width="115" />
+                        <DataGridTextColumn Header="Giá đêm" Binding="{Binding GiaDem, StringFormat={}{0:N0}}" Width="115" />
+                        <DataGridTextColumn Header="Trạng thái" Binding="{Binding TrangThai}" Width="130" />
+                        <DataGridTextColumn Header="Ghi chú" Binding="{Binding GhiChuHienThi}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <Button Grid.Row="2"
+                Margin="0,16,0,0"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                Margin="0,0,104,0"
-                Background="#667085"
-                BorderBrush="#667085"
-                Foreground="White"
-                FontWeight="SemiBold"
+                Style="{StaticResource RoomCloseButtonStyle}"
                 Click="BtnDong_Click">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="×" Margin="0,0,6,0" />
-                <TextBlock Text="Đóng" />
+                <iconPacks:PackIconMaterial Kind="Close" Width="16" Height="16" Margin="0,0,7,0" />
+                <TextBlock Text="Đóng" Style="{StaticResource ButtonContentTextStyle}" />
             </StackPanel>
         </Button>
     </Grid>

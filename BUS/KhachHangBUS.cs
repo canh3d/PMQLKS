@@ -127,9 +127,24 @@ namespace QLKS_AnPhu.BUS
                 throw new InvalidOperationException("Vui lòng nhập họ tên khách hàng.");
             }
 
-            if (!string.IsNullOrWhiteSpace(item.SDT) && item.SDT.Length < 8)
+            if (string.IsNullOrWhiteSpace(item.SDT))
+            {
+                throw new InvalidOperationException("Vui lòng nhập số điện thoại khách hàng.");
+            }
+
+            if (ChuanHoaSoDienThoai(item.SDT).Length < 8)
             {
                 throw new InvalidOperationException("Số điện thoại không hợp lệ.");
+            }
+
+            if (string.IsNullOrWhiteSpace(item.CCCD))
+            {
+                throw new InvalidOperationException("Vui lòng nhập CCCD/CMND khách hàng.");
+            }
+
+            if (string.IsNullOrWhiteSpace(item.DiaChi))
+            {
+                throw new InvalidOperationException("Vui lòng nhập địa chỉ khách hàng.");
             }
 
             if (string.IsNullOrWhiteSpace(item.LoaiKhach))

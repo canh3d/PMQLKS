@@ -127,7 +127,7 @@
             </Border>
 
             <UniformGrid Grid.Row="2" Columns="5" Rows="1">
-                <Border Style="{StaticResource HomeKpiCardStyle}" Visibility="{Binding RevenueVisibility}">
+                <Border x:Name="RevenueCard" Style="{StaticResource HomeKpiCardStyle}" Visibility="{Binding RevenueVisibility}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />

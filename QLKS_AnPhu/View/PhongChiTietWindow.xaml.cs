@@ -628,7 +628,7 @@ WHERE " + keyFilter + roomFilter + checkInFilter,
                 NgayTraDat = GetNullableDate(row, "NgayTraDat"),
                 CheDoDatPhong = row["CheDoDatPhong"]?.ToString() ?? string.Empty,
                 TienCoc = GetDecimal(row, "TienCoc"),
-                TienPhong = tienPhongDaChot > 0 ? tienPhongDaChot : tienPhongTinhLai,
+                TienPhong = laPhieuThue && tienPhongDaChot > 0 ? tienPhongDaChot : tienPhongTinhLai,
                 TienGiaHan = tienGiaHan,
                 PhuPhi = GetDecimal(row, "PhuPhi"),
                 GhiChu = ghiChu,
@@ -1627,7 +1627,7 @@ GhiChu = NULLIF(LTRIM(RTRIM(
 
         private static string TienPhongSql(string startExpr, string plannedEndExpr, string actualEndExpr)
         {
-            string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0)";
+            string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
             return @"CAST(CASE
     WHEN " + plannedEndExpr + @" IS NULL OR DATEDIFF(minute, " + startExpr + @", " + plannedEndExpr + @") <= 0 THEN " + giaNgayExpr + @"
     WHEN CAST(" + startExpr + @" AS date) = CAST(" + plannedEndExpr + @" AS date) THEN CEILING(DATEDIFF(minute, " + startExpr + @", " + plannedEndExpr + @") / 60.0) * ISNULL(LP.DonGiaGio, 0)

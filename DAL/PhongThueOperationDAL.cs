@@ -1,5 +1,7 @@
 using Microsoft.Data.SqlClient;
 using QLKS_AnPhu.DTO;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace QLKS_AnPhu.DAL
 {
@@ -219,6 +221,11 @@ WHERE " + hoaDonKey + @" = (
                     {
                         CapNhatChiTietDatPhongSauDoiPhong(conn, tran, request);
                     }
+
+                    if (request.MaThue <= 0)
+                    {
+                        CapNhatTienPhongDatPhongSauDoiPhong(conn, tran, bangDatPhong, request.MaDatPhong.Value);
+                    }
                 }
 
                 if (request.MaThue > 0)
@@ -277,8 +284,52 @@ WHERE " + hoaDonKey + @" = (
                 return;
             }
 
+            string bangDatPhong = LayBangDatPhong(conn, tran);
+            string ngayNhanDatPhongColumn = string.IsNullOrWhiteSpace(bangDatPhong)
+                ? string.Empty
+                : GetFirstExistingColumn(conn, tran, bangDatPhong, "NgayNhanDuKien", "NgayNhanPhong", "NgayNhan");
+            string ngayTraDatPhongColumn = string.IsNullOrWhiteSpace(bangDatPhong)
+                ? string.Empty
+                : GetFirstExistingColumn(conn, tran, bangDatPhong, "NgayTraDuKien", "NgayTraPhong", "NgayTra");
+            string joinDatPhong = string.IsNullOrWhiteSpace(bangDatPhong)
+                ? string.Empty
+                : " LEFT JOIN dbo." + bangDatPhong + " DP ON DP.MaDatPhong = CT.MaDatPhong";
+            string ngayNhanHieuLucExpr = string.IsNullOrWhiteSpace(ngayNhanDatPhongColumn)
+                ? "CT." + ngayNhanColumn
+                : "ISNULL(CT." + ngayNhanColumn + ", DP." + ngayNhanDatPhongColumn + ")";
+            string ngayTraHieuLucExpr = string.IsNullOrWhiteSpace(ngayTraDatPhongColumn)
+                ? "CT." + ngayTraColumn
+                : "ISNULL(CT." + ngayTraColumn + ", DP." + ngayTraDatPhongColumn + ")";
+
+            using (SqlCommand replaceFuture = new(
+                       "UPDATE CT SET MaPhong = @MaPhongMoi" + (ColumnExists(conn, tran, "CHITIETDATPHONG", "DonGia") ? ", DonGia = @DonGia" : string.Empty) +
+                       " FROM dbo.CHITIETDATPHONG CT" + joinDatPhong +
+                       " WHERE CT.MaDatPhong = @MaDatPhong AND CT.MaPhong = @MaPhongCu" +
+                       " AND " + ngayNhanHieuLucExpr + " >= @NgayDoi",
+                       conn,
+                       tran))
+            {
+                replaceFuture.Parameters.AddWithValue("@MaPhongMoi", request.MaPhongMoi);
+                replaceFuture.Parameters.AddWithValue("@MaDatPhong", request.MaDatPhong.Value);
+                replaceFuture.Parameters.AddWithValue("@MaPhongCu", request.MaPhongCu);
+                replaceFuture.Parameters.AddWithValue("@NgayDoi", request.NgayBatDau);
+                if (replaceFuture.CommandText.Contains("@DonGia"))
+                {
+                    replaceFuture.Parameters.AddWithValue("@DonGia", LayDonGiaPhong(conn, tran, request.MaPhongMoi));
+                }
+
+                if (replaceFuture.ExecuteNonQuery() > 0)
+                {
+                    return;
+                }
+            }
+
             using (SqlCommand cutOld = new(
-                       "UPDATE dbo.CHITIETDATPHONG SET " + ngayTraColumn + " = @NgayDoi WHERE MaDatPhong = @MaDatPhong AND MaPhong = @MaPhongCu AND " + ngayTraColumn + " > @NgayDoi",
+                       "UPDATE CT SET " + ngayTraColumn + " = @NgayDoi" +
+                       " FROM dbo.CHITIETDATPHONG CT" + joinDatPhong +
+                       " WHERE CT.MaDatPhong = @MaDatPhong AND CT.MaPhong = @MaPhongCu" +
+                       " AND " + ngayNhanHieuLucExpr + " < @NgayDoi" +
+                       " AND " + ngayTraHieuLucExpr + " > @NgayDoi",
                        conn,
                        tran))
             {
@@ -329,6 +380,104 @@ WHERE " + hoaDonKey + @" = (
                 insert.Parameters.AddWithValue("@GhiChu", "[DOI_PHONG] TuPhong=" + request.MaPhongCu + ";ThoiDiem=" + request.NgayBatDau.ToString("O"));
             }
             insert.ExecuteNonQuery();
+        }
+
+        private static void CapNhatTienPhongDatPhongSauDoiPhong(SqlConnection conn, SqlTransaction tran, string bangDatPhong, int maDatPhong)
+        {
+            if (string.IsNullOrWhiteSpace(bangDatPhong) || !ColumnExists(conn, tran, bangDatPhong, "GhiChu"))
+            {
+                return;
+            }
+
+            decimal tongTienPhong = TinhTongTienPhongDatPhong(conn, tran, bangDatPhong, maDatPhong);
+            if (tongTienPhong <= 0)
+            {
+                return;
+            }
+
+            using SqlCommand select = new("SELECT TOP 1 ISNULL(GhiChu, N'') FROM dbo." + bangDatPhong + " WHERE MaDatPhong = @MaDatPhong", conn, tran);
+            select.Parameters.AddWithValue("@MaDatPhong", maDatPhong);
+            string ghiChu = select.ExecuteScalar()?.ToString() ?? string.Empty;
+            string ghiChuMoi = CapNhatMarkerTienPhong(ghiChu, tongTienPhong);
+
+            using SqlCommand update = new("UPDATE dbo." + bangDatPhong + " SET GhiChu = @GhiChu WHERE MaDatPhong = @MaDatPhong", conn, tran);
+            update.Parameters.AddWithValue("@GhiChu", ghiChuMoi);
+            update.Parameters.AddWithValue("@MaDatPhong", maDatPhong);
+            update.ExecuteNonQuery();
+        }
+
+        private static decimal TinhTongTienPhongDatPhong(SqlConnection conn, SqlTransaction tran, string bangDatPhong, int maDatPhong)
+        {
+            string ngayNhanDatPhongColumn = GetFirstExistingColumn(conn, tran, bangDatPhong, "NgayNhanDuKien", "NgayNhanPhong", "NgayNhan");
+            string ngayTraDatPhongColumn = GetFirstExistingColumn(conn, tran, bangDatPhong, "NgayTraDuKien", "NgayTraPhong", "NgayTra");
+            if (string.IsNullOrWhiteSpace(ngayNhanDatPhongColumn) || string.IsNullOrWhiteSpace(ngayTraDatPhongColumn))
+            {
+                return 0;
+            }
+
+            bool coChiTietDatPhong = TableExists(conn, tran, "CHITIETDATPHONG") &&
+                                      ColumnExists(conn, tran, "CHITIETDATPHONG", "MaDatPhong") &&
+                                      ColumnExists(conn, tran, "CHITIETDATPHONG", "MaPhong");
+            string sourceSql = coChiTietDatPhong
+                ? @"FROM dbo.CHITIETDATPHONG CT
+JOIN dbo." + bangDatPhong + @" DP ON DP.MaDatPhong = CT.MaDatPhong
+JOIN dbo.PHONG P ON CT.MaPhong = P.MaPhong"
+                : @"FROM dbo." + bangDatPhong + @" DP
+JOIN dbo.PHONG P ON DP.MaPhong = P.MaPhong";
+            string whereSql = coChiTietDatPhong
+                ? "WHERE CT.MaDatPhong = @MaDatPhong"
+                : "WHERE DP.MaDatPhong = @MaDatPhong";
+            string ngayNhanChiTietColumn = coChiTietDatPhong
+                ? GetFirstExistingColumn(conn, tran, "CHITIETDATPHONG", "NgayNhanDuKien", "NgayNhanPhong", "NgayNhan")
+                : string.Empty;
+            string ngayTraChiTietColumn = coChiTietDatPhong
+                ? GetFirstExistingColumn(conn, tran, "CHITIETDATPHONG", "NgayTraDuKien", "NgayTraPhong", "NgayTra")
+                : string.Empty;
+            string startExpr = string.IsNullOrWhiteSpace(ngayNhanChiTietColumn)
+                ? "DP." + ngayNhanDatPhongColumn
+                : "ISNULL(CT." + ngayNhanChiTietColumn + ", DP." + ngayNhanDatPhongColumn + ")";
+            string endExpr = string.IsNullOrWhiteSpace(ngayTraChiTietColumn)
+                ? "DP." + ngayTraDatPhongColumn
+                : "ISNULL(CT." + ngayTraChiTietColumn + ", DP." + ngayTraDatPhongColumn + ")";
+            string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
+            string giaGioExpr = "ISNULL(LP.DonGiaGio, 0)";
+            string tienPhongExpr = @"CAST(CASE
+    WHEN " + endExpr + @" IS NULL OR DATEDIFF(minute, " + startExpr + @", " + endExpr + @") <= 0 THEN " + giaNgayExpr + @"
+    WHEN CAST(" + startExpr + @" AS date) = CAST(" + endExpr + @" AS date) THEN CEILING(DATEDIFF(minute, " + startExpr + @", " + endExpr + @") / 60.0) * " + giaGioExpr + @"
+    WHEN DATEDIFF(hour, " + startExpr + @", " + endExpr + @") <= 12 THEN " + giaNgayExpr + @"
+    ELSE CASE WHEN DATEDIFF(day, CAST(" + startExpr + @" AS date), CAST(" + endExpr + @" AS date)) <= 0 THEN 1
+              ELSE DATEDIFF(day, CAST(" + startExpr + @" AS date), CAST(" + endExpr + @" AS date))
+         END * " + giaNgayExpr + @"
+END AS decimal(18, 2))";
+
+            using SqlCommand cmd = new(
+                @"SELECT ISNULL(SUM(" + tienPhongExpr + @"), 0)
+" + sourceSql + @"
+LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong
+" + whereSql,
+                conn,
+                tran);
+            cmd.Parameters.AddWithValue("@MaDatPhong", maDatPhong);
+            object? value = cmd.ExecuteScalar();
+            return value == null || value == DBNull.Value ? 0 : Convert.ToDecimal(value);
+        }
+
+        private static string CapNhatMarkerTienPhong(string ghiChu, decimal tongTienPhong)
+        {
+            string value = tongTienPhong.ToString("0", CultureInfo.InvariantCulture);
+            if (string.IsNullOrWhiteSpace(ghiChu))
+            {
+                return "TongTienPhong=" + value;
+            }
+
+            string updated = Regex.Replace(
+                ghiChu,
+                @"(TongTienPhong|TienPhong)\s*=\s*[0-9][0-9.,]*",
+                "TongTienPhong=" + value,
+                RegexOptions.IgnoreCase);
+            return string.Equals(updated, ghiChu, StringComparison.Ordinal)
+                ? ghiChu.TrimEnd() + "; TongTienPhong=" + value
+                : updated;
         }
 
         private static decimal LayDonGiaPhong(SqlConnection conn, SqlTransaction tran, int maPhong)

@@ -29,6 +29,7 @@ namespace QLKS_AnPhu.View
                 () => HostWindow()?.NavigateToBaoCao(),
                 () => HostWindow()?.NavigateToPhieuThue());
             DataContext = viewModel;
+            RevenueCard.Visibility = RoleHelper.IsManagerRole(user.VaiTro) ? Visibility.Visible : Visibility.Collapsed;
             Loaded += TrangChu_Loaded;
             Unloaded += TrangChu_Unloaded;
         }

@@ -35,13 +35,19 @@
             <Setter Property="Padding" Value="14,0" />
             <Setter Property="FontSize" Value="12" />
         </Style>
+
+        <Style x:Key="RoomBookingButtonStyle" TargetType="Button" BasedOn="{StaticResource RoomButtonStyle}">
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="18,0" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="18,12,18,12">
         <Grid.RowDefinitions>
             <RowDefinition Height="44" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="52" />
+            <RowDefinition Height="64" />
             <RowDefinition Height="24" />
         </Grid.RowDefinitions>
 
@@ -194,21 +200,21 @@
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Width="150" Style="{StaticResource RoomButtonStyle}" Click="BtnDatPhong_Click">
+            <Button Width="178" Style="{StaticResource RoomBookingButtonStyle}" Click="BtnDatPhong_Click">
                 <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14" Margin="0,0,7,0" />
+                    <iconPacks:PackIconMaterial Kind="Plus" Width="18" Height="18" Margin="0,0,8,0" />
                     <TextBlock Text="Đặt phòng" Style="{StaticResource ButtonContentTextStyle}" />
                 </StackPanel>
             </Button>
-            <Button Width="190" Margin="10,0,0,0" Style="{StaticResource RoomButtonStyle}" Click="BtnDatPhongTheoDoan_Click">
+            <Button Width="232" Margin="12,0,0,0" Style="{StaticResource RoomBookingButtonStyle}" Click="BtnDatPhongTheoDoan_Click">
                 <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial Kind="AccountMultiplePlus" Width="14" Height="14" Margin="0,0,7,0" />
+                    <iconPacks:PackIconMaterial Kind="AccountMultiplePlus" Width="18" Height="18" Margin="0,0,8,0" />
                     <TextBlock Text="Đặt phòng theo đoàn" Style="{StaticResource ButtonContentTextStyle}" />
                 </StackPanel>
             </Button>
-            <Button Width="130" Margin="10,0,0,0" Style="{StaticResource RoomButtonStyle}" Click="BtnLamMoi_Click">
+            <Button Width="150" Margin="12,0,0,0" Style="{StaticResource RoomBookingButtonStyle}" Click="BtnLamMoi_Click">
                 <StackPanel Orientation="Horizontal">
-                    <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14" Margin="0,0,7,0" />
+                    <iconPacks:PackIconMaterial Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" />
                     <TextBlock Text="Làm mới" Style="{StaticResource ButtonContentTextStyle}" />
                 </StackPanel>
             </Button>

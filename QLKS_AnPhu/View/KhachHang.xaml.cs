@@ -1,4 +1,6 @@
 ﻿using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -63,6 +65,7 @@ namespace QLKS_AnPhu.View
         private void BtnTimKiem_Click(object sender, RoutedEventArgs e)
         {
             string keyword = TxtTimKiem.Text.Trim();
+            string normalizedKeyword = BoDau(keyword).ToLowerInvariant();
 
             if (string.IsNullOrWhiteSpace(keyword))
             {
@@ -73,11 +76,12 @@ namespace QLKS_AnPhu.View
             HienThiDanhSach(danhSachGoc
                 .Where(item =>
                     item.Ma.ToString().Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                    item.HoTen.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                    item.SDT.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                    item.CCCD.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                    item.LoaiKhach.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                    item.TrangThai.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                    ChuaTuKhoa(item.HoTen, normalizedKeyword) ||
+                    ChuaTuKhoa(item.SDT, normalizedKeyword) ||
+                    ChuaTuKhoa(item.CCCD, normalizedKeyword) ||
+                    ChuaTuKhoa(item.LoaiKhach, normalizedKeyword) ||
+                    ChuaTuKhoa(item.TrangThai, normalizedKeyword) ||
+                    ChuaTuKhoa(item.DiaChi, normalizedKeyword))
                 .ToList());
         }
 
@@ -548,6 +552,27 @@ namespace QLKS_AnPhu.View
 
             MessageBox.Show("Vui lòng chọn khách hàng.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
+        }
+
+        private static bool ChuaTuKhoa(string? value, string normalizedKeyword)
+        {
+            return BoDau(value).ToLowerInvariant().Contains(normalizedKeyword, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string BoDau(string? value)
+        {
+            string formD = (value ?? string.Empty).Normalize(NormalizationForm.FormD);
+            StringBuilder builder = new();
+
+            foreach (char ch in formD)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                {
+                    builder.Append(ch == 'đ' ? 'd' : ch == 'Đ' ? 'D' : ch);
+                }
+            }
+
+            return builder.ToString().Normalize(NormalizationForm.FormC);
         }
     }
 }

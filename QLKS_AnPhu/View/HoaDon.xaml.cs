@@ -181,7 +181,7 @@ namespace QLKS_AnPhu.View
                 string phuPhiDonThueExpr = PricingHelper.PhuThuNhanSomSql("PT.NgayNhan", ngayNhanDuKienExpr, ngayTraDuKienExpr, giaNgayDonThueExpr, giaGioDonThueExpr, giaDemDonThueExpr);
                 bool thueCoChiTietDoan = TableExists("CHITIETDATPHONG") && ColumnExists("PHIEUTHUE", "MaDatPhong");
                 string tenPhongP2Expr = TenPhongSql("P2");
-                string tongGiaNgayThueExpr = @"(SELECT ISNULL(SUM(ISNULL(NULLIF(LP2.DonGiaDem, 0), ISNULL(LP2.DonGiaGio, 0) * 24.0)), 0)
+                string tongGiaNgayThueExpr = @"(SELECT ISNULL(SUM(ISNULL(NULLIF(LP2.DonGiaNgay, 0), ISNULL(NULLIF(LP2.DonGiaDem, 0), ISNULL(LP2.DonGiaGio, 0) * 24.0))), 0)
                                                 FROM dbo.CHITIETDATPHONG CT2
                                                 JOIN dbo.PHONG P2 ON CT2.MaPhong = P2.MaPhong
                                                 LEFT JOIN dbo.LOAIPHONG LP2 ON P2.MaLoaiPhong = LP2.MaLoaiPhong
@@ -218,7 +218,7 @@ namespace QLKS_AnPhu.View
                          WHERE DP0.MaDatPhong = PT.MaDatPhong)"
                     : tenPhongExpr;
                 string tongGiaNgayNhomDatCuExpr = thueCoNhomDatCu
-                    ? @"(SELECT ISNULL(SUM(ISNULL(NULLIF(LP2.DonGiaDem, 0), ISNULL(LP2.DonGiaGio, 0) * 24.0)), 0)
+                    ? @"(SELECT ISNULL(SUM(ISNULL(NULLIF(LP2.DonGiaNgay, 0), ISNULL(NULLIF(LP2.DonGiaDem, 0), ISNULL(LP2.DonGiaGio, 0) * 24.0))), 0)
                          FROM dbo." + bangDatPhong + @" DP0
                          JOIN dbo." + bangDatPhong + @" DPG ON " + dieuKienNhomDatCu + @"
                          JOIN dbo.PHONG P2 ON DPG.MaPhong = P2.MaPhong
@@ -458,7 +458,7 @@ LEFT JOIN dbo.LOAIPHONG LP ON P.MaLoaiPhong = LP.MaLoaiPhong");
                 bool coChiTietDatPhong = TableExists("CHITIETDATPHONG");
                 bool coMaPhongDat = ColumnExists(bangDatPhong, "MaPhong");
                 string tonTaiChiTietDatExpr = "EXISTS (SELECT 1 FROM dbo.CHITIETDATPHONG CT2 WHERE CT2.MaDatPhong = DP.MaDatPhong)";
-                string tongGiaNgayDatExpr = @"(SELECT ISNULL(SUM(ISNULL(NULLIF(LP2.DonGiaDem, 0), ISNULL(LP2.DonGiaGio, 0) * 24.0)), 0)
+                string tongGiaNgayDatExpr = @"(SELECT ISNULL(SUM(ISNULL(NULLIF(LP2.DonGiaNgay, 0), ISNULL(NULLIF(LP2.DonGiaDem, 0), ISNULL(LP2.DonGiaGio, 0) * 24.0))), 0)
                                                FROM dbo.CHITIETDATPHONG CT2
                                                JOIN dbo.PHONG P2 ON CT2.MaPhong = P2.MaPhong
                                                LEFT JOIN dbo.LOAIPHONG LP2 ON P2.MaLoaiPhong = LP2.MaLoaiPhong
@@ -1551,7 +1551,7 @@ ORDER BY X.NgayLapHoaDon DESC";
 
         private static string TienPhongSql(string startExpr, string plannedEndExpr, string actualEndExpr)
         {
-            string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0)";
+            string giaNgayExpr = "ISNULL(NULLIF(LP.DonGiaNgay, 0), ISNULL(NULLIF(LP.DonGiaDem, 0), ISNULL(LP.DonGiaGio, 0) * 24.0))";
             string giaGioExpr = "ISNULL(LP.DonGiaGio, 0)";
             return TienPhongSql(startExpr, plannedEndExpr, actualEndExpr, giaNgayExpr, giaGioExpr);
         }

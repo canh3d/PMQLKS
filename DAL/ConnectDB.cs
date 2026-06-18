@@ -7,6 +7,8 @@ namespace QLKS_AnPhu.DAL
 {
     public class ConnectDB
     {
+        private const int DefaultCommandTimeoutSeconds = 120;
+
         public static string ConnectionString
         {
             get
@@ -44,6 +46,7 @@ namespace QLKS_AnPhu.DAL
             {
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
+                    cmd.CommandTimeout = DefaultCommandTimeoutSeconds;
                     if (parameters != null)
                     {
                         cmd.Parameters.AddRange(parameters);
@@ -68,6 +71,7 @@ namespace QLKS_AnPhu.DAL
             {
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
+                    cmd.CommandTimeout = DefaultCommandTimeoutSeconds;
                     if (parameters != null)
                     {
                         cmd.Parameters.AddRange(parameters);
@@ -89,6 +93,7 @@ namespace QLKS_AnPhu.DAL
             {
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
+                    cmd.CommandTimeout = DefaultCommandTimeoutSeconds;
                     if (parameters != null)
                     {
                         cmd.Parameters.AddRange(parameters);

@@ -7,9 +7,7 @@ namespace QLKS_AnPhu.Security
         public static string VaiTro { get; private set; } = string.Empty;
         public static string TenDangNhap { get; private set; } = string.Empty;
 
-        public static bool IsManager =>
-            VaiTro.Equals("Quản lý", StringComparison.OrdinalIgnoreCase)
-            || VaiTro.Equals("Quan ly", StringComparison.OrdinalIgnoreCase);
+        public static bool IsManager => RoleHelper.IsManagerRole(VaiTro);
 
         public static void Set(AppUser user)
         {

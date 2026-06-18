@@ -101,11 +101,11 @@ namespace QLKS_AnPhu.UserControls
         {
             DgDichVuDaThem.ItemsSource = dichVuDaThem;
             DpNgaySinh.SelectedDate = DateTime.Today;
-            DpNgayNhan.SelectedDate = DateTime.Now;
-            DpNgayTra.SelectedDate = DateTime.Now.AddDays(1);
-            TxtGioNhanNgay.Text = "09:00";
+            DpNgayNhan.SelectedDate = DateTime.Today;
+            DpNgayTra.SelectedDate = DateTime.Today.AddDays(1);
+            TxtGioNhanNgay.Text = "14:00";
             TxtGioTraNgay.Text = "12:00";
-            TxtGioNhan.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            TxtGioNhan.Text = LamTronLenPhut(DateTime.Now).ToString("dd/MM/yyyy HH:mm");
             NapThongTinPhongTuDatabase();
             NapDichVu();
             NapThongTinKhachHang();
@@ -319,12 +319,14 @@ namespace QLKS_AnPhu.UserControls
 
             if (theoGio)
             {
+                TxtGioNhan.Text = LamTronLenPhut(DateTime.Now).ToString("dd/MM/yyyy HH:mm");
                 GrpThongTinDatPhong.Header = "THÔNG TIN ĐẶT PHÒNG THEO GIỜ";
                 LblNgayNhan.Text = "Giờ nhận";
                 LblNgayTra.Text = "Số giờ thuê";
             }
             else if (cheDo == CheDoDatPhong.QuaDem)
             {
+                DpNgayTra.SelectedDate = (DpNgayNhan.SelectedDate ?? DateTime.Today).Date.AddDays(1);
                 TxtGioNhanNgay.Text = "21:00";
                 TxtGioTraNgay.Text = "08:00";
                 GrpThongTinDatPhong.Header = "THÔNG TIN ĐẶT PHÒNG QUA ĐÊM";
@@ -333,7 +335,13 @@ namespace QLKS_AnPhu.UserControls
             }
             else
             {
-                TxtGioNhanNgay.Text = "09:00";
+                DateTime ngayNhan = DpNgayNhan.SelectedDate ?? DateTime.Today;
+                if ((DpNgayTra.SelectedDate ?? ngayNhan) <= ngayNhan)
+                {
+                    DpNgayTra.SelectedDate = ngayNhan.Date.AddDays(1);
+                }
+
+                TxtGioNhanNgay.Text = "14:00";
                 TxtGioTraNgay.Text = "12:00";
                 GrpThongTinDatPhong.Header = "THÔNG TIN ĐẶT PHÒNG THEO NGÀY";
                 LblNgayNhan.Text = "Ngày nhận";
@@ -556,21 +564,21 @@ namespace QLKS_AnPhu.UserControls
             {
                 int soGio = ParsePositiveInt(TxtSoGioThue.Text, 1);
                 decimal giaGio = phong.GiaGio > 0 ? phong.GiaGio : LayGiaMacDinh();
-                return giaGio * soGio;
+                return Math.Round(giaGio * soGio, 0);
             }
 
-            DateTime ngayNhan = DpNgayNhan.SelectedDate ?? DateTime.Today;
-            DateTime ngayTra = DpNgayTra.SelectedDate ?? ngayNhan.AddDays(1);
+            DateTime ngayNhan = LayNgayNhanLuu();
+            DateTime ngayTra = LayNgayTraLuu();
             int soNgay = Math.Max(1, (ngayTra.Date - ngayNhan.Date).Days);
 
             if (cheDoHienTai == CheDoDatPhong.QuaDem)
             {
                 decimal giaDem = phong.GiaDem > 0 ? phong.GiaDem : LayGiaMacDinh();
-                return giaDem * soNgay;
+                return Math.Round(giaDem * soNgay, 0);
             }
 
             decimal giaNgay = phong.GiaNgay > 0 ? phong.GiaNgay : LayGiaMacDinh();
-            return giaNgay * soNgay;
+            return Math.Round(giaNgay * soNgay, 0);
         }
 
         private decimal LayGiaMacDinh()
@@ -655,9 +663,9 @@ namespace QLKS_AnPhu.UserControls
             TxtDiaChi.Clear();
             TxtSoNguoi.Text = "1";
             TxtDatCoc.Text = "0";
-            TxtGioNhanNgay.Text = "09:00";
+            TxtGioNhanNgay.Text = "14:00";
             TxtGioTraNgay.Text = "12:00";
-            TxtGioNhan.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            TxtGioNhan.Text = LamTronLenPhut(DateTime.Now).ToString("dd/MM/yyyy HH:mm");
             TxtSoGioThue.Text = "2";
             RbDatTruoc.IsChecked = true;
             dichVuDaThem.Clear();
@@ -680,10 +688,10 @@ namespace QLKS_AnPhu.UserControls
             DateTime date = DpNgayNhan.SelectedDate ?? DateTime.Now;
             if (cheDoHienTai == CheDoDatPhong.QuaDem)
             {
-                return date.Date.Add(LayGio(TxtGioNhanNgay.Text, new TimeSpan(20, 0, 0)));
+                return date.Date.Add(LayGio(TxtGioNhanNgay.Text, new TimeSpan(21, 0, 0)));
             }
 
-            TimeSpan gioNhanTheoNgay = LayGio(TxtGioNhanNgay.Text, new TimeSpan(9, 0, 0));
+            TimeSpan gioNhanTheoNgay = LayGio(TxtGioNhanNgay.Text, new TimeSpan(14, 0, 0));
             return date.Date.Add(gioNhanTheoNgay);
         }
 
@@ -697,6 +705,12 @@ namespace QLKS_AnPhu.UserControls
             DateTime date = DpNgayTra.SelectedDate ?? LayNgayNhanLuu().AddDays(1);
             if (cheDoHienTai == CheDoDatPhong.QuaDem)
             {
+                DateTime ngayNhan = LayNgayNhanLuu();
+                if (date.Date <= ngayNhan.Date)
+                {
+                    date = ngayNhan.Date.AddDays(1);
+                }
+
                 return date.Date.AddHours(8);
             }
 
@@ -712,6 +726,13 @@ namespace QLKS_AnPhu.UserControls
             }
 
             return defaultValue;
+        }
+
+        private static DateTime LamTronLenPhut(DateTime value)
+        {
+            return value.Second == 0 && value.Millisecond == 0
+                ? value
+                : new DateTime(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0).AddMinutes(1);
         }
 
         private string LayCheDoDatPhong()

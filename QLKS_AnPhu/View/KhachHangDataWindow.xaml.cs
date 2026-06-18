@@ -125,7 +125,7 @@ FROM [" + map.Schema + @"].[" + map.Name + @"] " + alias + @"
         private DataTable LoadLichSuThueData()
         {
             List<TableMap> maps = GetTableMaps();
-            string[] candidates = { "PHIEUDATPHONG", "DATPHONG", "PhieuDatPhong", "DatPhong", "PHIEUTHUE", "PhieuThue", "ThuePhong", "Booking", "Bookings", "RentalHistory" };
+            string[] candidates = { "PHIEUTHUE", "PhieuThue", "ThuePhong", "RentalHistory", "PHIEUDATPHONG", "DATPHONG", "PhieuDatPhong", "DatPhong", "Booking", "Bookings" };
             TableMap? map = maps
                 .FirstOrDefault(item => candidates.Any(name => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase)));
 

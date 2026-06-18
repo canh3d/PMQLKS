@@ -162,16 +162,16 @@ namespace QLKS_AnPhu.View
         {
             if (loaiPhong.Contains("VIP", StringComparison.OrdinalIgnoreCase))
             {
-                return (200000m, 1200000m, 1200000m);
+                return (200000m, 1200000m, 900000m);
             }
 
             if (loaiPhong.Contains("đôi", StringComparison.OrdinalIgnoreCase) ||
                 loaiPhong.Contains("doi", StringComparison.OrdinalIgnoreCase))
             {
-                return (120000m, 650000m, 650000m);
+                return (120000m, 700000m, 500000m);
             }
 
-            return (80000m, 450000m, 450000m);
+            return (80000m, 450000m, 350000m);
         }
 
         private static PhongDTO Clone(PhongDTO phong)
